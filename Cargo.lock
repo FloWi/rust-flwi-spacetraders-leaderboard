@@ -168,6 +168,7 @@ name = "flwi-spacetraders-leaderboard"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "futures",
  "governor",
  "reqwest",
  "reqwest-middleware",
