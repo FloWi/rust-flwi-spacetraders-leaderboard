@@ -1,37 +1,29 @@
 use std::future::Future;
-use std::sync::Arc;
 
 use futures::future::join_all;
-use governor::{DefaultDirectRateLimiter, Quota, RateLimiter};
-use reqwest::{Client, Request};
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware, Middleware, Next, Result};
-use task_local_extensions::Extensions;
+use itertools::Itertools;
+use reqwest_middleware::{ClientWithMiddleware, Middleware, Result};
 
 use model::{
     AgentInfoResponse, AgentSymbol, FactionSymbol, ListWaypointsInSystemResponse, StStatusResponse,
     SystemSymbol, WaypointSymbol,
 };
 
-use crate::leaderboard_model::LeaderboardStaticAgentInfo;
-use crate::model::GetMeta;
-use crate::pagination::PaginationInput;
+use crate::leaderboard_model::{
+    LeaderboardCurrentAgentInfo, LeaderboardCurrentConstructionInfo, LeaderboardStaticAgentInfo,
+};
+use crate::model::{GetConstructionResponse, GetMeta};
+use crate::pagination::{paginate, PaginationInput};
+use crate::reqwest_helpers::create_client;
 
 mod leaderboard_model;
 mod model;
 mod pagination;
+mod reqwest_helpers;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let reqwest_client = Client::builder().build().unwrap();
-
-    let limiter = RateLimiter::direct(Quota::per_second(std::num::NonZeroU32::new(2u32).unwrap()));
-    let arc_limiter = Arc::new(limiter);
-
-    let middleware = RateLimitingMiddleware {
-        limiter: arc_limiter,
-    };
-
-    let client = ClientBuilder::new(reqwest_client).with(middleware).build();
+    let client = create_client();
 
     let resp: StStatusResponse = client
         .get("https://api.spacetraders.io/v2/")
@@ -42,14 +34,19 @@ async fn main() -> Result<()> {
 
     println!("{:?}", resp.stats);
 
-    /*
-    // PAGINATION PLAYGROUND
-    let pages: Vec<ListWaypointsInSystemResponse> = paginate(|page| list_waypoints_of_system(&client, SystemSymbol("X1-ND96".into()), page)).await;
+    let system_symbol = SystemSymbol("X1-ND96".to_string());
 
-    for page in pages {
-        println!("{:?}", page)
-    }
-    */
+    println!("testing pagination",);
+
+    // PAGINATION PLAYGROUND
+    let pages: Vec<ListWaypointsInSystemResponse> =
+        paginate(|page| list_waypoints_of_system(&client, &system_symbol, page)).await;
+
+    println!(
+        "successfully downloaded {:?} pages of system-waypoints for system {}",
+        pages.len(),
+        &system_symbol.0
+    );
 
     let futures: Vec<_> = resp
         .leaderboards
@@ -58,11 +55,62 @@ async fn main() -> Result<()> {
         .map(|a| get_static_agent_info(&client, AgentSymbol(a.agent_symbol.to_string())))
         .collect();
 
-    let results: Vec<_> = join_all(futures).await.into_iter().collect();
+    let num_agents = futures.len();
+    println!("Downloading static infos for {} agents", num_agents);
+    let static_agent_info_results: Vec<_> = join_all(futures).await.into_iter().collect();
+    println!("Done downloading static infos for {} agents", num_agents);
 
-    for r in results {
+    let jump_gate_waypoints: Vec<_> = static_agent_info_results
+        .clone()
+        .into_iter()
+        .map(|sad| sad.jump_gate)
+        .unique()
+        .collect();
+
+    let construction_site_futures: Vec<_> = jump_gate_waypoints
+        .iter()
+        .map(|a| get_current_construction(&client, &a))
+        .collect();
+
+    let num_construction_sites = construction_site_futures.len();
+    println!(
+        "Downloading construction site infos for {} jump gates",
+        num_construction_sites
+    );
+    let construction_site_results: Vec<_> = join_all(construction_site_futures)
+        .await
+        .into_iter()
+        .collect();
+    println!(
+        "Done downloading construction site infos for {} jump gates",
+        num_construction_sites
+    );
+
+    println!(
+        "found static agent infos for {} agents",
+        static_agent_info_results.len()
+    );
+    for r in static_agent_info_results {
         println!("{:?}", r)
     }
+
+    println!(
+        "found {} distinct jump-gate waypoints",
+        num_construction_sites
+    );
+    for r in &construction_site_results {
+        println!("{:?}", r)
+    }
+
+    let num_completed_jump_gates = construction_site_results
+        .iter()
+        .filter(|c| c.is_complete)
+        .count();
+
+    println!(
+        "{} out of {} jump gates are completed",
+        num_completed_jump_gates, num_construction_sites
+    );
 
     Ok(())
 }
@@ -78,7 +126,7 @@ async fn get_static_agent_info(
     client: &ClientWithMiddleware,
     agent_symbol: AgentSymbol,
 ) -> LeaderboardStaticAgentInfo {
-    let agent_info = get_public_agent(&client, agent_symbol).await.data;
+    let agent_info = get_public_agent(&client, &agent_symbol).await.data;
     let headquarters = WaypointSymbol(agent_info.headquarters);
     let system_symbol = extract_system_symbol(&headquarters);
     let jump_gate_waypoints = get_waypoints_of_type_jump_gate(&client, system_symbol).await;
@@ -91,9 +139,33 @@ async fn get_static_agent_info(
     }
 }
 
-async fn get_public_agent(
+async fn get_current_agent_info(
     client: &ClientWithMiddleware,
     agent_symbol: AgentSymbol,
+) -> LeaderboardCurrentAgentInfo {
+    let agent_info = get_public_agent(&client, &agent_symbol).await.data;
+    LeaderboardCurrentAgentInfo {
+        symbol: agent_symbol,
+        credits: agent_info.credits,
+        ship_count: agent_info.ship_count,
+    }
+}
+
+async fn get_current_construction(
+    client: &ClientWithMiddleware,
+    waypoint_symbol: &WaypointSymbol,
+) -> LeaderboardCurrentConstructionInfo {
+    let construction_site_info = get_construction_site(&client, &waypoint_symbol).await.data;
+    LeaderboardCurrentConstructionInfo {
+        symbol: waypoint_symbol.clone(),
+        materials: construction_site_info.materials,
+        is_complete: construction_site_info.is_complete,
+    }
+}
+
+async fn get_public_agent(
+    client: &ClientWithMiddleware,
+    agent_symbol: &AgentSymbol,
 ) -> AgentInfoResponse {
     let resp = client
         .get(format!(
@@ -104,6 +176,23 @@ async fn get_public_agent(
         .await;
     let agent_info = resp.unwrap().json().await.unwrap();
     agent_info
+}
+
+async fn get_construction_site(
+    client: &ClientWithMiddleware,
+    waypoint_symbol: &WaypointSymbol,
+) -> GetConstructionResponse {
+    //--url https://api.spacetraders.io/v2/systems/X1-ND96/waypoints/X1-ND96-I52/construction \
+    let resp = client
+        .get(format!(
+            "https://api.spacetraders.io/v2/systems/{}/waypoints/{}/construction",
+            extract_system_symbol(&waypoint_symbol).0,
+            waypoint_symbol.0
+        ))
+        .send()
+        .await;
+    let construction_site_info = resp.unwrap().json().await.unwrap();
+    construction_site_info
 }
 
 async fn get_waypoints_of_type_jump_gate(
@@ -128,7 +217,7 @@ async fn get_waypoints_of_type_jump_gate(
 
 async fn list_waypoints_of_system(
     client: &ClientWithMiddleware,
-    system_symbol: SystemSymbol,
+    system_symbol: &SystemSymbol,
     pagination_input: PaginationInput,
 ) -> ListWaypointsInSystemResponse {
     /*
@@ -153,27 +242,4 @@ async fn list_waypoints_of_system(
     let resp = request.send().await;
 
     resp.unwrap().json().await.unwrap()
-}
-
-struct RateLimitingMiddleware {
-    limiter: Arc<DefaultDirectRateLimiter>,
-}
-
-#[async_trait::async_trait]
-impl Middleware for RateLimitingMiddleware {
-    async fn handle(
-        &self,
-        req: Request,
-        extensions: &mut Extensions,
-        next: Next<'_>,
-    ) -> reqwest_middleware::Result<reqwest::Response> {
-        println!("checking rate_limiting availability");
-        self.limiter.until_ready().await;
-        println!("rate_limit check ok");
-
-        println!("Request started {:?}", req);
-        let res = next.run(req, extensions).await;
-        println!("   got response: {:?}", res);
-        res
-    }
 }

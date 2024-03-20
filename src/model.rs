@@ -1,15 +1,15 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct AgentSymbol(pub String);
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SystemSymbol(pub String);
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WaypointSymbol(pub String);
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct FactionSymbol(pub String);
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -18,11 +18,31 @@ pub struct AgentInfoResponse {
     pub data: AgentInfoResponseData,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ConstructionMaterial {
+    pub trade_symbol: String,
+    pub required: i64,
+    pub fulfilled: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GetConstructionResponseData {
+    pub symbol: String,
+    pub materials: Vec<ConstructionMaterial>,
+    pub is_complete: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GetConstructionResponse {
+    pub data: GetConstructionResponseData,
+}
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct AgentInfoResponseData
-{
+pub struct AgentInfoResponseData {
     pub symbol: String,
     pub headquarters: String,
     pub credits: u64,
