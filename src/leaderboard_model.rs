@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+
 use crate::model::{AgentSymbol, FactionSymbol, WaypointSymbol};
 
 #[derive(Deserialize, Serialize, Debug)]
