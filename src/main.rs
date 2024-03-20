@@ -1,3 +1,4 @@
+use std::future::Future;
 use std::sync::Arc;
 
 use futures::future::join_all;
@@ -9,9 +10,12 @@ use task_local_extensions::Extensions;
 use model::{AgentInfoResponse, AgentSymbol, FactionSymbol, ListWaypointsInSystemResponse, StStatusResponse, SystemSymbol, WaypointSymbol};
 
 use crate::leaderboard_model::LeaderboardStaticAgentInfo;
+use crate::model::GetMeta;
+use crate::pagination::{paginate, PaginationInput};
 
 mod model;
 mod leaderboard_model;
+mod pagination;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -33,6 +37,16 @@ async fn main() -> Result<()> {
         .await?;
 
     println!("{:?}", resp.stats);
+
+
+    /*
+    // PAGINATION PLAYGROUND
+    let pages: Vec<ListWaypointsInSystemResponse> = paginate(|page| list_waypoints_of_system(&client, SystemSymbol("X1-ND96".into()), page)).await;
+
+    for page in pages {
+        println!("{:?}", page)
+    }
+    */
 
     let futures: Vec<_> = resp.leaderboards.most_credits.iter().map(|a| get_static_agent_info(&client, AgentSymbol(a.agent_symbol.to_string()))).collect();
 
@@ -67,6 +81,7 @@ async fn get_static_agent_info(client: &ClientWithMiddleware, agent_symbol: Agen
     }
 }
 
+
 async fn get_public_agent(client: &ClientWithMiddleware, agent_symbol: AgentSymbol) -> AgentInfoResponse {
     let resp = client.get(format!("https://api.spacetraders.io/v2/agents/{}", agent_symbol.0))
         .send().await;
@@ -78,12 +93,42 @@ async fn get_waypoints_of_type_jump_gate(client: &ClientWithMiddleware, system_s
     /*
       --url 'https://api.spacetraders.io/v2/systems/systemSymbol/waypoints?type=JUMP_GATE' \
      */
+    let query_param_list = [("type", "JUMP_GATE")];
     let request = client.get(format!("https://api.spacetraders.io/v2/systems/{}/waypoints", system_symbol.0))
-        .query(&[("type", "JUMP_GATE")]);
+        .query(&query_param_list);
     let resp = request
         .send().await;
 
     //TODO: implement pagination
+    resp.unwrap().json().await.unwrap()
+}
+
+async fn list_waypoints_of_system(client: &ClientWithMiddleware, system_symbol: SystemSymbol, pagination_input: PaginationInput) -> ListWaypointsInSystemResponse {
+    /*
+      --url 'https://api.spacetraders.io/v2/systems/systemSymbol/waypoints?type=JUMP_GATE' \
+     */
+    /*
+      --url 'https://api.spacetraders.io/v2/systems/X1-ND96/waypoints?page=1&limit=20&type=JUMP_GATE' \
+     */
+
+
+
+    let query_param_list = [
+        ("page", pagination_input.page.to_string()),
+        ("limit", pagination_input.limit.to_string())
+    ];
+
+    let request = client.get(format!("https://api.spacetraders.io/v2/systems/{}/waypoints",
+                                     system_symbol.0))
+        .query(&query_param_list);
+
+
+    let resp
+
+
+        = request
+        .send().await;
+
     resp.unwrap().json().await.unwrap()
 }
 

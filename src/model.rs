@@ -78,7 +78,7 @@ pub struct ListWaypointsInSystemResponse {
     pub meta: Meta,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Copy, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Meta {
     pub total: u32,
@@ -115,11 +115,21 @@ pub struct ListWaypointsInSystemResponseData {
     pub system_symbol: String,
     pub x: i64,
     pub y: i64,
-    pub orbitals: Vec<WaypointSymbol>,
-    pub orbits: Option<String>,
+    //pub orbitals: Vec<WaypointSymbol>,
+    pub orbits: Option<WaypointSymbol>,
     pub faction: Faction,
-    pub traits: Vec<Struct>,
-    pub modifiers: Vec<Struct>,
+    //pub traits: Vec<Struct>,
+    //pub modifiers: Vec<Struct>,
     pub chart: Chart,
     pub is_under_construction: bool,
+}
+
+pub trait GetMeta {
+    fn get_meta(&self) -> Meta;
+}
+
+impl GetMeta for ListWaypointsInSystemResponse {
+    fn get_meta(&self) -> Meta {
+        self.meta
+    }
 }
