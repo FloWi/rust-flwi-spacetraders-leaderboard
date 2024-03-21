@@ -3,21 +3,19 @@ use futures::future::join_all;
 use itertools::Itertools;
 use polars::lazy::prelude::*;
 use polars::prelude::*;
-use reqwest_middleware::{Middleware, Result};
+use reqwest_middleware::Result;
 
 use model::{AgentSymbol, FactionSymbol, SystemSymbol, WaypointSymbol};
 
 use crate::leaderboard_model::{
     LeaderboardCurrentAgentInfo, LeaderboardCurrentConstructionInfo, LeaderboardStaticAgentInfo,
 };
-use crate::model::GetMeta;
 use crate::reqwest_helpers::create_client;
 use crate::st_client::StClient;
 
 mod leaderboard_model;
 mod model;
 mod pagination;
-
 mod polars_helper;
 mod polars_playground;
 mod reqwest_helpers;
@@ -177,7 +175,7 @@ fn create_construction_struct_series(
         })
         .collect();
 
-    let mut df = struct_to_dataframe!(
+    let df = struct_to_dataframe!(
         materials,
         [symbol, is_complete, trade_symbol, required, fulfilled]
     )
