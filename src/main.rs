@@ -1,8 +1,6 @@
 use chrono::{Local, NaiveDate};
 use futures::future::join_all;
 use itertools::Itertools;
-use polars::lazy::prelude::*;
-use polars::prelude::*;
 use reqwest_middleware::Result;
 
 use model::{AgentSymbol, FactionSymbol, SystemSymbol, WaypointSymbol};
@@ -52,6 +50,8 @@ async fn main() -> Result<()> {
     let now = Local::now().naive_utc();
 
     let reset_date = NaiveDate::parse_from_str(st_status.reset_date.as_str(), "%Y-%m-%d").unwrap();
+
+    // TODO: Figure out how type-inference works with Vec<Future<Result<Foo, Err>>>
 
     let current_agent_futures: Vec<_> = static_agent_info_results
         .clone()
@@ -131,69 +131,6 @@ async fn main() -> Result<()> {
     );
 
     Ok(())
-}
-
-macro_rules! struct_to_dataframe {
-    ($input:expr, [$($field:ident),+]) => {
-        {
-            // Extract the field values into separate vectors
-            $(let mut $field = Vec::new();)*
-
-            for e in $input.into_iter() {
-                $($field.push(e.$field);)*
-            }
-            df! {
-                $(stringify!($field) => $field,)*
-            }
-        }
-    };
-}
-
-fn create_construction_struct_series(
-    construction_site_results: &Vec<LeaderboardCurrentConstructionInfo>,
-) -> DataFrame {
-    struct ConstructionMaterialDenormalized {
-        trade_symbol: String,
-        required: u32,
-        fulfilled: u32,
-        symbol: String,
-        is_complete: bool,
-    }
-
-    let materials: Vec<ConstructionMaterialDenormalized> = construction_site_results
-        .into_iter()
-        .flat_map(|cs| {
-            cs.materials
-                .iter()
-                .map(|cm| ConstructionMaterialDenormalized {
-                    trade_symbol: cm.trade_symbol.clone(),
-                    is_complete: cs.is_complete,
-                    symbol: cs.symbol.0.clone(),
-                    required: cm.required,
-                    fulfilled: cm.fulfilled,
-                })
-        })
-        .collect();
-
-    let df = struct_to_dataframe!(
-        materials,
-        [symbol, is_complete, trade_symbol, required, fulfilled]
-    )
-    .unwrap();
-
-    let df_with_struct = df
-        .lazy()
-        .with_column(
-            as_struct([col("trade_symbol"), col("required"), col("fulfilled")].into())
-                .alias("materials"),
-        )
-        .drop(["trade_symbol", "required", "fulfilled"])
-        .group_by([col("symbol"), col("is_complete")])
-        .agg([col("materials")])
-        .collect()
-        .unwrap();
-
-    df_with_struct
 }
 
 fn extract_system_symbol(waypoint_symbol: &WaypointSymbol) -> SystemSymbol {

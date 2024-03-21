@@ -1,12 +1,12 @@
+use std::fs::File;
+
+use chrono::{NaiveDate, NaiveDateTime};
+use polars::frame::DataFrame;
+use polars::prelude::*;
+
 use crate::leaderboard_model::{
     LeaderboardCurrentAgentInfo, LeaderboardCurrentConstructionInfo, LeaderboardStaticAgentInfo,
 };
-use chrono::{NaiveDate, NaiveDateTime};
-use polars::frame::DataFrame;
-use polars::prelude::{
-    lit, DataFrameJoinOps, IntoLazy, JoinArgs, JoinType, NamedFrom, ParquetWriter, Series,
-};
-use std::fs::File;
 
 pub fn create_and_write_polars_df(
     leaderboard_static_agent_info: &Vec<LeaderboardStaticAgentInfo>,
@@ -98,7 +98,7 @@ pub fn create_and_write_polars_df(
         .unwrap();
 
     let mut df_construction_materials =
-        crate::create_construction_struct_series(construction_site_results)
+        create_construction_struct_series(construction_site_results)
             .lazy()
             .with_column(lit(reset_date).alias("reset_date"))
             .with_column(lit(query_time).alias("query_time"))
@@ -141,4 +141,67 @@ pub fn create_and_write_polars_df(
     ParquetWriter::new(&mut file)
         .finish(&mut df_complete)
         .unwrap();
+}
+
+macro_rules! struct_to_dataframe {
+    ($input:expr, [$($field:ident),+]) => {
+        {
+            // Extract the field values into separate vectors
+            $(let mut $field = Vec::new();)*
+
+            for e in $input.into_iter() {
+                $($field.push(e.$field);)*
+            }
+            df! {
+                $(stringify!($field) => $field,)*
+            }
+        }
+    };
+}
+
+fn create_construction_struct_series(
+    construction_site_results: &Vec<LeaderboardCurrentConstructionInfo>,
+) -> DataFrame {
+    struct ConstructionMaterialDenormalized {
+        trade_symbol: String,
+        required: u32,
+        fulfilled: u32,
+        symbol: String,
+        is_complete: bool,
+    }
+
+    let materials: Vec<ConstructionMaterialDenormalized> = construction_site_results
+        .into_iter()
+        .flat_map(|cs| {
+            cs.materials
+                .iter()
+                .map(|cm| ConstructionMaterialDenormalized {
+                    trade_symbol: cm.trade_symbol.clone(),
+                    is_complete: cs.is_complete,
+                    symbol: cs.symbol.0.clone(),
+                    required: cm.required,
+                    fulfilled: cm.fulfilled,
+                })
+        })
+        .collect();
+
+    let df = struct_to_dataframe!(
+        materials,
+        [symbol, is_complete, trade_symbol, required, fulfilled]
+    )
+    .unwrap();
+
+    let df_with_struct = df
+        .lazy()
+        .with_column(
+            as_struct([col("trade_symbol"), col("required"), col("fulfilled")].into())
+                .alias("materials"),
+        )
+        .drop(["trade_symbol", "required", "fulfilled"])
+        .group_by([col("symbol"), col("is_complete")])
+        .agg([col("materials")])
+        .collect()
+        .unwrap();
+
+    df_with_struct
 }
