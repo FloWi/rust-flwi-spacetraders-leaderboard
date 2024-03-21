@@ -18,7 +18,7 @@ where
 
     let total_number_pages = (meta.total as f32 / meta.limit as f32).ceil() as u32;
 
-    let futures: Vec<_> = (2..total_number_pages)
+    let futures: Vec<_> = (2..=total_number_pages)
         .into_iter()
         .map(|p| call(PaginationInput { page: p, limit: 20 }))
         .collect();
