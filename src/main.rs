@@ -1,7 +1,10 @@
-use std::future::Future;
+use std::fs::File;
 
+use chrono::{Local, NaiveDate, NaiveDateTime};
 use futures::future::join_all;
 use itertools::Itertools;
+use polars::lazy::prelude::*;
+use polars::prelude::*;
 use reqwest_middleware::{ClientWithMiddleware, Middleware, Result};
 
 use model::{
@@ -19,20 +22,22 @@ use crate::reqwest_helpers::create_client;
 mod leaderboard_model;
 mod model;
 mod pagination;
+mod polars_playground;
 mod reqwest_helpers;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let client = create_client();
 
-    let resp: StStatusResponse = client
+    let st_status: StStatusResponse = client
         .get("https://api.spacetraders.io/v2/")
         .send()
         .await?
         .json()
         .await?;
 
-    println!("{:?}", resp.stats);
+    println!("Reset Date: {:?}", st_status.reset_date);
+    println!("{:?}", st_status.stats);
 
     let system_symbol = SystemSymbol("X1-ND96".to_string());
 
@@ -48,17 +53,30 @@ async fn main() -> Result<()> {
         &system_symbol.0
     );
 
-    let futures: Vec<_> = resp
+    let static_agent_futures: Vec<_> = st_status
         .leaderboards
         .most_credits
         .iter()
         .map(|a| get_static_agent_info(&client, AgentSymbol(a.agent_symbol.to_string())))
         .collect();
 
-    let num_agents = futures.len();
+    let num_agents = static_agent_futures.len();
     println!("Downloading static infos for {} agents", num_agents);
-    let static_agent_info_results: Vec<_> = join_all(futures).await.into_iter().collect();
+    let static_agent_info_results: Vec<_> =
+        join_all(static_agent_futures).await.into_iter().collect();
     println!("Done downloading static infos for {} agents", num_agents);
+    let now = Local::now().naive_utc();
+
+    //2024-03-10
+    let reset_date = NaiveDate::parse_from_str(st_status.reset_date.as_str(), "%Y-%m-%d").unwrap();
+
+    let current_agent_futures: Vec<_> = static_agent_info_results
+        .clone()
+        .into_iter()
+        .map(|a| get_current_agent_info(&client, a.symbol))
+        .collect();
+
+    let current_agent_results: Vec<_> = join_all(current_agent_futures).await.into_iter().collect();
 
     let jump_gate_waypoints: Vec<_> = static_agent_info_results
         .clone()
@@ -81,6 +99,7 @@ async fn main() -> Result<()> {
         .await
         .into_iter()
         .collect();
+
     println!(
         "Done downloading construction site infos for {} jump gates",
         num_construction_sites
@@ -90,7 +109,7 @@ async fn main() -> Result<()> {
         "found static agent infos for {} agents",
         static_agent_info_results.len()
     );
-    for r in static_agent_info_results {
+    for r in &static_agent_info_results {
         println!("{:?}", r)
     }
 
@@ -102,7 +121,7 @@ async fn main() -> Result<()> {
         println!("{:?}", r)
     }
 
-    let num_completed_jump_gates = construction_site_results
+    let num_completed_jump_gates = &construction_site_results
         .iter()
         .filter(|c| c.is_complete)
         .count();
@@ -112,7 +131,213 @@ async fn main() -> Result<()> {
         num_completed_jump_gates, num_construction_sites
     );
 
+    create_and_write_polars_df(
+        &static_agent_info_results,
+        &current_agent_results,
+        &construction_site_results,
+        now,
+        reset_date,
+    );
+
     Ok(())
+}
+
+macro_rules! struct_to_dataframe {
+    ($input:expr, [$($field:ident),+]) => {
+        {
+            // Extract the field values into separate vectors
+            $(let mut $field = Vec::new();)*
+
+            for e in $input.into_iter() {
+                $($field.push(e.$field);)*
+            }
+            df! {
+                $(stringify!($field) => $field,)*
+            }
+        }
+    };
+}
+
+fn create_construction_struct_series(
+    construction_site_results: &Vec<LeaderboardCurrentConstructionInfo>,
+) -> DataFrame {
+    struct ConstructionMaterialDenormalized {
+        trade_symbol: String,
+        required: u32,
+        fulfilled: u32,
+        symbol: String,
+        is_complete: bool,
+    }
+
+    let materials: Vec<ConstructionMaterialDenormalized> = construction_site_results
+        .into_iter()
+        .flat_map(|cs| {
+            cs.materials
+                .iter()
+                .map(|cm| ConstructionMaterialDenormalized {
+                    trade_symbol: cm.trade_symbol.clone(),
+                    is_complete: cs.is_complete,
+                    symbol: cs.symbol.0.clone(),
+                    required: cm.required,
+                    fulfilled: cm.fulfilled,
+                })
+        })
+        .collect();
+
+    let mut df = struct_to_dataframe!(
+        materials,
+        [symbol, is_complete, trade_symbol, required, fulfilled]
+    )
+    .unwrap();
+
+    let df_with_struct = df
+        .lazy()
+        .with_column(
+            as_struct([col("trade_symbol"), col("required"), col("fulfilled")].into())
+                .alias("materials"),
+        )
+        .drop(["trade_symbol", "required", "fulfilled"])
+        .group_by([col("symbol"), col("is_complete")])
+        .agg([col("materials")])
+        .collect()
+        .unwrap();
+
+    df_with_struct
+}
+
+fn create_and_write_polars_df(
+    leaderboard_static_agent_info: &Vec<LeaderboardStaticAgentInfo>,
+    current_agent_results: &Vec<LeaderboardCurrentAgentInfo>,
+    construction_site_results: &Vec<LeaderboardCurrentConstructionInfo>,
+    query_time: NaiveDateTime,
+    reset_date: NaiveDate,
+) {
+    let static_agent_symbols = Series::new(
+        "agent_symbol",
+        leaderboard_static_agent_info
+            .iter()
+            .map(|sad| sad.symbol.0.clone())
+            .collect::<Vec<_>>(),
+    );
+    let static_agent_headquarters_waypoint_symbols = Series::new(
+        "agent_headquarters_waypoint_symbol",
+        leaderboard_static_agent_info
+            .iter()
+            .map(|sad| sad.headquarters.0.clone())
+            .collect::<Vec<_>>(),
+    );
+    let static_jump_gate_waypoint_symbols = Series::new(
+        "jump_gate_waypoint_symbol",
+        leaderboard_static_agent_info
+            .iter()
+            .map(|sad| sad.jump_gate.0.clone())
+            .collect::<Vec<_>>(),
+    );
+    let static_starting_factions = Series::new(
+        "starting_faction",
+        leaderboard_static_agent_info
+            .iter()
+            .map(|sad| sad.starting_faction.0.clone())
+            .collect::<Vec<_>>(),
+    );
+
+    let current_agent_symbols = Series::new(
+        "agent_symbol",
+        current_agent_results
+            .iter()
+            .map(|c| c.symbol.0.clone())
+            .collect::<Vec<_>>(),
+    );
+
+    let current_agent_ship_count = Series::new(
+        "agent_ship_count",
+        current_agent_results
+            .iter()
+            .map(|c| c.ship_count)
+            .collect::<Vec<_>>(),
+    );
+
+    let current_agent_credits = Series::new(
+        "agent_credits",
+        current_agent_results
+            .iter()
+            .map(|c| c.credits)
+            .collect::<Vec<_>>(),
+    );
+
+    let mut df_static_agent_infos: DataFrame = DataFrame::new(vec![
+        static_agent_symbols,
+        static_agent_headquarters_waypoint_symbols,
+        static_jump_gate_waypoint_symbols,
+        static_starting_factions,
+    ])
+    .unwrap();
+
+    df_static_agent_infos = df_static_agent_infos
+        .lazy()
+        .with_column(lit(reset_date).alias("reset_date"))
+        .with_column(lit(query_time).alias("query_time"))
+        .collect()
+        .unwrap();
+
+    let mut df_current_agent_infos: DataFrame = DataFrame::new(vec![
+        current_agent_symbols,
+        current_agent_ship_count,
+        current_agent_credits,
+    ])
+    .unwrap();
+
+    df_current_agent_infos = df_current_agent_infos
+        .lazy()
+        .with_column(lit(reset_date).alias("reset_date"))
+        .with_column(lit(query_time).alias("query_time"))
+        .collect()
+        .unwrap();
+
+    let mut df_construction_materials =
+        create_construction_struct_series(construction_site_results)
+            .lazy()
+            .with_column(lit(reset_date).alias("reset_date"))
+            .with_column(lit(query_time).alias("query_time"))
+            .collect()
+            .unwrap();
+
+    let mut df_complete = df_current_agent_infos
+        .join(
+            &df_static_agent_infos,
+            ["agent_symbol"],
+            ["agent_symbol"],
+            JoinArgs::new(JoinType::Inner),
+        )
+        .unwrap()
+        .join(
+            &df_construction_materials,
+            ["reset_date", "query_time"],
+            ["reset_date", "query_time"],
+            JoinArgs::new(JoinType::Inner),
+        )
+        .unwrap();
+
+    let mut file = File::create("data/static_agent_infos.parquet").expect("could not create file");
+    ParquetWriter::new(&mut file)
+        .finish(&mut df_static_agent_infos)
+        .unwrap();
+
+    let mut file = File::create("data/current_agent_infos.parquet").expect("could not create file");
+    ParquetWriter::new(&mut file)
+        .finish(&mut df_current_agent_infos)
+        .unwrap();
+
+    let mut file =
+        File::create("data/construction_materials.parquet").expect("could not create file");
+    ParquetWriter::new(&mut file)
+        .finish(&mut df_construction_materials)
+        .unwrap();
+
+    let mut file = File::create("data/complete.parquet").expect("could not create file");
+    ParquetWriter::new(&mut file)
+        .finish(&mut df_complete)
+        .unwrap();
 }
 
 fn extract_system_symbol(waypoint_symbol: &WaypointSymbol) -> SystemSymbol {
@@ -220,13 +445,6 @@ async fn list_waypoints_of_system(
     system_symbol: &SystemSymbol,
     pagination_input: PaginationInput,
 ) -> ListWaypointsInSystemResponse {
-    /*
-     --url 'https://api.spacetraders.io/v2/systems/systemSymbol/waypoints?type=JUMP_GATE' \
-    */
-    /*
-     --url 'https://api.spacetraders.io/v2/systems/X1-ND96/waypoints?page=1&limit=20&type=JUMP_GATE' \
-    */
-
     let query_param_list = [
         ("page", pagination_input.page.to_string()),
         ("limit", pagination_input.limit.to_string()),

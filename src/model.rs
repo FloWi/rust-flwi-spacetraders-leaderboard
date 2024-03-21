@@ -22,8 +22,8 @@ pub struct AgentInfoResponse {
 #[serde(rename_all = "camelCase")]
 pub struct ConstructionMaterial {
     pub trade_symbol: String,
-    pub required: i64,
-    pub fulfilled: i64,
+    pub required: u32,
+    pub fulfilled: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
