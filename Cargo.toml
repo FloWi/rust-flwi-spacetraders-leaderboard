@@ -18,3 +18,5 @@ itertools = "0.12.1"
 polars = { version = "0.38.3", features = ["lazy", "parquet", "dtype-struct"] }
 chrono = { version = "0.4.35", features = ["serde"] }
 anyhow = "1.0.81"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = [] }
