@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\ninsert into agent_log (agent_id, job_id, credits, ship_count)\nvalues (?, ?, ?, ?)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "9b5f0d2c7fa54aa0f3f9b7acb720ea4d3e55475133eae825bea8b92d7c467952"
+}

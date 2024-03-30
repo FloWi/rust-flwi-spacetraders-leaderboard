@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\nselect id, reset_id, trade_symbol, required\n  from construction_requirement\n where reset_id = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "reset_id",
+        "ordinal": 1,
+        "type_info": "Int64"
+      },
+      {
+        "name": "trade_symbol",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "required",
+        "ordinal": 3,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "de406a3041ee84f1f289602f45f046e756df78bde032701c909601350c583cd8"
+}

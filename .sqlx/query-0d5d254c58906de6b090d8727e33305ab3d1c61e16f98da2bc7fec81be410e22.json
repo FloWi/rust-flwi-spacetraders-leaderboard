@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\ninsert into reset_date (reset, first_ts) \nVALUES (?, ?)\nreturning reset_id, reset, first_ts\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "reset_id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "reset",
+        "ordinal": 1,
+        "type_info": "Date"
+      },
+      {
+        "name": "first_ts",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "0d5d254c58906de6b090d8727e33305ab3d1c61e16f98da2bc7fec81be410e22"
+}

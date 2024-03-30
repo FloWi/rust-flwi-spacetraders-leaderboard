@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\ninsert into construction_requirement (reset_id, trade_symbol, required)\nvalues (?, ?, ?)\non conflict (reset_id, trade_symbol) do nothing\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "410295bcd454aa17504d053bbd9edb549841d9394a87cb2fa4999178c37c1c57"
+}

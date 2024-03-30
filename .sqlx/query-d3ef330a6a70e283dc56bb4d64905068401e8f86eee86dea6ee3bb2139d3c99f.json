@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\ninsert into construction_material_log (construction_log_id, construction_requirement_id, fulfilled)\nvalues (?, ?, ?)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "d3ef330a6a70e283dc56bb4d64905068401e8f86eee86dea6ee3bb2139d3c99f"
+}

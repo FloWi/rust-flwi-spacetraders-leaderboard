@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\ninsert into static_agent_info (agent_symbol, agent_headquarters_waypoint_symbol, construction_site_id, starting_faction, reset_id, query_time)\nvalues (?, ?, ?, ?, ?, ?)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "7c5630a2bfa9cdf84be35cb825d2a96f536403b4db4f9b6d0fe52a1c20e586f4"
+}

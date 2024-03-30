@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "\nselect id\n     , agent_symbol\n     , construction_site_id\n     , starting_faction\n     , reset_id\n     , query_time\n  from static_agent_info\n where reset_id = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "agent_symbol",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "construction_site_id",
+        "ordinal": 2,
+        "type_info": "Int64"
+      },
+      {
+        "name": "starting_faction",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "reset_id",
+        "ordinal": 4,
+        "type_info": "Int64"
+      },
+      {
+        "name": "query_time",
+        "ordinal": 5,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "8cf70d31463d5d2a6907cd8a0114466729bfdecf6ea9a769c02204ae903e96a3"
+}

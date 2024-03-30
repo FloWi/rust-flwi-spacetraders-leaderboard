@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\ninsert into job_run (reset_id, query_time) \nVALUES (?, ?)\nreturning id, reset_id, query_time\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "reset_id",
+        "ordinal": 1,
+        "type_info": "Int64"
+      },
+      {
+        "name": "query_time",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "84fd6ccf00bf7d5f871fd89618628a96d7f6d5de9693cde167673b42d1ee2379"
+}

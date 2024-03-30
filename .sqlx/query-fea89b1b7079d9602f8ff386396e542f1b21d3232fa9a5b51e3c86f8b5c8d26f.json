@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\ninsert into construction_site (reset_id, jump_gate_waypoint_symbol)\nvalues (?, ?)\non conflict (reset_id, jump_gate_waypoint_symbol) do nothing\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "fea89b1b7079d9602f8ff386396e542f1b21d3232fa9a5b51e3c86f8b5c8d26f"
+}

@@ -19,7 +19,7 @@ pub struct LeaderboardCurrentAgentInfo {
     pub ship_count: u32,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LeaderboardCurrentConstructionInfo {
     pub symbol: WaypointSymbol,

@@ -18,7 +18,7 @@ pub struct AgentInfoResponse {
     pub data: AgentInfoResponseData,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ConstructionMaterial {
     pub trade_symbol: String,
@@ -112,13 +112,6 @@ pub struct Chart {
     pub waypoint_symbol: Option<String>,
     pub submitted_by: String,
     pub submitted_on: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Struct {
-    pub symbol: String,
-    pub name: String,
-    pub description: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

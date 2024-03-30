@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\nselect id\n     , reset_id\n     , jump_gate_waypoint_symbol\n  from construction_site\n where reset_id = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "reset_id",
+        "ordinal": 1,
+        "type_info": "Int64"
+      },
+      {
+        "name": "jump_gate_waypoint_symbol",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "92ec310ad999f108919c554928311570e971876955e35d1887abffd17e85f14e"
+}
