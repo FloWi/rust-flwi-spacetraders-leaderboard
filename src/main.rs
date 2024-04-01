@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::error::Error;
 use std::time::Duration;
 
+use anyhow::Result;
 use chrono::{Local, NaiveDate};
 use futures::future::join_all;
 use itertools::Itertools;
@@ -34,7 +35,7 @@ mod st_client;
 mod db;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<()> {
     tracing_subscriber::registry()
         .with(fmt::layer())
         .with(EnvFilter::from_default_env())
@@ -72,7 +73,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn perform_tick(client: &StClient) -> Result<(), Box<dyn Error>> {
+async fn perform_tick(client: &StClient) -> Result<()> {
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .connect("sqlite://data/flwi-leaderboard.db?mode=rwc")
@@ -196,7 +197,7 @@ fn determine_missing_agent_symbols(
 async fn load_static_agent_infos(
     client: &StClient,
     agent_symbols: Vec<String>,
-) -> Result<Vec<LeaderboardStaticAgentInfo>, Box<dyn Error>> {
+) -> Result<Vec<LeaderboardStaticAgentInfo>> {
     let static_agent_futures: Vec<_> = agent_symbols
         .iter()
         .map(|a| get_static_agent_info(&client, AgentSymbol(a.to_string())))
@@ -211,7 +212,7 @@ async fn load_static_agent_infos(
 
     let joined = join_all(static_agent_futures).await;
 
-    let static_agent_info_results: Result<Vec<LeaderboardStaticAgentInfo>, Box<dyn Error>> =
+    let static_agent_info_results: Result<Vec<LeaderboardStaticAgentInfo>> =
         joined.into_iter().collect();
 
     static_agent_info_results
@@ -221,13 +222,10 @@ async fn collect_data(
     client: &StClient,
     static_agent_infos: Vec<DbStaticAgentInfo>,
     construction_sites: Vec<DbConstructionSite>,
-) -> Result<
-    (
-        Vec<LeaderboardCurrentAgentInfo>,
-        Vec<LeaderboardCurrentConstructionInfo>,
-    ),
-    Box<dyn Error>,
-> {
+) -> Result<(
+    Vec<LeaderboardCurrentAgentInfo>,
+    Vec<LeaderboardCurrentConstructionInfo>,
+)> {
     let current_agent_infos = collect_current_agent_infos(client, static_agent_infos).await?;
     let current_construction_infos =
         collect_current_construction_infos(client, construction_sites).await?;
@@ -238,7 +236,7 @@ async fn collect_data(
 async fn collect_current_agent_infos(
     client: &StClient,
     static_agent_infos: Vec<DbStaticAgentInfo>,
-) -> Result<Vec<LeaderboardCurrentAgentInfo>, Box<dyn Error>> {
+) -> Result<Vec<LeaderboardCurrentAgentInfo>> {
     let current_agent_futures: Vec<_> = static_agent_infos
         .clone()
         .into_iter()
@@ -251,7 +249,7 @@ async fn collect_current_agent_infos(
 async fn collect_current_construction_infos(
     client: &StClient,
     construction_sites: Vec<DbConstructionSite>,
-) -> Result<Vec<LeaderboardCurrentConstructionInfo>, Box<dyn Error>> {
+) -> Result<Vec<LeaderboardCurrentConstructionInfo>> {
     let current_agent_futures: Vec<_> = construction_sites
         .clone()
         .into_iter()
@@ -271,7 +269,7 @@ fn extract_system_symbol(waypoint_symbol: &WaypointSymbol) -> SystemSymbol {
 async fn get_static_agent_info(
     client: &StClient,
     agent_symbol: AgentSymbol,
-) -> Result<LeaderboardStaticAgentInfo, Box<dyn Error>> {
+) -> Result<LeaderboardStaticAgentInfo> {
     let agent_info = client.get_public_agent(&agent_symbol).await?.data;
     let headquarters = WaypointSymbol(agent_info.headquarters);
     let system_symbol = extract_system_symbol(&headquarters);
@@ -290,7 +288,7 @@ async fn get_static_agent_info(
 async fn get_current_agent_info(
     client: &StClient,
     agent_symbol: AgentSymbol,
-) -> Result<LeaderboardCurrentAgentInfo, Box<dyn Error>> {
+) -> Result<LeaderboardCurrentAgentInfo> {
     let agent_info = client.get_public_agent(&agent_symbol).await?.data;
     Ok(LeaderboardCurrentAgentInfo {
         symbol: agent_symbol,
@@ -302,7 +300,7 @@ async fn get_current_agent_info(
 async fn get_current_construction(
     client: &StClient,
     waypoint_symbol: WaypointSymbol,
-) -> Result<LeaderboardCurrentConstructionInfo, Box<dyn Error>> {
+) -> Result<LeaderboardCurrentConstructionInfo> {
     let construction_site_info = client.get_construction_site(&waypoint_symbol).await?.data;
     Ok(LeaderboardCurrentConstructionInfo {
         symbol: waypoint_symbol.clone(),
@@ -312,7 +310,7 @@ async fn get_current_construction(
 }
 
 // example for paginated fetching
-async fn download_all_agents(client: &StClient) -> Result<(), Box<dyn Error>> {
+async fn download_all_agents(client: &StClient) -> Result<()> {
     event!(Level::INFO, "Downloading all agents");
 
     let results = paginate(|p| client.list_agents_page(p)).await;
