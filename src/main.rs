@@ -1,12 +1,13 @@
 use std::collections::HashSet;
 use std::error::Error;
+use std::time::Duration;
 
 use chrono::{Local, NaiveDate};
 use futures::future::join_all;
 use itertools::Itertools;
 use sqlx::sqlite::SqlitePoolOptions;
+use tokio_cron_scheduler::{Job, JobScheduler};
 use tracing::{event, Level};
-use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 use model::{AgentSymbol, FactionSymbol, SystemSymbol, WaypointSymbol};
@@ -39,9 +40,35 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .with(EnvFilter::from_default_env())
         .init();
 
-    let reqwest_client_with_middleware = create_client();
-    let client = StClient::new(reqwest_client_with_middleware);
-    perform_tick(&client).await?;
+    let mut sched = JobScheduler::new().await?;
+
+    // Add async job
+    sched
+        .add(Job::new_async("0 */5 * * * *", |uuid, mut l| {
+            Box::pin(async move {
+                println!("I run async every 5 minutes");
+
+                let reqwest_client_with_middleware = create_client();
+                let client = StClient::new(reqwest_client_with_middleware);
+
+                let _ = perform_tick(&client).await;
+
+                // Query the next execution time for this job
+                let next_tick = l.next_tick_for_job(uuid).await;
+                match next_tick {
+                    Ok(Some(ts)) => println!("Next time for 5min job is {:?}", ts),
+                    _ => println!("Could not get next tick for 5min job"),
+                }
+            })
+        })?)
+        .await?;
+
+    // Start the scheduler
+    sched.start().await?;
+
+    // Just run the whole thing for 1h
+    tokio::time::sleep(Duration::from_secs(60 * 60)).await;
+
     Ok(())
 }
 
@@ -282,4 +309,28 @@ async fn get_current_construction(
         materials: construction_site_info.materials,
         is_complete: construction_site_info.is_complete,
     })
+}
+
+// example for paginated fetching
+async fn download_all_agents(client: &StClient) -> Result<(), Box<dyn Error>> {
+    event!(Level::INFO, "Downloading all agents");
+
+    let results = paginate(|p| client.list_agents_page(p)).await;
+
+    let headquarters: Vec<String> = results
+        .iter()
+        .flat_map(|page| &page.data)
+        .into_iter()
+        .map(|a| a.headquarters.clone())
+        .unique()
+        .collect();
+
+    event!(
+        Level::INFO,
+        "Done downloading all agents: Agents: {num_agents}, Number of distinct headquarters: {num_distinct_headquarters}",
+        num_agents = results.len(),
+        num_distinct_headquarters = headquarters.len()
+    );
+
+    Ok(())
 }
