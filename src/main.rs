@@ -47,8 +47,6 @@ async fn main() -> Result<()> {
     sched
         .add(Job::new_async("0 */5 * * * *", |uuid, mut l| {
             Box::pin(async move {
-                println!("I run async every 5 minutes");
-
                 let reqwest_client_with_middleware = create_client();
                 let client = StClient::new(reqwest_client_with_middleware);
 
@@ -57,8 +55,8 @@ async fn main() -> Result<()> {
                 // Query the next execution time for this job
                 let next_tick = l.next_tick_for_job(uuid).await;
                 match next_tick {
-                    Ok(Some(ts)) => println!("Next time for 5min job is {:?}", ts),
-                    _ => println!("Could not get next tick for 5min job"),
+                    Ok(Some(ts)) => event!(Level::INFO, "Next time for 5min job is {:?}", ts),
+                    _ => event!(Level::INFO, "Could not get next tick for 5min job"),
                 }
             })
         })?)
