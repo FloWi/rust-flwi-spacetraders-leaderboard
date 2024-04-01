@@ -45,7 +45,7 @@ pub struct GetConstructionResponse {
 pub struct AgentInfoResponseData {
     pub symbol: String,
     pub headquarters: String,
-    pub credits: u64,
+    pub credits: i64,
     pub starting_faction: String,
     pub ship_count: u32,
 }
@@ -137,11 +137,24 @@ pub struct ListWaypointsInSystemResponseData {
     pub is_under_construction: bool,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ListAgentsResponse {
+    pub data: Vec<AgentInfoResponseData>,
+    pub meta: Meta,
+}
+
 pub trait GetMeta {
     fn get_meta(&self) -> Meta;
 }
 
 impl GetMeta for ListWaypointsInSystemResponse {
+    fn get_meta(&self) -> Meta {
+        self.meta
+    }
+}
+
+impl GetMeta for ListAgentsResponse {
     fn get_meta(&self) -> Meta {
         self.meta
     }

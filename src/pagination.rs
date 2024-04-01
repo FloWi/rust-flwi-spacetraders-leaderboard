@@ -1,6 +1,7 @@
 use std::future::Future;
 
 use futures::future::join_all;
+use tracing::{event, span, Level};
 
 use crate::model::GetMeta;
 
@@ -13,6 +14,11 @@ pub async fn paginate<F, T: GetMeta>(call: impl Fn(PaginationInput) -> F) -> Vec
 where
     F: Future<Output = T>,
 {
+    let span = span!(Level::TRACE, "pagination");
+    let _ = span.enter();
+
+    event!(Level::TRACE, "Start downloading all pages");
+
     let first_page = call(PaginationInput { page: 1, limit: 20 }).await;
     let meta = first_page.get_meta();
 
@@ -20,9 +26,17 @@ where
 
     let futures: Vec<_> = (2..=total_number_pages)
         .into_iter()
-        .map(|p| call(PaginationInput { page: p, limit: 20 }))
+        .map(|p| {
+            event!(Level::TRACE, "Downloading page {p} of {total_number_pages}",);
+            call(PaginationInput { page: p, limit: 20 })
+        })
         .collect();
     let rest_results: Vec<_> = join_all(futures).await.into_iter().collect();
+
+    event!(
+        Level::TRACE,
+        "Done downloading rest of {total_number_pages} pages"
+    );
 
     //let futures: Vec<_> = resp.leaderboards.most_credits.iter().map(|a| get_static_agent_info(&client, AgentSymbol(a.agent_symbol.to_string()))).collect();
 

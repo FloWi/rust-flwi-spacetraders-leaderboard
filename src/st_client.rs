@@ -3,8 +3,8 @@ use reqwest_middleware::ClientWithMiddleware;
 
 use crate::extract_system_symbol;
 use crate::model::{
-    AgentInfoResponse, AgentSymbol, GetConstructionResponse, ListWaypointsInSystemResponse,
-    StStatusResponse, SystemSymbol, WaypointSymbol,
+    AgentInfoResponse, AgentSymbol, GetConstructionResponse, ListAgentsResponse,
+    ListWaypointsInSystemResponse, StStatusResponse, SystemSymbol, WaypointSymbol,
 };
 use crate::pagination::PaginationInput;
 
@@ -89,6 +89,25 @@ impl StClient {
         let resp = request.send().await?;
 
         Ok(resp.json().await?)
+    }
+
+    pub(crate) async fn list_agents_page(
+        &self,
+        pagination_input: PaginationInput,
+    ) -> ListAgentsResponse {
+        let query_param_list = [
+            ("page", pagination_input.page.to_string()),
+            ("limit", pagination_input.limit.to_string()),
+        ];
+
+        let request = self
+            .client
+            .get("https://api.spacetraders.io/v2/agents".to_string())
+            .query(&query_param_list);
+
+        let resp = request.send().await.unwrap();
+
+        resp.json().await.unwrap()
     }
 
     pub(crate) async fn get_status(&self) -> Result<StStatusResponse> {

@@ -7,6 +7,7 @@ use itertools::Itertools;
 use sqlx::sqlite::SqlitePoolOptions;
 use tracing::{event, Level};
 use tracing_subscriber::fmt::format::FmtSpan;
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 use model::{AgentSymbol, FactionSymbol, SystemSymbol, WaypointSymbol};
 
@@ -18,7 +19,8 @@ use crate::db::{
 use crate::leaderboard_model::{
     LeaderboardCurrentAgentInfo, LeaderboardCurrentConstructionInfo, LeaderboardStaticAgentInfo,
 };
-use crate::model::StStatusResponse;
+use crate::model::{GetMeta, StStatusResponse};
+use crate::pagination::paginate;
 use crate::reqwest_helpers::create_client;
 use crate::st_client::StClient;
 
@@ -32,13 +34,18 @@ mod db;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let reqwest_client_with_middleware = create_client();
-    let client = StClient::new(reqwest_client_with_middleware);
-
-    tracing_subscriber::fmt()
-        .with_span_events(FmtSpan::CLOSE)
+    tracing_subscriber::registry()
+        .with(fmt::layer())
+        .with(EnvFilter::from_default_env())
         .init();
 
+    let reqwest_client_with_middleware = create_client();
+    let client = StClient::new(reqwest_client_with_middleware);
+    perform_tick(&client).await?;
+    Ok(())
+}
+
+async fn perform_tick(client: &StClient) -> Result<(), Box<dyn Error>> {
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .connect("sqlite://data/flwi-leaderboard.db?mode=rwc")
@@ -69,7 +76,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     event!(
         Level::INFO,
-        "Of these {num} agent_symbols are new: {infos:?}",
+        "{num} agent_symbols are new: {infos:?}",
         num = new_agent_symbols.len(),
         infos = new_agent_symbols
     );
@@ -95,11 +102,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let static_agent_infos: Vec<DbStaticAgentInfo> =
         select_static_agent_infos_for_reset(&pool, reset_date_db).await?;
 
+    let num_agents = static_agent_infos.len();
+    let num_construction_sites = construction_sites.len();
+
     event!(
         Level::INFO,
         "Downloading current infos for {num_agents} agents and {num_construction_sites} construction sites",
-        num_agents = static_agent_info_results.len(),
-        num_construction_sites = construction_sites.len(),
     );
 
     let (current_agent_entries, current_construction_entries) =
@@ -118,72 +126,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .await;
 
-    panic!("early exit");
-
-    // TODO: Figure out how type-inference works with Vec<Future<Result<Foo, Err>>>
-
-    let jump_gate_waypoints: Vec<WaypointSymbol> = static_agent_info_results
-        .clone()
-        .into_iter()
-        .map(|sad| sad.jump_gate)
-        .unique()
-        .collect();
-
-    let construction_site_futures: Vec<_> = jump_gate_waypoints
-        .iter()
-        .map(|a| get_current_construction(&client, a.clone()))
-        .collect();
-
-    let num_construction_sites = construction_site_futures.len();
     event!(
         Level::INFO,
-        "Downloading construction site infos for {} jump gates",
-        num_construction_sites
-    );
-
-    let construction_site_results: Result<Vec<LeaderboardCurrentConstructionInfo>, Box<dyn Error>> =
-        join_all(construction_site_futures)
-            .await
-            .into_iter()
-            .collect();
-
-    let construction_site_results = construction_site_results?;
-
-    event!(
-        Level::INFO,
-        "Done downloading construction site infos for {} jump gates",
-        num_construction_sites
-    );
-
-    event!(
-        Level::INFO,
-        "found static agent infos for {} agents",
-        static_agent_info_results.len()
-    );
-    for r in &static_agent_info_results {
-        event!(Level::INFO, "{:?}", r)
-    }
-
-    event!(
-        Level::INFO,
-        "found {} distinct jump-gate waypoints",
-        num_construction_sites
-    );
-    for r in &construction_site_results {
-        event!(Level::INFO, "{:?}", r)
-    }
-
-    let num_completed_jump_gates = &construction_site_results
-        .iter()
-        .clone()
-        .filter(|c| c.is_complete)
-        .count();
-
-    event!(
-        Level::INFO,
-        "{} out of {} jump gates are completed",
-        num_completed_jump_gates,
-        num_construction_sites
+        "Done collecting current infos for {num_agents} agents and {num_construction_sites} construction sites",
     );
 
     Ok(())

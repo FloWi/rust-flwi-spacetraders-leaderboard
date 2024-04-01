@@ -15,7 +15,7 @@ pub struct LeaderboardStaticAgentInfo {
 #[serde(rename_all = "camelCase")]
 pub struct LeaderboardCurrentAgentInfo {
     pub symbol: AgentSymbol,
-    pub credits: u64,
+    pub credits: i64,
     pub ship_count: u32,
 }
 
