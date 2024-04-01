@@ -1,13 +1,14 @@
 use std::collections::HashSet;
 use std::error::Error;
+use std::future::Future;
 use std::time::Duration;
 
 use anyhow::Result;
-use chrono::{Local, NaiveDate};
+use chrono::{DateTime, Local, NaiveDate, Utc};
 use futures::future::join_all;
 use itertools::Itertools;
 use sqlx::sqlite::SqlitePoolOptions;
-use tokio_cron_scheduler::{Job, JobScheduler};
+use tokio_cron_scheduler::{Job, JobScheduler, JobSchedulerError};
 use tracing::{event, Level};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
@@ -44,26 +45,31 @@ async fn main() -> Result<()> {
     let mut sched = JobScheduler::new().await?;
 
     // Add async job
-    sched
-        .add(Job::new_async("0 */5 * * * *", |uuid, mut l| {
-            Box::pin(async move {
-                let reqwest_client_with_middleware = create_client();
-                let client = StClient::new(reqwest_client_with_middleware);
+    let job = Job::new_async("0 */5 * * * *", |uuid, mut l| {
+        Box::pin(async move {
+            let reqwest_client_with_middleware = create_client();
+            let client = StClient::new(reqwest_client_with_middleware);
 
-                let _ = perform_tick(&client).await;
+            let _ = perform_tick(&client).await;
 
-                // Query the next execution time for this job
-                let next_tick = l.next_tick_for_job(uuid).await;
-                match next_tick {
-                    Ok(Some(ts)) => event!(Level::INFO, "Next time for 5min job is {:?}", ts),
-                    _ => event!(Level::INFO, "Could not get next tick for 5min job"),
-                }
-            })
-        })?)
-        .await?;
+            // Query the next execution time for this job
+            let next_tick = l.next_tick_for_job(uuid).await;
+            match next_tick {
+                Ok(Some(ts)) => event!(Level::INFO, "Next time for 5min job is {:?}", ts),
+                _ => event!(Level::INFO, "Could not get next tick for 5min job"),
+            }
+        })
+    })?;
+
+    sched.add(job.clone()).await?;
 
     // Start the scheduler
     sched.start().await?;
+
+    match sched.next_tick_for_job(job.guid()).await {
+        Ok(Some(ts)) => event!(Level::INFO, "Next time for 5min job is {:?}", ts),
+        _ => event!(Level::INFO, "Could not get next tick for 5min job"),
+    }
 
     // Just run the whole thing for 1h
     tokio::time::sleep(Duration::from_secs(60 * 60)).await;
