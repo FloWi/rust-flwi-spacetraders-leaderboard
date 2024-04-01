@@ -25,8 +25,6 @@ use crate::st_client::StClient;
 mod leaderboard_model;
 mod model;
 mod pagination;
-mod polars_helper;
-mod polars_playground;
 mod reqwest_helpers;
 mod st_client;
 
