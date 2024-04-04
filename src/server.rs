@@ -1,15 +1,15 @@
 use std::io::Error;
-use std::net::{Ipv4Addr, SocketAddr};
 
 use axum::{response::Result, routing, Router};
 use sqlx::{Pool, Sqlite};
 use tokio::net::TcpListener;
+use tracing::{event, Level};
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 use utoipa_redoc::{Redoc, Servable};
 use utoipa_swagger_ui::SwaggerUi;
 
-pub async fn http_server(db: Pool<Sqlite>) -> Result<(), Error> {
+pub async fn http_server(db: Pool<Sqlite>, address: String) -> Result<(), Error> {
     let app = Router::new()
         .merge(
             SwaggerUi::new("/swagger-ui")
@@ -25,8 +25,13 @@ pub async fn http_server(db: Pool<Sqlite>) -> Result<(), Error> {
         )
         .with_state(db);
 
-    let address = SocketAddr::from((Ipv4Addr::new(127, 0, 0, 1), 8080));
-    let listener = TcpListener::bind(&address).await?;
+    let listener = TcpListener::bind(address).await?;
+    event!(
+        Level::INFO,
+        "listening on {}",
+        listener.local_addr().unwrap()
+    );
+
     axum::serve(listener, app.into_make_service()).await
 }
 

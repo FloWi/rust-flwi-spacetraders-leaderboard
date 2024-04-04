@@ -9,6 +9,7 @@ use tracing::{event, Level};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 use crate::leaderboard_collector::perform_tick;
+use crate::leaderboard_config::LeaderboardConfig;
 use crate::reqwest_helpers::create_client;
 use crate::server::http_server;
 use crate::st_client::StClient;
@@ -21,6 +22,7 @@ mod st_client;
 
 mod db;
 mod leaderboard_collector;
+mod leaderboard_config;
 mod server;
 
 #[tokio::main]
@@ -30,12 +32,17 @@ async fn main() -> Result<()> {
         .with(EnvFilter::from_default_env())
         .init();
 
+    let cfg = LeaderboardConfig::from_env_vars()?;
+
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
-        .connect("sqlite://data/flwi-leaderboard.db?mode=rwc")
+        .connect(cfg.database_url.as_str())
         .await?;
 
-    let _ = join!(background_collect(pool.clone()), http_server(pool.clone()));
+    let _ = join!(
+        background_collect(pool.clone()),
+        http_server(pool.clone(), cfg.bind_address())
+    );
 
     Ok(())
 }
