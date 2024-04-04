@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\nselect reset_id\n     , reset\n     , first_ts\n  from reset_date\n order by reset\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "reset_id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "reset",
+        "ordinal": 1,
+        "type_info": "Date"
+      },
+      {
+        "name": "first_ts",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7b7eb84735a8c08771aab0656e377b934cd581700fc08b08da45dc4ffe0004f6"
+}

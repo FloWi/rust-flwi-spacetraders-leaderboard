@@ -2,3 +2,4 @@
 data/*
 .hide
 .env
+.python-version

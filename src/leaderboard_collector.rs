@@ -29,9 +29,8 @@ pub async fn perform_tick(client: &StClient, pool: Pool<Sqlite>) -> anyhow::Resu
 
     event!(
         Level::INFO,
-        "Got these {num} static_agent_infos {infos:?}",
+        "Got {num} static_agent_infos",
         num = static_agent_infos.len(),
-        infos = static_agent_infos
     );
 
     let new_agent_symbols = determine_missing_agent_symbols(st_status, static_agent_infos);
