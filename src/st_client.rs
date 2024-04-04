@@ -1,10 +1,10 @@
 use anyhow::Result;
 use reqwest_middleware::ClientWithMiddleware;
 
-use crate::extract_system_symbol;
 use crate::model::{
-    AgentInfoResponse, AgentSymbol, GetConstructionResponse, ListAgentsResponse,
-    ListWaypointsInSystemResponse, StStatusResponse, SystemSymbol, WaypointSymbol,
+    extract_system_symbol, AgentInfoResponse, AgentSymbol, GetConstructionResponse,
+    ListAgentsResponse, ListWaypointsInSystemResponse, StStatusResponse, SystemSymbol,
+    WaypointSymbol,
 };
 use crate::pagination::PaginationInput;
 

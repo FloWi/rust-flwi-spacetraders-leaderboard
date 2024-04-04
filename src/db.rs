@@ -90,6 +90,21 @@ select reset_id
     .await
 }
 
+pub(crate) async fn load_reset_dates(pool: &Pool<Sqlite>) -> Result<Vec<ResetDate>, Error> {
+    sqlx::query_as!(
+        ResetDate,
+        "
+select reset_id
+     , reset
+     , first_ts
+  from reset_date
+ order by reset
+        "
+    )
+    .fetch_all(pool)
+    .await
+}
+
 pub(crate) async fn save_construction_sites(
     pool: &Pool<Sqlite>,
     reset_date: ResetDate,
@@ -368,7 +383,7 @@ select id, reset_id, trade_symbol, required
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub(crate) struct ResetDate {
     reset_id: i64,
-    reset: NaiveDate,
+    pub reset: NaiveDate,
     first_ts: NaiveDateTime,
 }
 

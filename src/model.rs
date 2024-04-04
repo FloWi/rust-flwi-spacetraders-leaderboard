@@ -159,3 +159,10 @@ impl GetMeta for ListAgentsResponse {
         self.meta
     }
 }
+
+pub(crate) fn extract_system_symbol(waypoint_symbol: &WaypointSymbol) -> SystemSymbol {
+    let parts: Vec<&str> = waypoint_symbol.0.split('-').collect();
+    // Join the first two parts with '-'
+    let first_two_parts = parts[..2].join("-");
+    SystemSymbol(first_two_parts)
+}

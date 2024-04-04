@@ -21,3 +21,8 @@ tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18" , features = ["env-filter", "std"]}
 sqlx = { version = "0.7.4", features = ["sqlite", "runtime-tokio-native-tls", "chrono"] }
 tokio-cron-scheduler = "0.10.0"
+axum = "0.7.5"
+utoipa = { version = "4.2.0", features = ["axum_extras", "chrono"] }
+utoipa-swagger-ui = { version = "6.0.0", features = ["axum"] }
+utoipa-redoc = { version = "3.0.0", features = ["axum"] }
+utoipa-rapidoc = { version = "3.0.0", features = ["axum"] }
