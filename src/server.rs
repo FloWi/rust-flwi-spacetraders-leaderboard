@@ -3,6 +3,7 @@ use std::io::Error;
 use axum::{response::Result, routing, Router};
 use sqlx::{Pool, Sqlite};
 use tokio::net::TcpListener;
+use tower_http::cors::CorsLayer;
 use tracing::{event, Level};
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
@@ -23,6 +24,7 @@ pub async fn http_server(db: Pool<Sqlite>, address: String) -> Result<(), Error>
             "/api/reset-dates",
             routing::get(leaderboard::get_reset_dates),
         )
+        .layer(CorsLayer::very_permissive())
         .with_state(db);
 
     let listener = TcpListener::bind(address).await?;
