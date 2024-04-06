@@ -3,3 +3,4 @@ data/*
 .hide
 .env
 .python-version
+routeTree.gen.ts
