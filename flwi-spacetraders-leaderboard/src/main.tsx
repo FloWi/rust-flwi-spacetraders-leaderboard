@@ -1,11 +1,15 @@
 import {StrictMode} from 'react'
 import ReactDOM from 'react-dom/client'
 import {createRouter, RouterProvider} from '@tanstack/react-router'
-
 import './index.css'
 
 // Import the generated route tree
 import {routeTree} from './routeTree.gen'
+import {OpenAPI} from "../generated";
+
+// Setting a mutable variable seems to be the way to go in js-land :sob:
+OpenAPI.BASE = 'http://localhost:8080'
+
 
 // Create a new router instance
 const router = createRouter({ routeTree })
