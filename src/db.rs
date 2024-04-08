@@ -105,6 +105,35 @@ select reset_id
     .await
 }
 
+pub(crate) async fn load_leaderboard_for_reset(
+    pool: &Pool<Sqlite>,
+    reset_date: NaiveDate,
+) -> Result<Vec<LeaderboardEntry>, Error> {
+    sqlx::query_as!(
+        LeaderboardEntry,
+        "
+select agent_symbol
+     , credits
+     , ship_count
+     , agent_headquarters_waypoint_symbol
+     , jump_gate_waypoint_symbol
+from agent_log a
+         join static_agent_info sai on a.agent_id = sai.id
+         join main.construction_site cs on sai.construction_site_id = cs.id
+where job_id = (select id
+                from job_run j
+                         join reset_date rd on j.reset_id = rd.reset_id
+                where rd.reset = ?
+                order by datetime(query_time) desc
+                limit 1)
+order by credits desc, ship_count desc
+",
+        reset_date
+    )
+    .fetch_all(pool)
+    .await
+}
+
 pub(crate) async fn save_construction_sites(
     pool: &Pool<Sqlite>,
     reset_date: ResetDate,
@@ -385,6 +414,15 @@ pub(crate) struct ResetDate {
     reset_id: i64,
     pub reset: NaiveDate,
     first_ts: NaiveDateTime,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub(crate) struct LeaderboardEntry {
+    pub agent_symbol: String,
+    pub credits: i64,
+    pub ship_count: i64,
+    pub agent_headquarters_waypoint_symbol: String,
+    pub jump_gate_waypoint_symbol: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

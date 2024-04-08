@@ -24,6 +24,10 @@ pub async fn http_server(db: Pool<Sqlite>, address: String) -> Result<(), Error>
             "/api/reset-dates",
             routing::get(leaderboard::get_reset_dates),
         )
+        .route(
+            "/api/leaderboard/:reset_date",
+            routing::get(leaderboard::get_leaderboard),
+        )
         .layer(CorsLayer::very_permissive())
         .with_state(db);
 
@@ -38,29 +42,58 @@ pub async fn http_server(db: Pool<Sqlite>, address: String) -> Result<(), Error>
 }
 
 mod leaderboard {
-    use axum::extract::State;
+    use axum::extract::{Path, State};
     use axum::Json;
     use chrono::format::StrftimeItems;
+    use chrono::NaiveDate;
     use serde::{Deserialize, Serialize};
     use sqlx::{Pool, Sqlite};
     use utoipa::{OpenApi, ToSchema};
 
-    use crate::db::load_reset_dates;
+    use crate::db::{load_leaderboard_for_reset, load_reset_dates};
+    use crate::model::AgentSymbol;
 
     #[derive(OpenApi)]
     #[openapi(
-        paths(get_reset_dates),
-        components(schemas(ListResetDatesResponseContent), schemas(ApiResetDate))
+        paths(get_reset_dates, get_leaderboard),
+        components(
+            schemas(ListResetDatesResponseContent),
+            schemas(ApiResetDate),
+            schemas(GetLeaderboardForResetResponseContent),
+            schemas(ApiLeaderboardEntry),
+            schemas(ApiAgentSymbol),
+        )
     )]
     pub(crate) struct ApiDoc;
 
     #[derive(Serialize, Deserialize, ToSchema)]
+    #[serde(rename_all = "camelCase")]
     pub(crate) struct ListResetDatesResponseContent {
         reset_dates: Vec<ApiResetDate>,
     }
 
     #[derive(Serialize, Deserialize, ToSchema)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct GetLeaderboardForResetResponseContent {
+        reset_date: ApiResetDate,
+        leaderboard_entries: Vec<ApiLeaderboardEntry>,
+    }
+
+    #[derive(Serialize, Deserialize, ToSchema)]
+    #[serde(rename_all = "camelCase")]
     pub(crate) struct ApiResetDate(pub String);
+
+    #[derive(Serialize, Deserialize, ToSchema)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct ApiAgentSymbol(pub String);
+
+    #[derive(Serialize, Deserialize, ToSchema)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct ApiLeaderboardEntry {
+        agent_symbol: ApiAgentSymbol,
+        credits: i64,
+        ship_count: i64,
+    }
 
     /// List all reset-dates
     #[utoipa::path(get, path = "/api/reset-dates", responses((status = 200, body = ListResetDatesResponseContent)))]
@@ -76,6 +109,35 @@ mod leaderboard {
 
         Json(ListResetDatesResponseContent {
             reset_dates: response,
+        })
+    }
+
+    /// Get the leaderboard for a reset.
+    #[utoipa::path(
+    get,
+    path = "/api/leaderboard/{resetDate}",
+    responses((status = 200, body = GetLeaderboardForResetResponseContent)),
+    params(
+        ("resetDate" = NaiveDate, Path, description = "The reset date"),
+    )
+    )]
+    pub(crate) async fn get_leaderboard(
+        State(pool): State<Pool<Sqlite>>,
+        Path(reset_date): Path<NaiveDate>,
+    ) -> Json<GetLeaderboardForResetResponseContent> {
+        let reset_dates = load_leaderboard_for_reset(&pool, reset_date).await.unwrap();
+        let response = reset_dates
+            .iter()
+            .map(|r| ApiLeaderboardEntry {
+                agent_symbol: ApiAgentSymbol(r.agent_symbol.clone()),
+                credits: r.credits,
+                ship_count: r.ship_count,
+            })
+            .collect();
+
+        Json(GetLeaderboardForResetResponseContent {
+            reset_date: ApiResetDate(reset_date.format("%Y-%m-%d").to_string()),
+            leaderboard_entries: response,
         })
     }
 }
