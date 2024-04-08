@@ -1,5 +1,8 @@
 import {createFileRoute, Link, Outlet} from '@tanstack/react-router'
-import {CrateService} from "../../../generated-src";
+
+import {CrateService, OpenAPI} from "../../../generated";
+
+OpenAPI.BASE = 'http://localhost:8080'
 
 export const Route = createFileRoute('/reset')({
   component: ResetRouteComponent,
@@ -9,7 +12,7 @@ export const Route = createFileRoute('/reset')({
 
 function ResetRouteComponent() {
   const resetDates = Route.useLoaderData();
-  let latestReset = resetDates.reset_dates.toSorted().toReversed().at(0);
+  let latestReset = resetDates.resetDates.toSorted().toReversed().at(0);
 
   return (
     <>
@@ -19,12 +22,23 @@ function ResetRouteComponent() {
 
           <nav>
             <ul>
-              {latestReset != undefined &&
-                <Link to="/reset/leaderboard"
-                      params={{resetDate: "latest"}}
-                      className="[&.active]:font-bold">
-                  Latest Reset
-                </Link>}
+              <li key="latest">
+                {latestReset != undefined &&
+                  <Link to="/reset/leaderboard"
+                        search={{resetDate: latestReset}}
+                        className="[&.active]:font-bold">
+                    Latest Reset
+                  </Link>}
+              </li>
+              {resetDates.resetDates.toSorted().toReversed().map((date, idx) =>
+                <li key={idx}>
+                  <Link to="/reset/leaderboard"
+                        search={{resetDate: date}}
+                        className="[&.active]:font-bold">
+                    {date}
+                  </Link>
+                </li>)
+              }
 
             </ul>
           </nav>
