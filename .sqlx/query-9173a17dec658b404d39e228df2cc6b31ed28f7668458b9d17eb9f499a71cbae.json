@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\nselect agent_symbol\n     , credits\n     , ship_count\n     , agent_headquarters_waypoint_symbol\n     , jump_gate_waypoint_symbol\nfrom agent_log a\n         join static_agent_info sai on a.agent_id = sai.id\n         join main.construction_site cs on sai.construction_site_id = cs.id\nwhere job_id = (select id\n                from job_run j\n                         join reset_date rd on j.reset_id = rd.reset_id\n                where rd.reset = ?\n                order by datetime(query_time) desc\n                limit 1)\norder by credits desc, ship_count desc\n",
+  "describe": {
+    "columns": [
+      {
+        "name": "agent_symbol",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "credits",
+        "ordinal": 1,
+        "type_info": "Int64"
+      },
+      {
+        "name": "ship_count",
+        "ordinal": 2,
+        "type_info": "Int64"
+      },
+      {
+        "name": "agent_headquarters_waypoint_symbol",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "jump_gate_waypoint_symbol",
+        "ordinal": 4,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9173a17dec658b404d39e228df2cc6b31ed28f7668458b9d17eb9f499a71cbae"
+}
