@@ -9,4 +9,16 @@ export default defineConfig({
     react(),
     TanStackRouterVite(),
   ],
+
+  server: {
+    proxy: {
+      // For requests to /api/**, drop the prefix and proxy the rest to the backend.
+      "/api": {
+        target: "http://localhost:8080",
+        //changeOrigin: true,
+        //secure: false,
+        //rewrite: path => path.replace('/api', '/api'),
+      },
+    },
+  }
 })

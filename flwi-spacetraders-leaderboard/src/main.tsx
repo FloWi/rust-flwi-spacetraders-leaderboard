@@ -8,11 +8,10 @@ import {routeTree} from './routeTree.gen'
 import {OpenAPI} from "../generated";
 
 // Setting a mutable variable seems to be the way to go in js-land :sob:
-OpenAPI.BASE = 'http://localhost:8080'
-
+OpenAPI.BASE = `${window.location.origin}`
 
 // Create a new router instance
-const router = createRouter({ routeTree })
+const router = createRouter({routeTree})
 
 // Register the router instance for type safety
 declare module '@tanstack/react-router' {
@@ -27,7 +26,7 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
     <StrictMode>
-      <RouterProvider router={router} />
+      <RouterProvider router={router}/>
     </StrictMode>,
   )
 }
