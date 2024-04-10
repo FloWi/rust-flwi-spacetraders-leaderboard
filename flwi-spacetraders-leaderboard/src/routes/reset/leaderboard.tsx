@@ -1,7 +1,7 @@
 import {createFileRoute} from '@tanstack/react-router'
 import {ApiLeaderboardEntry, CrateService} from "../../../generated";
 
-import {createColumnHelper, flexRender, getCoreRowModel, getSortedRowModel, SortingState, useReactTable,} from '@tanstack/react-table'
+import {createColumnHelper, flexRender, getCoreRowModel, getSortedRowModel, SortingState, Table, useReactTable,} from '@tanstack/react-table'
 import React from "react";
 
 
@@ -11,7 +11,7 @@ type LeaderboardSearch = {
 
 const columnHelper = createColumnHelper<ApiLeaderboardEntry>()
 let numberFmt = new Intl.NumberFormat();
-numberFmt.format(1234567)
+
 const columns = [
   columnHelper.accessor('agentSymbol', {
     cell: info => info.getValue(),
@@ -49,6 +49,74 @@ export const Route = createFileRoute('/reset/leaderboard')({
 
 })
 
+
+function prettyTable<T>(table: Table<T>) {
+  let prettyTable = <table>
+    <thead>
+    {table.getHeaderGroups().map(headerGroup => (
+      <tr key={headerGroup.id}>
+        {headerGroup.headers.map(header => {
+          return (
+            <th key={header.id} colSpan={header.colSpan}>
+              {header.isPlaceholder ? null : (
+                <div
+                  className={
+                    header.column.getCanSort()
+                      ? 'cursor-pointer select-none'
+                      : ''
+                  }
+                  onClick={header.column.getToggleSortingHandler()}
+                  title={
+                    header.column.getCanSort()
+                      ? header.column.getNextSortingOrder() === 'asc'
+                        ? 'Sort ascending'
+                        : header.column.getNextSortingOrder() === 'desc'
+                          ? 'Sort descending'
+                          : 'Clear sort'
+                      : undefined
+                  }
+                >
+                  {flexRender(
+                    header.column.columnDef.header,
+                    header.getContext()
+                  )}
+                  {{
+                    asc: ' 🔼',
+                    desc: ' 🔽',
+                  }[header.column.getIsSorted() as string] ?? null}
+                </div>
+              )}
+            </th>
+          )
+        })}
+      </tr>
+    ))}
+    </thead>
+    <tbody>
+    {table
+      .getRowModel()
+      .rows
+      .map(row => {
+        return (
+          <tr key={row.id}>
+            {row.getVisibleCells().map(cell => {
+              return (
+                <td key={cell.id}>
+                  {flexRender(
+                    cell.column.columnDef.cell,
+                    cell.getContext()
+                  )}
+                </td>
+              )
+            })}
+          </tr>
+        )
+      })}
+    </tbody>
+  </table>;
+  return prettyTable;
+}
+
 function LeaderboardComponent() {
   const {resetDateToUse, leaderboard} = Route.useLoaderData()
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -62,75 +130,14 @@ function LeaderboardComponent() {
     getSortedRowModel: getSortedRowModel(),
     debugTable: true,
   })
+
   return (
     <>
       <div className="flex flex-col">
         <h1>Leaderboard for reset {resetDateToUse}</h1>
         <div className="p-2">
           <div className="h-2"/>
-          <table>
-            <thead>
-            {table.getHeaderGroups().map(headerGroup => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map(header => {
-                  return (
-                    <th key={header.id} colSpan={header.colSpan}>
-                      {header.isPlaceholder ? null : (
-                        <div
-                          className={
-                            header.column.getCanSort()
-                              ? 'cursor-pointer select-none'
-                              : ''
-                          }
-                          onClick={header.column.getToggleSortingHandler()}
-                          title={
-                            header.column.getCanSort()
-                              ? header.column.getNextSortingOrder() === 'asc'
-                                ? 'Sort ascending'
-                                : header.column.getNextSortingOrder() === 'desc'
-                                  ? 'Sort descending'
-                                  : 'Clear sort'
-                              : undefined
-                          }
-                        >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                          {{
-                            asc: ' 🔼',
-                            desc: ' 🔽',
-                          }[header.column.getIsSorted() as string] ?? null}
-                        </div>
-                      )}
-                    </th>
-                  )
-                })}
-              </tr>
-            ))}
-            </thead>
-            <tbody>
-            {table
-              .getRowModel()
-              .rows
-              .map(row => {
-                return (
-                  <tr key={row.id}>
-                    {row.getVisibleCells().map(cell => {
-                      return (
-                        <td key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          {prettyTable(table)}
           <div>{table.getRowModel().rows.length.toLocaleString()} Rows</div>
         </div>
       </div>
