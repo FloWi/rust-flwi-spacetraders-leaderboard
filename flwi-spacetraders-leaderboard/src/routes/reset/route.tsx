@@ -17,7 +17,7 @@ function ResetRouteComponent() {
   return (
     <>
       <div className="p-2 flex flex-row gap-6">
-        <div className="bg-blue-600 text-blue-200">
+        <div className="text-amber-700">
           <h2>Resets</h2>
 
           <nav>

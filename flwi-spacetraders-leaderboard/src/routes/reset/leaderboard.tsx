@@ -3,6 +3,7 @@ import {ApiLeaderboardEntry, CrateService} from "../../../generated";
 
 import {createColumnHelper, flexRender, getCoreRowModel, getSortedRowModel, SortingState, Table, useReactTable,} from '@tanstack/react-table'
 import React from "react";
+import Plot from 'react-plotly.js';
 
 
 type LeaderboardSearch = {
@@ -131,14 +132,62 @@ function LeaderboardComponent() {
     debugTable: true,
   })
 
+  //don't ask
+  let sortedLeaderboard = leaderboard.leaderboardEntries.toSorted((a, b) => a.credits - b.credits).toReversed();
+
+  let xValues = sortedLeaderboard.map(e => e.agentSymbol);
+  let yValuesCredits = sortedLeaderboard.map(e => e.credits);
+  let yValuesShips = sortedLeaderboard.map(e => e.shipCount);
+
+  const [isLog, setIsLog] = React.useState(true)
+
+
   return (
     <>
-      <div className="flex flex-col">
+      <div className="flex flex-col gap-4">
         <h1>Leaderboard for reset {resetDateToUse}</h1>
-        <div className="p-2">
-          <div className="h-2"/>
-          {prettyTable(table)}
-          <div>{table.getRowModel().rows.length.toLocaleString()} Rows</div>
+        <div className="flex flex-row gap-4">
+          <div className="p-2">
+            <div className="h-2"/>
+            {prettyTable(table)}
+            <div>{table.getRowModel().rows.length.toLocaleString()} Rows</div>
+          </div>
+          <div className="w-full flex flex-col">
+            <Plot
+              debug={true}
+              data={[
+                {type: 'bar', x: xValues, y: yValuesCredits, name: "Credits"},
+                {type: 'bar', x: xValues, y: yValuesShips, xaxis: 'x', yaxis: 'y2', name: "Ships"},
+              ]}
+              layout={{
+                grid: {rows: 2, columns: 1, subplots: ['xy', 'xy2']},
+                legend: {xanchor: "right", yanchor: "top", x: 0.99, y: 0.99},
+                height: 800,
+                width: 800,
+                font: {
+                  size: 10,
+                  color: 'white'
+                },
+                paper_bgcolor: "rgba(0,0,0,0)",
+                plot_bgcolor: "rgba(0,0,0,0)",
+
+                /*plot_bgcolor: 'black',
+                paper_bgcolor: 'black',*/
+                yaxis: {type: isLog ? "log" : "linear", gridcolor: 'lightgray'},
+                yaxis2: { gridcolor: 'lightgray'}
+
+              }}
+              config={{}}
+            />
+            <label>
+              <input
+                type="checkbox"
+                checked={isLog}
+                onChange={() => setIsLog(!isLog)}
+              />
+              Use log scale for credits
+            </label>
+          </div>
         </div>
       </div>
     </>
