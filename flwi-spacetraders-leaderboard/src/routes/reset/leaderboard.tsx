@@ -12,10 +12,35 @@ type LeaderboardSearch = {
   resetDate?: string
 }
 
-const columnHelper = createColumnHelper<ApiLeaderboardEntry>()
+interface UiLeaderboardEntry extends ApiLeaderboardEntry {
+  displayColor: string
+}
+
+const columnHelper = createColumnHelper<UiLeaderboardEntry>()
 let numberFmt = new Intl.NumberFormat();
 
 const columns = [
+  columnHelper.accessor('displayColor', {
+    cell: info => {
+      /*
+                      span(
+                  cls := "border border-2 w-4 h-4 rounded inline-block",
+                  borderColor(if (agentSelection.contains(agent)) "transparent" else col),
+                  backgroundColor(if (agentSelection.contains(agent)) col else "transparent"),
+                  //                    eventListener,
+                )
+
+       */
+
+      let isSelected = true;
+      let hexColor = info.getValue();
+      let style = {borderColor: isSelected ? "transparent" : hexColor, backgroundColor: isSelected ? hexColor : "transparent"}
+
+      return <span className="border-2 w-4 h-4 rounded inline-block" style={style}/>
+    },
+    header: "",
+    footer: info => info.column.id,
+  }),
   columnHelper.accessor('agentSymbol', {
     cell: info => info.getValue(),
     footer: info => info.column.id,
@@ -39,7 +64,7 @@ const columns = [
 let chartColors = [
 
 // d3 category 20 scheme
-"#1f77b4",
+  "#1f77b4",
   "#ffbb78",
   "#2ca02c",
   "#d62728",
@@ -110,7 +135,6 @@ function zip<T, U>(a: T[], b: U[]): [T, U][] {
 }
 
 
-
 function prettyTable<T>(table: Table<T>) {
   let prettyTable = <table>
     <thead>
@@ -120,7 +144,7 @@ function prettyTable<T>(table: Table<T>) {
           return (
             <th key={header.id} colSpan={header.colSpan}
                 align={(header.column.columnDef.meta as any)?.align}
-                style={{ width: `${header.getSize()}px` }}
+                style={{width: `${header.getSize()}px`}}
             >
               {header.isPlaceholder ? null : (
                 <div
@@ -182,12 +206,25 @@ function prettyTable<T>(table: Table<T>) {
   return prettyTable;
 }
 
+
 function LeaderboardComponent() {
   const {resetDateToUse, leaderboard} = Route.useLoaderData()
   const [sorting, setSorting] = React.useState<SortingState>([])
 
+  //don't ask
+  let sortedEntries = leaderboard.leaderboardEntries.toSorted((a, b) => a.credits - b.credits).toReversed();
+
+  let sortedAndColoredLeaderboard: UiLeaderboardEntry[] = zip(sortedEntries.slice(0, 20), chartColors).map(([e, c]) => ({displayColor: c, ...e}));
+
+  let colors = sortedAndColoredLeaderboard.map(({displayColor}) => displayColor)
+  let xValues = sortedAndColoredLeaderboard.map(e => e.agentSymbol);
+  let yValuesCredits = sortedAndColoredLeaderboard.map(e => e.credits);
+  let yValuesShips = sortedAndColoredLeaderboard.map(e => e.shipCount);
+
+  const [isLog, setIsLog] = React.useState(true)
+
   const table = useReactTable({
-    data: leaderboard.leaderboardEntries,
+    data: sortedAndColoredLeaderboard,
     defaultColumn: {
       size: 200,
       minSize: 50,
@@ -199,21 +236,6 @@ function LeaderboardComponent() {
     getSortedRowModel: getSortedRowModel(),
     debugTable: true,
   })
-
-  //don't ask
-  let sortedEntries = leaderboard.leaderboardEntries.toSorted((a, b) => a.credits - b.credits).toReversed();
-
-  let sortedLeaderboard = zip(sortedEntries.slice(0, 20), chartColors);
-
-
-
-  let colors = sortedLeaderboard.map(([_, color]) => color)
-  let xValues = sortedLeaderboard.map(([e, _]) => e.agentSymbol);
-  let yValuesCredits = sortedLeaderboard.map(([e, _]) => e.credits);
-  let yValuesShips = sortedLeaderboard.map(([e, _]) => e.shipCount);
-
-  const [isLog, setIsLog] = React.useState(true)
-
 
 
   return (
@@ -237,8 +259,8 @@ function LeaderboardComponent() {
             <Plot
               debug={true}
               data={[
-                {type: 'bar', x: xValues, y: yValuesCredits, name: "Credits", marker: {color: colors }},
-                {type: 'bar', x: xValues, y: yValuesShips, xaxis: 'x', yaxis: 'y2', name: "Ships", marker: {color: colors }},
+                {type: 'bar', x: xValues, y: yValuesCredits, name: "Credits", marker: {color: colors}},
+                {type: 'bar', x: xValues, y: yValuesShips, xaxis: 'x', yaxis: 'y2', name: "Ships", marker: {color: colors}},
               ]}
               layout={{
                 grid: {rows: 2, columns: 1, subplots: ['xy', 'xy2']},
