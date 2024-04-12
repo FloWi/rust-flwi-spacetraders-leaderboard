@@ -289,7 +289,7 @@ function LeaderboardComponent() {
           <div className="w-full flex flex-col">
 
             <div>
-              <h3 className="text-xl font-bold">Credits</h3>
+              <h3 className="text-xl font-bold">Credits {isLog ? "(log axis)" : ""}</h3>
               <div className="flex items-center space-x-2">
 
                 <Switch id="log-y-axis"
@@ -312,9 +312,7 @@ function LeaderboardComponent() {
                   paper_bgcolor: "rgba(0,0,0,0)",
                   plot_bgcolor: "rgba(0,0,0,0)",
 
-                  /*plot_bgcolor: 'black',
-                  paper_bgcolor: 'black',*/
-                  yaxis: {type: isLog ? "log" : "linear", gridcolor: 'lightgray'},
+                  yaxis: {type: isLog ? "log" : "linear", gridcolor: 'lightgray', tickformat: ",d"},
                 }}
                 config={{}}
               />
@@ -337,9 +335,8 @@ function LeaderboardComponent() {
                   paper_bgcolor: "rgba(0,0,0,0)",
                   plot_bgcolor: "rgba(0,0,0,0)",
 
-                  /*plot_bgcolor: 'black',
-                  paper_bgcolor: 'black',*/
-                  yaxis: {gridcolor: 'lightgray'},
+
+                  yaxis: {gridcolor: 'lightgray', tickformat: ",d"}, //integer
 
                 }}
                 config={{}}
