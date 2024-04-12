@@ -1,7 +1,7 @@
 import {createFileRoute} from '@tanstack/react-router'
 import {ApiLeaderboardEntry, CrateService} from "../../../generated";
 
-import {createColumnHelper, flexRender, getCoreRowModel, getSortedRowModel, SortingState, Table, useReactTable,} from '@tanstack/react-table'
+import {createColumnHelper, flexRender, getCoreRowModel, getSortedRowModel, RowSelectionState, SortingState, Table, useReactTable,} from '@tanstack/react-table'
 import React from "react";
 import Plot from 'react-plotly.js';
 import {Switch} from "../../@/components/ui/switch.tsx";
@@ -13,6 +13,7 @@ type LeaderboardSearch = {
 }
 
 interface UiLeaderboardEntry extends ApiLeaderboardEntry {
+  //selected: boolean
   displayColor: string
 }
 
@@ -32,7 +33,7 @@ const columns = [
 
        */
 
-      let isSelected = true;
+      let isSelected = info.row.getIsSelected();
       let hexColor = info.getValue();
       let style = {borderColor: isSelected ? "transparent" : hexColor, backgroundColor: isSelected ? hexColor : "transparent"}
 
@@ -186,7 +187,10 @@ function prettyTable<T>(table: Table<T>) {
       .rows
       .map(row => {
         return (
-          <tr key={row.id}>
+          <tr key={row.id}
+              className={row.getIsSelected() ? 'selected' : undefined}
+              onClick={row.getToggleSelectedHandler()}
+          >
             {row.getVisibleCells().map(cell => {
               return (
                 <td key={cell.id}
@@ -210,27 +214,59 @@ function prettyTable<T>(table: Table<T>) {
 function LeaderboardComponent() {
   const {resetDateToUse, leaderboard} = Route.useLoaderData()
   const [sorting, setSorting] = React.useState<SortingState>([])
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({}) //manage your own row selection state
 
-  //don't ask
-  let sortedEntries = leaderboard.leaderboardEntries.toSorted((a, b) => a.credits - b.credits).toReversed();
 
-  let sortedAndColoredLeaderboard: UiLeaderboardEntry[] = zip(sortedEntries.slice(0, 20), chartColors).map(([e, c]) => ({displayColor: c, ...e}));
+  let foo = React.useMemo(() => {
+    //don't ask
+    let sortedEntries = leaderboard.leaderboardEntries.toSorted((a, b) => a.credits - b.credits).toReversed();
 
-  let colors = sortedAndColoredLeaderboard.map(({displayColor}) => displayColor)
-  let xValues = sortedAndColoredLeaderboard.map(e => e.agentSymbol);
-  let yValuesCredits = sortedAndColoredLeaderboard.map(e => e.credits);
-  let yValuesShips = sortedAndColoredLeaderboard.map(e => e.shipCount);
+    let sortedAndColoredLeaderboard: UiLeaderboardEntry[] = zip(sortedEntries.slice(0, 30), chartColors).map(([e, c]) => ({
+      displayColor: c, ...e
+    }));
+
+    //select top 10 by default
+    let selectedAgents: Record<string, boolean> = {}
+
+    // haven't found a way to convert an array into a record
+    sortedEntries.slice(0, 10).forEach(e => {
+      selectedAgents[e.agentSymbol] = true
+    });
+
+    setRowSelection(selectedAgents)
+
+    return {sortedAndColoredLeaderboard}
+
+  }, [leaderboard])
+
+
+  let chartData = React.useMemo(() => {
+
+    let selectedAgents = Object.keys(rowSelection)
+
+    let chartEntries = foo.sortedAndColoredLeaderboard.filter(e => selectedAgents.includes(e.agentSymbol))
+
+    let colors = chartEntries.map(({displayColor}) => displayColor)
+    let xValues = chartEntries.map(e => e.agentSymbol);
+    let yValuesCredits = chartEntries.map(e => e.credits);
+    let yValuesShips = chartEntries.map(e => e.shipCount);
+
+    return {chartEntries, colors, xValues, yValuesCredits, yValuesShips}
+  }, [rowSelection, leaderboard]);
+
 
   const [isLog, setIsLog] = React.useState(true)
 
   const table = useReactTable({
-    data: sortedAndColoredLeaderboard,
+    data: foo.sortedAndColoredLeaderboard,
     defaultColumn: {
       size: 200,
       minSize: 50,
     },
     columns,
-    state: {sorting},
+    getRowId: row => row.agentSymbol,
+    onRowSelectionChange: setRowSelection, //hoist up the row selection state to your own scope
+    state: {sorting, rowSelection},
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -244,44 +280,71 @@ function LeaderboardComponent() {
         <h1>Leaderboard for reset {resetDateToUse}</h1>
         <div className="flex flex-row gap-4">
           <div className="p-2">
-            <div className="h-2"/>
-            {prettyTable(table)}
-            <div>{table.getRowModel().rows.length.toLocaleString()} Rows</div>
+            <div className="h-2 flex flex-col gap-2">
+              {prettyTable(table)}
+              <div>{table.getRowModel().rows.length.toLocaleString()} Rows</div>
+              {/*<pre>{JSON.stringify(rowSelection)}</pre>*/}
+            </div>
           </div>
           <div className="w-full flex flex-col">
-            <div className="flex items-center space-x-2">
 
-              <Switch id="log-y-axis"
-                      checked={isLog}
-                      onCheckedChange={setIsLog}/>
-              <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
+            <div>
+              <h3 className="text-xl font-bold">Credits</h3>
+              <div className="flex items-center space-x-2">
+
+                <Switch id="log-y-axis"
+                        checked={isLog}
+                        onCheckedChange={setIsLog}/>
+                <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
+              </div>
+              <Plot
+                data={[
+                  {type: 'bar', x: chartData.xValues, y: chartData.yValuesCredits, name: "Credits", marker: {color: chartData.colors}},
+                ]}
+                layout={{
+                  showlegend: false,
+                  height: 500,
+                  width: 1200,
+                  font: {
+                    size: 10,
+                    color: 'white'
+                  },
+                  paper_bgcolor: "rgba(0,0,0,0)",
+                  plot_bgcolor: "rgba(0,0,0,0)",
+
+                  /*plot_bgcolor: 'black',
+                  paper_bgcolor: 'black',*/
+                  yaxis: {type: isLog ? "log" : "linear", gridcolor: 'lightgray'},
+                }}
+                config={{}}
+              />
             </div>
-            <Plot
-              debug={true}
-              data={[
-                {type: 'bar', x: xValues, y: yValuesCredits, name: "Credits", marker: {color: colors}},
-                {type: 'bar', x: xValues, y: yValuesShips, xaxis: 'x', yaxis: 'y2', name: "Ships", marker: {color: colors}},
-              ]}
-              layout={{
-                grid: {rows: 2, columns: 1, subplots: ['xy', 'xy2']},
-                showlegend: false,
-                height: 1000,
-                width: 1200,
-                font: {
-                  size: 10,
-                  color: 'white'
-                },
-                paper_bgcolor: "rgba(0,0,0,0)",
-                plot_bgcolor: "rgba(0,0,0,0)",
 
-                /*plot_bgcolor: 'black',
-                paper_bgcolor: 'black',*/
-                yaxis: {type: isLog ? "log" : "linear", gridcolor: 'lightgray'},
-                yaxis2: {gridcolor: 'lightgray'}
+            <div>
+              <h3 className="text-xl font-bold">Ships</h3>
+              <Plot
+                data={[
+                  {type: 'bar', x: chartData.xValues, y: chartData.yValuesShips, xaxis: 'x', yaxis: 'y2', name: "Ships", marker: {color: chartData.colors}},
+                ]}
+                layout={{
+                  showlegend: false,
+                  height: 500,
+                  width: 1200,
+                  font: {
+                    size: 10,
+                    color: 'white'
+                  },
+                  paper_bgcolor: "rgba(0,0,0,0)",
+                  plot_bgcolor: "rgba(0,0,0,0)",
 
-              }}
-              config={{}}
-            />
+                  /*plot_bgcolor: 'black',
+                  paper_bgcolor: 'black',*/
+                  yaxis: {gridcolor: 'lightgray'},
+
+                }}
+                config={{}}
+              />
+            </div>
           </div>
         </div>
       </div>
