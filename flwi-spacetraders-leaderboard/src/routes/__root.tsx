@@ -6,7 +6,7 @@ export const Route = createRootRoute({
     <>
       <div>
       <div className="p-2 flex gap-2 ">
-        <Link to="/reset" className="[&.active]:font-bold">
+        <Link to="/resets" className="[&.active]:font-bold">
           Resets
         </Link>
         <Link to="/all-time" className="[&.active]:font-bold">

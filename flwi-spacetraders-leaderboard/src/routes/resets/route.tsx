@@ -4,7 +4,7 @@ import {CrateService, OpenAPI} from "../../../generated";
 
 OpenAPI.BASE = 'http://localhost:8080'
 
-export const Route = createFileRoute('/reset')({
+export const Route = createFileRoute('/resets')({
   component: ResetRouteComponent,
   loader: CrateService.getResetDates,
 
@@ -32,8 +32,8 @@ function ResetRouteComponent() {
               </li>
               {resetDates.resetDates.toSorted().toReversed().map((date, idx) =>
                 <li key={idx}>
-                  <Link to="/reset/leaderboard"
-                        search={{resetDate: date}}
+                  <Link to="/resets/$resetDate/leaderboard"
+                        params={{resetDate: date}}
                         className="[&.active]:font-bold">
                     {date}
                   </Link>

@@ -101,12 +101,10 @@ let chartColors = [
   "#a6761d",
 ]
 
-export const Route = createFileRoute('/reset/leaderboard')({
+export const Route = createFileRoute('/resets/$resetDate/leaderboard')({
   component: LeaderboardComponent,
-  loaderDeps: ({search: {resetDate}}) => ({resetDate}),
-  loader: async ({deps: {resetDate}}) => {
+  loader: async ({params: {resetDate}}) => {
     let resetDates = await CrateService.getResetDates();
-
 
     let resetDateToUse = resetDate ? resetDate : resetDates.resetDates.toSorted().at(-1) ?? "foobar";
     console.log("resetDate", resetDate)
@@ -117,12 +115,12 @@ export const Route = createFileRoute('/reset/leaderboard')({
     return {resetDateToUse, leaderboard};
   },
 
-  validateSearch: (search: Record<string, unknown>): LeaderboardSearch => {
-    // validate and parse the search params into a typed state
-    return {
-      resetDate: search?.resetDate as string,
-    }
-  },
+  // validateSearch: (search: Record<string, unknown>): LeaderboardSearch => {
+  //   // validate and parse the search params into a typed state
+  //   return {
+  //     resetDate: search?.resetDate as string,
+  //   }
+  // },
 
 })
 
