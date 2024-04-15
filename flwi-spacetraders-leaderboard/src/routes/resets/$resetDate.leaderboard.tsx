@@ -10,8 +10,6 @@ import {Label} from "../../@/components/ui/label.tsx";
 import {prettyTable} from "../../components/prettyTable.tsx";
 import {chartColors} from "../../utils/chartColors.ts";
 import {zip} from "../../lib/utils.ts";
-import {atom, useAtomValue} from "jotai";
-import {resetDatesAtom, store} from "../../state/resets.ts";
 
 type LeaderboardSearch = {
   agents?: string[]
@@ -71,18 +69,9 @@ export const Route = createFileRoute('/resets/$resetDate/leaderboard')({
   component: LeaderboardComponent,
   loaderDeps: ({search: {agents}}) => ({agents}),
   loader: async ({deps: {agents}, params: {resetDate}}) => {
+    let resetDates = await CrateService.getResetDates();
 
-    let cachedResetDates = store.get(resetDatesAtom)
-
-    if(cachedResetDates.length == 0) {
-      let resetDates = await CrateService.getResetDates();
-      store.set(resetDatesAtom, resetDates.resetDates)
-    }
-    let resetDates = store.get(resetDatesAtom)
-
-    console.log("found these reset dates in jotai", resetDates)
-
-    let resetDateToUse = resetDate
+    let resetDateToUse = resetDate ? resetDate : resetDates.resetDates.toSorted().at(-1) ?? "foobar";
 
     let leaderboard = await CrateService.getLeaderboard({resetDate: resetDateToUse});
 
