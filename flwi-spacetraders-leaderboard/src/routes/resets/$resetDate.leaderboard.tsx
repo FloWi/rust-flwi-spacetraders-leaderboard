@@ -12,7 +12,7 @@ import {chartColors} from "../../utils/chartColors.ts";
 import {zip} from "../../lib/utils.ts";
 
 type LeaderboardSearch = {
-  resetDate?: string
+  agents?: string[]
 }
 
 interface UiLeaderboardEntry extends ApiLeaderboardEntry {
@@ -67,29 +67,28 @@ const columns = [
 
 export const Route = createFileRoute('/resets/$resetDate/leaderboard')({
   component: LeaderboardComponent,
-  loader: async ({params: {resetDate}}) => {
+  loaderDeps: ({search: {agents}}) => ({agents}),
+  loader: async ({deps: {agents}, params: {resetDate}}) => {
     let resetDates = await CrateService.getResetDates();
 
     let resetDateToUse = resetDate ? resetDate : resetDates.resetDates.toSorted().at(-1) ?? "foobar";
-    console.log("resetDate", resetDate)
-    console.log("resetDateToUse", resetDateToUse)
 
     let leaderboard = await CrateService.getLeaderboard({resetDate: resetDateToUse});
 
-    return {resetDateToUse, leaderboard};
+    return {resetDateToUse, leaderboard, agents};
   },
 
-  // validateSearch: (search: Record<string, unknown>): LeaderboardSearch => {
-  //   // validate and parse the search params into a typed state
-  //   return {
-  //     resetDate: search?.resetDate as string,
-  //   }
-  // },
+  validateSearch: (search: Record<string, unknown>): LeaderboardSearch => {
+    // validate and parse the search params into a typed state
+    return {
+      agents: search?.agents as string[],
+    }
+  },
 
 })
 
 function LeaderboardComponent() {
-  const {resetDateToUse, leaderboard} = Route.useLoaderData()
+  const {resetDateToUse, leaderboard, agents} = Route.useLoaderData()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({}) //manage your own row selection state
 
@@ -160,7 +159,7 @@ function LeaderboardComponent() {
             <div className="h-2 flex flex-col gap-2">
               {prettyTable(table)}
               <div>{table.getRowModel().rows.length.toLocaleString()} Rows</div>
-              {/*<pre>{JSON.stringify(rowSelection)}</pre>*/}
+              <pre>{agents?.join("\n")}</pre>
             </div>
           </div>
           <div className="w-full flex flex-col">
