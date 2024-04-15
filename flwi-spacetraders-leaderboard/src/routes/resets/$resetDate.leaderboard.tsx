@@ -10,8 +10,7 @@ import {Label} from "../../@/components/ui/label.tsx";
 import {prettyTable} from "../../components/prettyTable.tsx";
 import {chartColors} from "../../utils/chartColors.ts";
 import {zip} from "../../lib/utils.ts";
-import {atom, useAtomValue} from "jotai";
-import {resetDatesAtom, store} from "../../state/resets.ts";
+import {resetDataAtom, resetDatesAtom, store} from "../../state/resets.ts";
 
 type LeaderboardSearch = {
   agents?: string[]
@@ -74,19 +73,35 @@ export const Route = createFileRoute('/resets/$resetDate/leaderboard')({
 
     let cachedResetDates = store.get(resetDatesAtom)
 
-    if(cachedResetDates.length == 0) {
+    if (cachedResetDates.length == 0) {
       let resetDates = await CrateService.getResetDates();
       store.set(resetDatesAtom, resetDates.resetDates)
     }
     let resetDates = store.get(resetDatesAtom)
 
-    console.log("found these reset dates in jotai", resetDates)
-
     let resetDateToUse = resetDate
 
-    let leaderboard = await CrateService.getLeaderboard({resetDate: resetDateToUse});
+    let queryParamAgents = agents ?? []
 
-    return {resetDateToUse, leaderboard, agents};
+    let data = store.get(resetDataAtom).get(resetDateToUse)
+
+    if(!data) {
+      let leaderboard = await CrateService.getLeaderboard({resetDate: resetDateToUse});
+      data = leaderboard
+      store.set(resetDataAtom, (old) => old.set(resetDateToUse, leaderboard))
+    }
+
+    let loadedAgents = data.leaderboardEntries.map(e => e.agentSymbol) ;
+    let notIncluded = queryParamAgents.filter(queryParamAgent => !loadedAgents.includes(queryParamAgent));
+
+    console.log("found these reset dates in jotai", resetDates)
+    console.log("agents in jotai", loadedAgents)
+    console.log("agents in queryParam", queryParamAgents)
+    console.log("not included", notIncluded)
+
+
+
+    return {resetDateToUse, leaderboard: data, agents};
   },
 
   validateSearch: (search: Record<string, unknown>): LeaderboardSearch => {
