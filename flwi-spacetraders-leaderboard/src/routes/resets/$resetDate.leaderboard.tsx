@@ -1,12 +1,15 @@
 import {createFileRoute} from '@tanstack/react-router'
 import {ApiLeaderboardEntry, CrateService} from "../../../generated";
 
-import {createColumnHelper, flexRender, getCoreRowModel, getSortedRowModel, RowSelectionState, SortingState, Table, useReactTable,} from '@tanstack/react-table'
+import {createColumnHelper, getCoreRowModel, getSortedRowModel, RowSelectionState, SortingState, useReactTable,} from '@tanstack/react-table'
 import React from "react";
 import Plot from 'react-plotly.js';
 import {Switch} from "../../@/components/ui/switch.tsx";
 import {Label} from "../../@/components/ui/label.tsx";
 
+import {prettyTable} from "../../components/prettyTable.tsx";
+import {chartColors} from "../../utils/chartColors.ts";
+import {zip} from "../../lib/utils.ts";
 
 type LeaderboardSearch = {
   resetDate?: string
@@ -62,45 +65,6 @@ const columns = [
   }),
 ]
 
-let chartColors = [
-
-// d3 category 20 scheme
-  "#1f77b4",
-  "#ffbb78",
-  "#2ca02c",
-  "#d62728",
-  "#aec7e8",
-  "#ff7f0e",
-  "#98df8a",
-  "#9467bd",
-  "#ff9896",
-  "#9edae5",
-  "#c5b0d5",
-  "#8c564b",
-  "#f7b6d2",
-  "#c7c7c7",
-  "#bcbd22",
-  "#dbdb8d",
-  "#e377c2",
-  "#17becf",
-  // d3 accent scheme
-  "#7fc97f",
-  "#beaed4",
-  "#fdc086",
-  "#386cb0",
-  "#f0027f",
-  "#bf5b17",
-  "#ffff99",
-  // d3 dark scheme
-  "#1b9e77",
-  "#d95f02",
-  "#7570b3",
-  "#e6ab02",
-  "#e7298a",
-  "#66a61e",
-  "#a6761d",
-]
-
 export const Route = createFileRoute('/resets/$resetDate/leaderboard')({
   component: LeaderboardComponent,
   loader: async ({params: {resetDate}}) => {
@@ -123,91 +87,6 @@ export const Route = createFileRoute('/resets/$resetDate/leaderboard')({
   // },
 
 })
-
-function zip<T, U>(a: T[], b: U[]): [T, U][] {
-  const length = Math.min(a.length, b.length);
-  const result: [T, U][] = [];
-  for (let i = 0; i < length; i++) {
-    result.push([a[i], b[i]]);
-  }
-  return result;
-}
-
-
-function prettyTable<T>(table: Table<T>) {
-  let prettyTable = <table>
-    <thead>
-    {table.getHeaderGroups().map(headerGroup => (
-      <tr key={headerGroup.id}>
-        {headerGroup.headers.map(header => {
-          return (
-            <th key={header.id} colSpan={header.colSpan}
-                align={(header.column.columnDef.meta as any)?.align}
-                style={{width: `${header.getSize()}px`}}
-            >
-              {header.isPlaceholder ? null : (
-                <div
-                  className={
-                    header.column.getCanSort()
-                      ? 'cursor-pointer select-none'
-                      : ''
-                  }
-                  onClick={header.column.getToggleSortingHandler()}
-                  title={
-                    header.column.getCanSort()
-                      ? header.column.getNextSortingOrder() === 'asc'
-                        ? 'Sort ascending'
-                        : header.column.getNextSortingOrder() === 'desc'
-                          ? 'Sort descending'
-                          : 'Clear sort'
-                      : undefined
-                  }
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-                  {{
-                    asc: ' 🔼',
-                    desc: ' 🔽',
-                  }[header.column.getIsSorted() as string] ?? null}
-                </div>
-              )}
-            </th>
-          )
-        })}
-      </tr>
-    ))}
-    </thead>
-    <tbody>
-    {table
-      .getRowModel()
-      .rows
-      .map(row => {
-        return (
-          <tr key={row.id}
-              className={row.getIsSelected() ? 'selected' : undefined}
-              onClick={row.getToggleSelectedHandler()}
-          >
-            {row.getVisibleCells().map(cell => {
-              return (
-                <td key={cell.id}
-                    align={(cell.column.columnDef.meta as any)?.align}>
-                  {flexRender(
-                    cell.column.columnDef.cell,
-                    cell.getContext()
-                  )}
-                </td>
-              )
-            })}
-          </tr>
-        )
-      })}
-    </tbody>
-  </table>;
-  return prettyTable;
-}
-
 
 function LeaderboardComponent() {
   const {resetDateToUse, leaderboard} = Route.useLoaderData()
