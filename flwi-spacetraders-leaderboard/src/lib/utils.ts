@@ -75,7 +75,7 @@ async function computeNewState(
   let updated = {
     fetchStates: new Map(state.fetchStates).set(resetDate, {
       ...current,
-      historyData: newEntries,
+      historyData: current.historyData.concat(newEntries),
     }),
   };
 
