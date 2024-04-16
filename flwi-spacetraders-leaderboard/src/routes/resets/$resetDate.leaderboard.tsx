@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ApiLeaderboardEntry, CrateService } from "../../../generated";
 
 import {
@@ -9,7 +9,7 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import React from "react";
+import React, { useEffect } from "react";
 import Plot from "react-plotly.js";
 import { Switch } from "../../@/components/ui/switch.tsx";
 import { Label } from "../../@/components/ui/label.tsx";
@@ -81,17 +81,27 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
   component: LeaderboardComponent,
   loaderDeps: ({ search: { agents } }) => ({ agents }),
   loader: async ({ deps: { agents }, params: { resetDate } }) => {
-    let resetDates = await CrateService.getResetDates();
+    const current = useFetchState.getState();
 
-    let resetDateToUse = resetDate
-      ? resetDate
-      : resetDates.resetDates.toSorted().at(-1) ?? "foobar";
+    console.log(
+      "inside tanstackRouter.loader. current state:",
+      current.fetchStates,
+    );
+
+    await current.updateFetchData(resetDate, agents ?? []);
+
+    const updatedState = useFetchState.getState();
+
+    console.log(
+      "inside tanstackRouter.loader. updated state:",
+      updatedState.fetchStates,
+    );
 
     let leaderboard = await CrateService.getLeaderboard({
-      resetDate: resetDateToUse,
+      resetDate,
     });
 
-    return { resetDateToUse, leaderboard, agents };
+    return { resetDateToUse: resetDate, leaderboard, agents };
   },
 
   validateSearch: (search: Record<string, unknown>): LeaderboardSearch => {
@@ -124,10 +134,11 @@ function LeaderboardComponent() {
     //select top 10 by default
     let selectedAgents: Record<string, boolean> = {};
 
-    // haven't found a way to convert an array into a record
-    sortedEntries.slice(0, 10).forEach((e) => {
-      selectedAgents[e.agentSymbol] = true;
-    });
+    // // haven't found a way to convert an array into a record
+    // sortedEntries.slice(0, 10).forEach((e) => {
+    //   selectedAgents[e.agentSymbol] = true;
+    // });
+    agents?.forEach((agentSymbol) => (selectedAgents[agentSymbol] = true));
 
     setRowSelection(selectedAgents);
 
@@ -167,8 +178,22 @@ function LeaderboardComponent() {
     debugTable: true,
   });
 
-  const fetchStates = useFetchState((state) => state.fetchStates);
+  const fetchStates = useFetchState((state) =>
+    state.fetchStates.get(resetDateToUse),
+  );
   const updateSelection = useFetchState((state) => state.updateFetchData);
+
+  const navigate = useNavigate({ from: Route.fullPath });
+
+  useEffect(() => {
+    let newAgentSelection = Object.keys(rowSelection);
+    updateSelection(resetDateToUse, newAgentSelection);
+    navigate({
+      search: () => ({
+        agents: newAgentSelection,
+      }),
+    });
+  }, [resetDateToUse, rowSelection]);
 
   return (
     <>
@@ -187,6 +212,14 @@ function LeaderboardComponent() {
               >
                 Update Foo
               </button>
+              <h3>Data in cache</h3>
+              <pre>
+                {`Refresh Date: ${fetchStates?.lastRefresh.toISOString()}
+`}
+                {fetchStates?.historyData
+                  ?.map((e) => e.agentSymbol)
+                  ?.join(", ")}
+              </pre>
             </div>
           </div>
           <div className="w-full flex flex-col">

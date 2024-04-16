@@ -63,10 +63,6 @@ async function computeNewState(
     (queryParamAgent) => !currentAgentSymbols.includes(queryParamAgent),
   );
 
-  console.log("currentAgentSymbols in cache", currentAgentSymbols);
-  console.log("newAgentSelection", newAgentSelection);
-  console.log("notIncluded", notIncluded);
-
   let newEntries = notIncluded.map((agentSymbol) => ({
     agentSymbol,
     entries: [],
@@ -78,6 +74,11 @@ async function computeNewState(
       historyData: current.historyData.concat(newEntries),
     }),
   };
+
+  console.log("currentAgentSymbols in cache", currentAgentSymbols);
+  console.log("newAgentSelection", newAgentSelection);
+  console.log("notIncluded", notIncluded);
+  console.log("updated state", updated);
 
   return updated;
 }
