@@ -28,6 +28,7 @@ interface ResetFetchState {
 }
 
 interface FetchState {
+  selectedAgents: string[];
   fetchStates: Map<string, ResetFetchState>;
 }
 
@@ -69,6 +70,7 @@ async function computeNewState(
   }));
 
   let updated = {
+    selectedAgents: newAgentSelection,
     fetchStates: new Map(state.fetchStates).set(resetDate, {
       ...current,
       historyData: current.historyData.concat(newEntries),
@@ -84,6 +86,7 @@ async function computeNewState(
 }
 
 export const useFetchState = create<FetchState & Action>((set, get) => ({
+  selectedAgents: [],
   fetchStates: new Map(),
   updateFetchData: async (resetDate: string, newAgentSelection: string[]) => {
     let current = get();

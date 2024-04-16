@@ -97,11 +97,7 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
       updatedState.fetchStates,
     );
 
-    let leaderboard = await CrateService.getLeaderboard({
-      resetDate,
-    });
-
-    return { resetDateToUse: resetDate, leaderboard, agents };
+    return { resetDateToUse: resetDate };
   },
 
   validateSearch: (search: Record<string, unknown>): LeaderboardSearch => {
@@ -113,13 +109,24 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
 });
 
 function LeaderboardComponent() {
-  const { resetDateToUse, leaderboard, agents } = Route.useLoaderData();
+  const { resetDateToUse } = Route.useLoaderData();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({}); //manage your own row selection state
 
+  let states = useFetchState((state) => state.fetchStates);
+  let agents = useFetchState((state) => state.selectedAgents);
+
+  let current = states.get(resetDateToUse) ?? {
+    lastRefresh: new Date(),
+    leaderboard: [],
+    historyData: [],
+  };
+
+  let leaderboard = current.leaderboard;
+
   let foo = React.useMemo(() => {
     //don't ask
-    let sortedEntries = leaderboard.leaderboardEntries
+    let sortedEntries = leaderboard
       .toSorted((a, b) => a.credits - b.credits)
       .toReversed();
 
@@ -187,7 +194,6 @@ function LeaderboardComponent() {
 
   useEffect(() => {
     let newAgentSelection = Object.keys(rowSelection);
-    updateSelection(resetDateToUse, newAgentSelection);
     navigate({
       search: () => ({
         agents: newAgentSelection,
