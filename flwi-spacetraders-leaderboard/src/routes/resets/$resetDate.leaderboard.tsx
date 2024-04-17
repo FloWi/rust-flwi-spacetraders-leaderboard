@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ApiLeaderboardEntry, CrateService } from "../../../generated";
+import { ApiLeaderboardEntry } from "../../../generated";
 
 import {
   createColumnHelper,
@@ -108,6 +108,22 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
   },
 });
 
+function calcSortedAndColoredLeaderboard(leaderboard: ApiLeaderboardEntry[]) {
+  let sortedEntries = leaderboard
+    .toSorted((a, b) => a.credits - b.credits)
+    .toReversed();
+
+  let sortedAndColoredLeaderboard: UiLeaderboardEntry[] = zip(
+    sortedEntries.slice(0, 30),
+    chartColors,
+  ).map(([e, c]) => ({
+    displayColor: c,
+    ...e,
+  }));
+
+  return { sortedAndColoredLeaderboard };
+}
+
 function LeaderboardComponent() {
   const { resetDateToUse } = Route.useLoaderData();
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -122,22 +138,7 @@ function LeaderboardComponent() {
     historyData: [],
   };
 
-  let leaderboard = current.leaderboard;
-
-  let foo = React.useMemo(() => {
-    //don't ask
-    let sortedEntries = leaderboard
-      .toSorted((a, b) => a.credits - b.credits)
-      .toReversed();
-
-    let sortedAndColoredLeaderboard: UiLeaderboardEntry[] = zip(
-      sortedEntries.slice(0, 30),
-      chartColors,
-    ).map(([e, c]) => ({
-      displayColor: c,
-      ...e,
-    }));
-
+  let memoizedLeaderboard = React.useMemo(() => {
     //select top 10 by default
     let selectedAgents: Record<string, boolean> = {};
 
@@ -148,15 +149,14 @@ function LeaderboardComponent() {
     agents?.forEach((agentSymbol) => (selectedAgents[agentSymbol] = true));
 
     setRowSelection(selectedAgents);
-
-    return { sortedAndColoredLeaderboard };
-  }, [leaderboard]);
+    return calcSortedAndColoredLeaderboard(current.leaderboard);
+  }, [current.leaderboard]);
 
   let chartData = React.useMemo(() => {
     let selectedAgents = Object.keys(rowSelection);
 
-    let chartEntries = foo.sortedAndColoredLeaderboard.filter((e) =>
-      selectedAgents.includes(e.agentSymbol),
+    let chartEntries = memoizedLeaderboard.sortedAndColoredLeaderboard.filter(
+      (e) => selectedAgents.includes(e.agentSymbol),
     );
 
     let colors = chartEntries.map(({ displayColor }) => displayColor);
@@ -165,12 +165,12 @@ function LeaderboardComponent() {
     let yValuesShips = chartEntries.map((e) => e.shipCount);
 
     return { chartEntries, colors, xValues, yValuesCredits, yValuesShips };
-  }, [rowSelection, leaderboard]);
+  }, [rowSelection, current.leaderboard]);
 
   const [isLog, setIsLog] = React.useState(true);
 
   const table = useReactTable({
-    data: foo.sortedAndColoredLeaderboard,
+    data: memoizedLeaderboard.sortedAndColoredLeaderboard,
     defaultColumn: {
       size: 200,
       minSize: 50,
@@ -188,12 +188,13 @@ function LeaderboardComponent() {
   const fetchStates = useFetchState((state) =>
     state.fetchStates.get(resetDateToUse),
   );
-  const updateSelection = useFetchState((state) => state.updateFetchData);
 
   const navigate = useNavigate({ from: Route.fullPath });
 
   useEffect(() => {
     let newAgentSelection = Object.keys(rowSelection);
+
+    //fire-and-forget promise call seems to be ok? YOLO
     navigate({
       search: () => ({
         agents: newAgentSelection,
@@ -210,21 +211,14 @@ function LeaderboardComponent() {
             <div className="h-2 flex flex-col gap-2">
               {prettyTable(table)}
               <div>{table.getRowModel().rows.length.toLocaleString()} Rows</div>
-              <pre>{agents?.join("\n")}</pre>
-              <button
-                onClick={() =>
-                  updateSelection(resetDateToUse, Object.keys(rowSelection))
-                }
-              >
-                Update Foo
-              </button>
+
               <h3>Data in cache</h3>
               <pre>
                 {`Refresh Date: ${fetchStates?.lastRefresh.toISOString()}
 `}
                 {fetchStates?.historyData
                   ?.map((e) => e.agentSymbol)
-                  ?.join(", ")}
+                  ?.join("\n")}
               </pre>
             </div>
           </div>

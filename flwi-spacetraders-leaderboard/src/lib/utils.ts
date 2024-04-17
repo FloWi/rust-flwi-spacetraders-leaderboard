@@ -28,7 +28,9 @@ interface ResetFetchState {
 }
 
 interface FetchState {
+  lastRefresh: Date;
   selectedAgents: string[];
+  resetDates: string[];
   fetchStates: Map<string, ResetFetchState>;
 }
 
@@ -36,6 +38,9 @@ type Action = {
   updateFetchData: (
     resetDate: string,
     newAgentSelection: string[],
+  ) => Promise<void>;
+  refreshResetDatesIfNecessary: (
+    getResetDates: () => Promise<string[]>,
   ) => Promise<void>;
 };
 
@@ -55,10 +60,12 @@ async function computeNewState(
   state: FetchState,
   newAgentSelection: string[],
 ): Promise<FetchState> {
-  let current =
+  let currentResetState =
     state.fetchStates.get(resetDate) ?? (await loadResetFetchState(resetDate));
 
-  let currentAgentSymbols = current.historyData.map((e) => e.agentSymbol);
+  let currentAgentSymbols = currentResetState.historyData.map(
+    (e) => e.agentSymbol,
+  );
 
   let notIncluded = newAgentSelection.filter(
     (queryParamAgent) => !currentAgentSymbols.includes(queryParamAgent),
@@ -70,10 +77,11 @@ async function computeNewState(
   }));
 
   let updated = {
+    ...state,
     selectedAgents: newAgentSelection,
     fetchStates: new Map(state.fetchStates).set(resetDate, {
-      ...current,
-      historyData: current.historyData.concat(newEntries),
+      ...currentResetState,
+      historyData: currentResetState.historyData.concat(newEntries),
     }),
   };
 
@@ -87,10 +95,22 @@ async function computeNewState(
 
 export const useFetchState = create<FetchState & Action>((set, get) => ({
   selectedAgents: [],
+  lastRefresh: new Date(),
+  resetDates: [],
   fetchStates: new Map(),
   updateFetchData: async (resetDate: string, newAgentSelection: string[]) => {
     let current = get();
     let newState = await computeNewState(resetDate, current, newAgentSelection);
     set(() => newState);
+  },
+  refreshResetDatesIfNecessary: async (getRefreshDatesFn) => {
+    let current = get();
+    let now = new Date();
+    let ageInMs = now.getTime() - current.lastRefresh.getTime();
+    let isExpired = ageInMs > 5 * 60 * 1000;
+    if (current.resetDates.length == 0 || isExpired) {
+      let newResetDates = await getRefreshDatesFn();
+      set(() => ({ ...current, resetDates: newResetDates }));
+    }
   },
 }));
