@@ -1,5 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ApiLeaderboardEntry } from "../../../generated";
+import {
+  ApiLeaderboardEntry,
+  CrateService,
+  GetLeaderboardForResetResponseContent,
+} from "../../../generated";
 
 import {
   createColumnHelper,
@@ -17,6 +21,7 @@ import { Label } from "../../@/components/ui/label.tsx";
 import { prettyTable } from "../../components/prettyTable.tsx";
 import { chartColors } from "../../utils/chartColors.ts";
 import { useFetchState, zip } from "../../lib/utils.ts";
+import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
 type LeaderboardSearch = {
   agents?: string[];
@@ -80,24 +85,60 @@ const columns = [
 export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
   component: LeaderboardComponent,
   loaderDeps: ({ search: { agents } }) => ({ agents }),
-  loader: async ({ deps: { agents }, params: { resetDate } }) => {
-    const current = useFetchState.getState();
+  beforeLoad: async (arg) => {
+    console.log("before load:");
+    let selectedAgents = arg.search.agents ?? [];
 
-    console.log(
-      "inside tanstackRouter.loader. current state:",
-      current.fetchStates,
+    let options = leaderboardQueryOptions(arg.params.resetDate);
+
+    let queryClient = arg.context.queryClient;
+    const queryCache = queryClient.getQueryCache();
+    const query = queryCache.find<GetLeaderboardForResetResponseContent>({
+      queryKey: options.queryKey,
+    });
+
+    let entries = query?.state.data?.leaderboardEntries ?? [];
+    let agentsInCache = entries.map((e) => e.agentSymbol);
+
+    let needsInvalidation = selectedAgents.some(
+      (a) => !agentsInCache.includes(a),
     );
+    console.log("selected agents", selectedAgents);
+    console.log("agents in cache", agentsInCache);
+    console.log("arg", arg);
+    console.log("needsInvalidation", needsInvalidation);
 
-    await current.updateFetchData(resetDate, agents ?? []);
+    await queryClient.invalidateQueries({
+      predicate: (query) => {
+        return needsInvalidation;
+      },
+    });
 
-    const updatedState = useFetchState.getState();
+    // console.log("current state of query", query);
+  },
+  loader: async ({
+    //deps: { agents },
+    params: { resetDate },
+    context: { queryClient },
+  }) => {
+    let options = leaderboardQueryOptions(resetDate);
+    return queryClient.ensureQueryData(options);
 
-    console.log(
-      "inside tanstackRouter.loader. updated state:",
-      updatedState.fetchStates,
-    );
-
-    return { resetDateToUse: resetDate };
+    // const current = useFetchState.getState();
+    //
+    // console.log(
+    //   "inside tanstackRouter.loader. current state:",
+    //   current.fetchStates,
+    // );
+    //
+    // await current.updateFetchData(resetDate, agents ?? []);
+    //
+    // const updatedState = useFetchState.getState();
+    //
+    // console.log(
+    //   "inside tanstackRouter.loader. updated state:",
+    //   updatedState.fetchStates,
+    // );
   },
 
   validateSearch: (search: Record<string, unknown>): LeaderboardSearch => {
@@ -124,19 +165,32 @@ function calcSortedAndColoredLeaderboard(leaderboard: ApiLeaderboardEntry[]) {
   return { sortedAndColoredLeaderboard };
 }
 
+export const leaderboardQueryOptions = (resetDate: string) =>
+  queryOptions({
+    queryKey: ["leaderboardData", resetDate],
+    queryFn: () => CrateService.getLeaderboard({ resetDate }),
+  });
+
 function LeaderboardComponent() {
-  const { resetDateToUse } = Route.useLoaderData();
+  const { resetDate } = Route.useParams();
+  const resetDateToUse = resetDate;
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({}); //manage your own row selection state
 
-  let states = useFetchState((state) => state.fetchStates);
-  let agents = useFetchState((state) => state.selectedAgents);
+  const { data } = useSuspenseQuery(leaderboardQueryOptions(resetDate));
+  const leaderboardEntries = data.leaderboardEntries;
+  const { agents } = Route.useSearch(); //leaderboardEntries.map((e) => e.agentSymbol);
 
-  let current = states.get(resetDateToUse) ?? {
-    lastRefresh: new Date(),
-    leaderboard: [],
-    historyData: [],
-  };
+  // let states = useFetchState((state) => state.fetchStates);
+  // let agents = useFetchState((state) => state.selectedAgents);
+
+  // let current = states.get(resetDateToUse) ?? {
+  //   lastRefresh: new Date(),
+  //   leaderboard: [],
+  //   historyData: [],
+  // };
+
+  let current = { leaderboard: leaderboardEntries };
 
   let memoizedLeaderboard = React.useMemo(() => {
     //select top 10 by default
