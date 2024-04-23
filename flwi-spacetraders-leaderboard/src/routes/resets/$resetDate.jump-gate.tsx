@@ -8,25 +8,12 @@ import {
 } from "@tanstack/react-table";
 import React, { JSX } from "react";
 import { prettyTable } from "../../components/prettyTable.tsx";
-import humanizeDuration from "humanize-duration";
+import { Duration } from "luxon";
 
-let durationHumanizer: humanizeDuration.Humanizer = humanizeDuration.humanizer({
-  language: "shortEn",
-  languages: {
-    shortEn: {
-      y: () => "y",
-      mo: () => "mo",
-      w: () => "w",
-      d: () => "d",
-      h: () => "h",
-      m: () => "m",
-      s: () => "s",
-      ms: () => "ms",
-    },
-  },
-  units: ["d", "h", "m"],
-  round: true,
-});
+const prettyDuration = (durationMs: number) => {
+  let d = Duration.fromMillis(durationMs);
+  return d.toFormat("d'd' hh:mm");
+};
 
 const columnHelper = createColumnHelper<ConstructionProgressEntry>();
 let intNumberFmt = new Intl.NumberFormat();
@@ -96,8 +83,8 @@ const columns = [
     (row) => durationMillis(row.tsStartOfReset, row.tsFirstConstructionEvent),
     {
       id: "durationStartResetFirstConstructionEvent",
-      header: "Duration FirstConstruction",
-      cell: (info) => durationHumanizer(info.getValue()),
+      header: "Start Fortnight --> FirstConstruction",
+      cell: (info) => <pre>{prettyDuration(info.getValue())}</pre>,
       meta: {
         align: "right",
       },
@@ -125,10 +112,10 @@ const columns = [
 
     {
       id: "durationStartResetLastConstructionEvent",
-      header: "Duration until Last Construction",
+      header: "Start Fortnight --> Last Construction",
       cell: (info) => {
         let v = info.getValue();
-        return v ? durationHumanizer(v) : "";
+        return <pre>{v ? prettyDuration(v) : ""}</pre>;
       },
       sortUndefined: -1,
       meta: {
@@ -146,10 +133,10 @@ const columns = [
         : undefined,
     {
       id: "durationConstruction",
-      header: "Duration First Last Construction",
+      header: "Duration Construction",
       cell: (info) => {
         let v = info.getValue();
-        return v ? durationHumanizer(v) : "";
+        return <pre>{v ? prettyDuration(v) : ""}</pre>;
       },
       sortUndefined: -1,
       meta: {
@@ -218,7 +205,7 @@ interface ConstructionProgressEntry {
 }
 
 function durationMillis(from: Date, to: Date): number {
-  return from.getTime() - to.getTime();
+  return to.getTime() - from.getTime();
 }
 
 function convert(e: ConstructionProgressEntryRaw): ConstructionProgressEntry {
