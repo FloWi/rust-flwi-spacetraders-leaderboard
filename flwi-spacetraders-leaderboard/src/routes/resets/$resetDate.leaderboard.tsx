@@ -108,11 +108,11 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
     console.log("arg", arg);
     console.log("needsInvalidation", needsInvalidation);
 
-    await queryClient.invalidateQueries({
-      predicate: (query) => {
-        return needsInvalidation;
-      },
-    });
+    if (needsInvalidation) {
+      console.log("invalidating query");
+
+      await queryClient.invalidateQueries({ queryKey: options.queryKey });
+    }
 
     // console.log("current state of query", query);
   },
@@ -123,22 +123,6 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
   }) => {
     let options = leaderboardQueryOptions(resetDate);
     return queryClient.ensureQueryData(options);
-
-    // const current = useFetchState.getState();
-    //
-    // console.log(
-    //   "inside tanstackRouter.loader. current state:",
-    //   current.fetchStates,
-    // );
-    //
-    // await current.updateFetchData(resetDate, agents ?? []);
-    //
-    // const updatedState = useFetchState.getState();
-    //
-    // console.log(
-    //   "inside tanstackRouter.loader. updated state:",
-    //   updatedState.fetchStates,
-    // );
   },
 
   validateSearch: (search: Record<string, unknown>): LeaderboardSearch => {
