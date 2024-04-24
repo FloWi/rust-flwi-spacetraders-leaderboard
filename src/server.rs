@@ -125,7 +125,6 @@ mod leaderboard {
     #[derive(Serialize, Deserialize, ToSchema)]
     #[serde(rename_all = "camelCase")]
     pub(crate) struct ApiJumpGateAssignmentEntry {
-        reset: ApiResetDate,
         agent_headquarters_waypoint_symbol: ApiWaypointSymbol,
         jump_gate_waypoint_symbol: ApiWaypointSymbol,
         agents_in_system: Vec<ApiAgentSymbol>,
@@ -198,7 +197,6 @@ mod leaderboard {
         let response = jump_gate_assignment_entries
             .iter()
             .map(|r| ApiJumpGateAssignmentEntry {
-                reset: ApiResetDate(reset_date.format("%Y-%m-%d").to_string()),
                 agent_headquarters_waypoint_symbol: ApiWaypointSymbol(
                     r.agent_headquarters_waypoint_symbol.clone(),
                 ),
