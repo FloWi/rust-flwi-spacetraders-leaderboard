@@ -16,10 +16,13 @@ use utoipa_swagger_ui::SwaggerUi;
 pub async fn http_server(db: Pool<Sqlite>, address: String) -> Result<(), Error> {
     let app = Router::new()
         .merge(
-            SwaggerUi::new("/swagger-ui")
+            SwaggerUi::new("/docs/swagger-ui")
                 .url("/api-docs/openapi.json", leaderboard::ApiDoc::openapi()),
         )
-        .merge(Redoc::with_url("/redoc", leaderboard::ApiDoc::openapi()))
+        .merge(Redoc::with_url(
+            "/docs/redoc",
+            leaderboard::ApiDoc::openapi(),
+        ))
         // There is no need to create `RapiDoc::with_openapi` because the OpenApi is served
         // via SwaggerUi instead we only make rapidoc to point to the existing doc.
         .merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))

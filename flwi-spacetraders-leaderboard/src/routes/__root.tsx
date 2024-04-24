@@ -5,6 +5,8 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { QueryClient } from "@tanstack/react-query";
+import { ShadcnIcons } from "../components/shadcn-icons.tsx";
+import { SwaggerIcon } from "../components/swagger-icon.tsx";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   {
@@ -18,6 +20,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             <Link to="/all-time" className="[&.active]:font-bold">
               All Time Comparison
             </Link>
+            <a
+              className="ml-auto"
+              href="/docs/swagger-ui"
+              title="Github Repository"
+              target="_blank"
+            >
+              <SwaggerIcon.icon className="mr-2 h-8 w-8" />
+            </a>
+            <a
+              href="https://github.com/FloWi/rust-flwi-spacetraders-leaderboard"
+              title="Github Repository"
+              target="_blank"
+            >
+              <ShadcnIcons.gitHub className="mr-2 h-8 w-8" />
+            </a>
           </div>
           <hr />
           <Outlet />
