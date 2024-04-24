@@ -10,7 +10,7 @@ import {
 
 export function prettyTable<T>(table: TanStackTable<T>) {
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border w-fit">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -21,6 +21,7 @@ export function prettyTable<T>(table: TanStackTable<T>) {
                     key={header.id}
                     colSpan={header.colSpan}
                     align={(header.column.columnDef.meta as any)?.align}
+                    className="border"
                     style={{ width: `${header.getSize()}px` }}
                   >
                     {header.isPlaceholder ? null : (
@@ -70,7 +71,7 @@ export function prettyTable<T>(table: TanStackTable<T>) {
                     <TableCell
                       key={cell.id}
                       align={(cell.column.columnDef.meta as any)?.align}
-                      className="p-1"
+                      className="border py-1 px-4"
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
