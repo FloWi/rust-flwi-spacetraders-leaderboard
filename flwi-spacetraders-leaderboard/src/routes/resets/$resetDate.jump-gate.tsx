@@ -233,10 +233,12 @@ function JumpGateComponent(): JSX.Element {
 
   return (
     <>
-      <div>
-        <h2>Jump Gate to Agents Assignment</h2>
+      <div className="flex flex-col gap-4">
+        <h2 className="text-2xl font-bold pt-4">
+          Jump Gate to Agents Assignment
+        </h2>
         {prettyTable(assignmentTable)}
-        <h2>Construction Overview</h2>
+        <h2 className="text-2xl font-bold pt-4">Construction Overview</h2>
         {prettyTable(table)}
         <pre>{JSON.stringify(mockDataConstructionProgress, null, 2)}</pre>
       </div>
