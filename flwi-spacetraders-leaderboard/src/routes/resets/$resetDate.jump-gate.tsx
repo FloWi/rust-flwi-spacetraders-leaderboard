@@ -9,13 +9,22 @@ import {
 import React, { JSX } from "react";
 import { prettyTable } from "../../components/prettyTable.tsx";
 import { Duration } from "luxon";
+import { ApiJumpGateAssignmentEntry, CrateService } from "../../../generated";
+import {
+  queryOptions,
+  useQuery,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 
 const prettyDuration = (durationMs: number) => {
   let d = Duration.fromMillis(durationMs);
   return d.toFormat("d'd' hh:mm");
 };
 
-const columnHelper = createColumnHelper<ConstructionProgressEntry>();
+const columnHelperConstructionOverview =
+  createColumnHelper<ConstructionProgressEntry>();
+const columnHelperJumpGateAssignment =
+  createColumnHelper<ApiJumpGateAssignmentEntry>();
 let intNumberFmt = new Intl.NumberFormat();
 let percentNumberFmt = new Intl.NumberFormat(undefined, {
   style: "percent",
@@ -34,33 +43,33 @@ let dateTimeFormatOptions: Intl.DateTimeFormatOptions = {
 let dateFmt = new Intl.DateTimeFormat(undefined, dateTimeFormatOptions);
 
 const columns = [
-  columnHelper.accessor("jumpGateWaypointSymbol", {
+  columnHelperConstructionOverview.accessor("jumpGateWaypointSymbol", {
     cell: (info) => info.getValue(),
     footer: (info) => info.column.id,
   }),
-  columnHelper.accessor("isJumpGateComplete", {
+  columnHelperConstructionOverview.accessor("isJumpGateComplete", {
     cell: (info) => info.getValue(),
     footer: (info) => info.column.id,
   }),
-  columnHelper.accessor("tradeSymbol", {
+  columnHelperConstructionOverview.accessor("tradeSymbol", {
     cell: (info) => info.getValue(),
     footer: (info) => info.column.id,
   }),
-  columnHelper.accessor("fulfilled", {
+  columnHelperConstructionOverview.accessor("fulfilled", {
     cell: (info) => intNumberFmt.format(info.getValue()),
     footer: (info) => info.column.id,
     meta: {
       align: "right",
     },
   }),
-  columnHelper.accessor("required", {
+  columnHelperConstructionOverview.accessor("required", {
     cell: (info) => intNumberFmt.format(info.getValue()),
     footer: (info) => info.column.id,
     meta: {
       align: "right",
     },
   }),
-  columnHelper.accessor(
+  columnHelperConstructionOverview.accessor(
     (row) => `${percentNumberFmt.format(row.fulfilled / row.required)}`,
     {
       id: "completed",
@@ -69,7 +78,7 @@ const columns = [
       },
     },
   ),
-  columnHelper.accessor("tsFirstConstructionEvent", {
+  columnHelperConstructionOverview.accessor("tsFirstConstructionEvent", {
     header: "First Construction Event",
     cell: (info) => dateFmt.format(info.getValue()),
     footer: (info) => info.column.id,
@@ -79,7 +88,7 @@ const columns = [
       align: "right",
     },
   }),
-  columnHelper.accessor(
+  columnHelperConstructionOverview.accessor(
     (row) => durationMillis(row.tsStartOfReset, row.tsFirstConstructionEvent),
     {
       id: "durationStartResetFirstConstructionEvent",
@@ -90,7 +99,7 @@ const columns = [
       },
     },
   ),
-  columnHelper.accessor("tsLastConstructionEvent", {
+  columnHelperConstructionOverview.accessor("tsLastConstructionEvent", {
     header: "Last Construction Event",
     cell: (info) => {
       // beware: formatting null returns 01/01/190 - formatting undefined return current date :facepalm:
@@ -104,7 +113,7 @@ const columns = [
       align: "right",
     },
   }),
-  columnHelper.accessor(
+  columnHelperConstructionOverview.accessor(
     (row) =>
       row.tsLastConstructionEvent
         ? durationMillis(row.tsStartOfReset, row.tsLastConstructionEvent)
@@ -123,7 +132,7 @@ const columns = [
       },
     },
   ),
-  columnHelper.accessor(
+  columnHelperConstructionOverview.accessor(
     (row) =>
       row.tsLastConstructionEvent
         ? durationMillis(
@@ -146,12 +155,66 @@ const columns = [
   ),
 ];
 
+const jumpGateAssignmentColumns = [
+  columnHelperJumpGateAssignment.accessor("jumpGateWaypointSymbol", {
+    cell: (info) => info.getValue(),
+    footer: (info) => info.column.id,
+  }),
+  columnHelperJumpGateAssignment.accessor("agentHeadquartersWaypointSymbol", {
+    cell: (info) => info.getValue(),
+    footer: (info) => info.column.id,
+  }),
+  columnHelperJumpGateAssignment.accessor("agentsInSystem", {
+    cell: (info) =>
+      info
+        .getValue()
+        .map((a) => a)
+        .join(", "),
+    footer: (info) => info.column.id,
+  }),
+];
+
+export const jumpGateQueryOptions = (resetDate: string) =>
+  queryOptions({
+    queryKey: ["jumpGateData", resetDate],
+    queryFn: () => CrateService.getJumpGateAgentsAssignment({ resetDate }),
+  });
+
 export const Route = createFileRoute("/resets/$resetDate/jump-gate")({
   component: JumpGateComponent,
+  loader: async ({
+    //deps: { agents },
+    params: { resetDate },
+    context: { queryClient },
+  }) => {
+    let options = jumpGateQueryOptions(resetDate);
+    return queryClient.ensureQueryData(options);
+  },
 });
 
 function JumpGateComponent(): JSX.Element {
+  const { resetDate } = Route.useParams();
+
   const [sorting, setSorting] = React.useState<SortingState>([]);
+
+  const { data } = useSuspenseQuery(jumpGateQueryOptions(resetDate));
+
+  console.log("jumpGateAssignment", data);
+
+  const assignmentTable = useReactTable({
+    data: data.jumpGateAssignmentEntries,
+    defaultColumn: {
+      size: 200,
+      minSize: 50,
+    },
+    columns: jumpGateAssignmentColumns,
+    getRowId: (row) => `${row.jumpGateWaypointSymbol}`,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    state: { sorting },
+    onSortingChange: setSorting,
+    debugTable: true,
+  });
 
   const table = useReactTable({
     data: mockDataConstructionProgress,
@@ -171,6 +234,9 @@ function JumpGateComponent(): JSX.Element {
   return (
     <>
       <div>
+        <h2>Jump Gate to Agents Assignment</h2>
+        {prettyTable(assignmentTable)}
+        <h2>Construction Overview</h2>
         {prettyTable(table)}
         <pre>{JSON.stringify(mockDataConstructionProgress, null, 2)}</pre>
       </div>
