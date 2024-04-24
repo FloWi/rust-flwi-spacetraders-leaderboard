@@ -134,6 +134,34 @@ order by credits desc, ship_count desc
     .await
 }
 
+pub(crate) async fn load_jump_gate_agent_assignment_for_reset(
+    pool: &Pool<Sqlite>,
+    reset_date: NaiveDate,
+) -> Result<Vec<DbJumpGateAssignmentEntry>, Error> {
+    sqlx::query_as!(
+        DbJumpGateAssignmentEntry,
+        "
+select rd.reset
+     , agent_headquarters_waypoint_symbol
+     , jump_gate_waypoint_symbol
+     , group_concat(agent_symbol order by agent_symbol, ',') as agents_in_system_csv
+from static_agent_info sai
+         join main.construction_site cs on sai.construction_site_id = cs.id
+         join main.reset_date rd on cs.reset_id = rd.reset_id
+where reset = ?
+group by rd.reset
+       , agent_headquarters_waypoint_symbol
+       , cs.jump_gate_waypoint_symbol
+       , construction_site_id
+order by rd.reset
+       , jump_gate_waypoint_symbol
+",
+        reset_date
+    )
+    .fetch_all(pool)
+    .await
+}
+
 pub(crate) async fn save_construction_sites(
     pool: &Pool<Sqlite>,
     reset_date: ResetDate,
@@ -423,6 +451,17 @@ pub(crate) struct LeaderboardEntry {
     pub ship_count: i64,
     pub agent_headquarters_waypoint_symbol: String,
     pub jump_gate_waypoint_symbol: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, sqlx::FromRow)]
+pub(crate) struct DbJumpGateAssignmentEntry {
+    pub reset: NaiveDate,
+    pub agent_headquarters_waypoint_symbol: String,
+    pub jump_gate_waypoint_symbol: String,
+
+    // for some reason, sqlx thinks this is a string if I use json_group_array.
+    // I'm now concatenating the values with a comma to then split in the rust world
+    pub agents_in_system_csv: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
