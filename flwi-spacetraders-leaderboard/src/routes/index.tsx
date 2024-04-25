@@ -6,7 +6,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <div className="p-4 flex flex-col gap-4 w-1/2">
+    <div className="flex flex-col gap-4 w-1/2">
       <h3 className="text-xl font-bold">How to leaderboard?</h3>
 
       <p>The backend crawls the SpaceTraders server every 5 minutes.</p>

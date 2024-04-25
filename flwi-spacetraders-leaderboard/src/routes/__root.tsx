@@ -13,40 +13,70 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     component: () => (
       <>
         <div>
-          <div className="p-2 flex gap-2 items-end">
-            <Link to="/" className="text-2xl font-bold">
-              Flwi SpaceTraders Leaderboard
-            </Link>
-            <Link to="/resets" className="[&.active]:font-bold">
-              Resets
-            </Link>
-            <Link to="/all-time" className="[&.active]:font-bold">
-              All Time Comparison
-            </Link>
-            <a
-              className="ml-auto"
-              href="/docs/swagger-ui"
-              title="Swagger API docs"
-              target="_blank"
-            >
-              <SwaggerIcon.icon
-                className="mr-2 h-8 w-8"
+          <div className="min-w-full table p-4">
+            <div className="flex flex-row items-center">
+              <Link
+                to="/"
+                className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+              [&.active]:bg-muted
+              [&.active]:font-medium
+              [&.active]:text-primary
+"
+              >
+                Home
+              </Link>
+              <Link
+                to="/resets"
+                className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+              [&.active]:bg-muted
+              [&.active]:font-medium
+              [&.active]:text-primary
+"
+              >
+                Resets
+              </Link>
+              <Link
+                to="/all-time"
+                className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+              [&.active]:bg-muted
+              [&.active]:font-medium
+              [&.active]:text-primary
+"
+              >
+                All Time Comparison
+              </Link>
+              <a
+                className="ml-auto"
+                href="/docs/swagger-ui"
                 title="Swagger API docs"
-              />
-            </a>
-            <a
-              href="https://github.com/FloWi/rust-flwi-spacetraders-leaderboard"
-              title="Github Repository"
-              target="_blank"
-            >
-              <ShadcnIcons.gitHub className="mr-2 h-8 w-8" />
-            </a>
+                target="_blank"
+              >
+                <SwaggerIcon.icon
+                  className="mr-2 h-6 w-6"
+                  title="Swagger API docs"
+                />
+              </a>
+              <a
+                href="https://github.com/FloWi/rust-flwi-spacetraders-leaderboard"
+                title="Github Repository"
+                target="_blank"
+              >
+                <ShadcnIcons.gitHub className="mr-2 h-6 w-6" />
+              </a>
+            </div>
           </div>
           <hr />
-          <Outlet />
+          <div className="p-8">
+            <Outlet />
+          </div>
         </div>
         <TanStackRouterDevtools />
       </>
     ),
   },
 );
+
+// active
+// flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary bg-muted font-medium text-primary
+//inactive
+// flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
