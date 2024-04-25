@@ -23,6 +23,16 @@ import { chartColors } from "../../utils/chartColors.ts";
 import { useFetchState, zip } from "../../lib/utils.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "../../@/components/ui/sheet";
+import { Button } from "../../@/components/ui/button.tsx";
+
 type LeaderboardSearch = {
   agents?: string[];
 };
@@ -67,13 +77,6 @@ const columns = [
     footer: (info) => info.column.id,
   }),
   columnHelper.accessor("credits", {
-    cell: (info) => numberFmt.format(info.getValue()),
-    footer: (info) => info.column.id,
-    meta: {
-      align: "right",
-    },
-  }),
-  columnHelper.accessor("shipCount", {
     cell: (info) => numberFmt.format(info.getValue()),
     footer: (info) => info.column.id,
     meta: {
@@ -209,10 +212,10 @@ function LeaderboardComponent() {
 
   const table = useReactTable({
     data: memoizedLeaderboard.sortedAndColoredLeaderboard,
-    defaultColumn: {
-      size: 200,
-      minSize: 50,
-    },
+    // defaultColumn: {
+    //   size: 200,
+    //   minSize: 50,
+    // },
     columns,
     getRowId: (row) => row.agentSymbol,
     onRowSelectionChange: setRowSelection, //hoist up the row selection state to your own scope
@@ -242,98 +245,109 @@ function LeaderboardComponent() {
 
   return (
     <>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 w-full">
         <h1>Leaderboard for reset {resetDateToUse}</h1>
-        <div className="flex flex-row gap-4">
-          <div className="p-2">
-            <div className="h-2 flex flex-col gap-2">
-              {prettyTable(table)}
-              <div>{table.getRowModel().rows.length.toLocaleString()} Rows</div>
-
-              <h3>Data in cache</h3>
-              <pre>
-                {`Refresh Date: ${fetchStates?.lastRefresh.toISOString()}
-`}
-                {fetchStates?.historyData
-                  ?.map((e) => e.agentSymbol)
-                  ?.join("\n")}
-              </pre>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline">Change Selection</Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="min-w-[375px] max-w-[375px]">
+            <SheetHeader>
+              <SheetTitle>Agent Selection</SheetTitle>
+              <SheetDescription>
+                <div className="flex flex-col gap-2">
+                  {prettyTable(table)}
+                  <div>
+                    {table.getRowModel().rows.length.toLocaleString()} Rows
+                  </div>
+                </div>
+              </SheetDescription>
+            </SheetHeader>
+          </SheetContent>
+        </Sheet>
+        <div className="w-full flex flex-col">
+          <div>
+            <h3 className="text-xl font-bold">
+              Credits {isLog ? "(log axis)" : ""}
+            </h3>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="log-y-axis"
+                checked={isLog}
+                onCheckedChange={setIsLog}
+              />
+              <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
             </div>
+            <Plot
+              className="w-full"
+              data={[
+                {
+                  type: "bar",
+                  x: chartData.xValues,
+                  y: chartData.yValuesCredits,
+                  name: "Credits",
+                  marker: { color: chartData.colors },
+                },
+              ]}
+              layout={{
+                modebar: { orientation: "h" },
+                showlegend: false,
+                height: 500,
+                font: {
+                  size: 10,
+                  color: "white",
+                },
+                paper_bgcolor: "rgba(0,0,0,0)",
+                plot_bgcolor: "rgba(0,0,0,0)",
+
+                yaxis: {
+                  type: isLog ? "log" : "linear",
+                  zeroline: true,
+                  linecolor: "lightgray",
+                  zerolinecolor: "lightgray",
+                  gridcolor: "lightgray",
+                  tickformat: ",d",
+                },
+              }}
+              config={{ displayModeBar: false, responsive: true }}
+            />
           </div>
-          <div className="w-full flex flex-col">
-            <div>
-              <h3 className="text-xl font-bold">
-                Credits {isLog ? "(log axis)" : ""}
-              </h3>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="log-y-axis"
-                  checked={isLog}
-                  onCheckedChange={setIsLog}
-                />
-                <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
-              </div>
-              <Plot
-                data={[
-                  {
-                    type: "bar",
-                    x: chartData.xValues,
-                    y: chartData.yValuesCredits,
-                    name: "Credits",
-                    marker: { color: chartData.colors },
-                  },
-                ]}
-                layout={{
-                  showlegend: false,
-                  height: 500,
-                  width: 1200,
-                  font: {
-                    size: 10,
-                    color: "white",
-                  },
-                  paper_bgcolor: "rgba(0,0,0,0)",
-                  plot_bgcolor: "rgba(0,0,0,0)",
 
-                  yaxis: {
-                    type: isLog ? "log" : "linear",
-                    gridcolor: "lightgray",
-                    tickformat: ",d",
-                  },
-                }}
-                config={{}}
-              />
-            </div>
+          <div>
+            <h3 className="text-xl font-bold">Ships</h3>
+            <Plot
+              className="w-full"
+              data={[
+                {
+                  type: "bar",
+                  x: chartData.xValues,
+                  y: chartData.yValuesShips,
+                  xaxis: "x",
+                  yaxis: "y2",
+                  name: "Ships",
+                  marker: { color: chartData.colors },
+                },
+              ]}
+              layout={{
+                showlegend: false,
+                height: 500,
+                font: {
+                  size: 10,
+                  color: "white",
+                },
+                paper_bgcolor: "rgba(0,0,0,0)",
+                plot_bgcolor: "rgba(0,0,0,0)",
 
-            <div>
-              <h3 className="text-xl font-bold">Ships</h3>
-              <Plot
-                data={[
-                  {
-                    type: "bar",
-                    x: chartData.xValues,
-                    y: chartData.yValuesShips,
-                    xaxis: "x",
-                    yaxis: "y2",
-                    name: "Ships",
-                    marker: { color: chartData.colors },
-                  },
-                ]}
-                layout={{
-                  showlegend: false,
-                  height: 500,
-                  width: 1200,
-                  font: {
-                    size: 10,
-                    color: "white",
-                  },
-                  paper_bgcolor: "rgba(0,0,0,0)",
-                  plot_bgcolor: "rgba(0,0,0,0)",
-
-                  yaxis: { gridcolor: "lightgray", tickformat: ",d" }, //integer
-                }}
-                config={{}}
-              />
-            </div>
+                yaxis: {
+                  zeroline: true,
+                  linecolor: "lightgray",
+                  zerolinecolor: "lightgray",
+                  gridcolor: "lightgray",
+                  tickformat: ",d",
+                }, //integer
+              }}
+              config={{ displayModeBar: false, responsive: true }}
+            />
           </div>
         </div>
       </div>

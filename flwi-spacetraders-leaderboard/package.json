@@ -11,6 +11,7 @@
     "codegen": "rm -rf generated; openapi-ts --input http://localhost:8080/api-docs/openapi.json --output generated --client axios --format true --lint true"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-switch": "^1.0.3",
