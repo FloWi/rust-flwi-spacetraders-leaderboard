@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ShadcnIcons } from "../components/shadcn-icons.tsx";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -8,14 +7,15 @@ export const Route = createFileRoute("/")({
 function Index() {
   return (
     <div className="p-4 flex flex-col gap-4 w-1/2">
-      <h3 className="text-xl font-bold">Welcome Home!</h3>
+      <h3 className="text-xl font-bold">How to leaderboard?</h3>
 
       <p>The backend crawls the SpaceTraders server every 5 minutes.</p>
       <p>
-        I'm monitoring the official leaderboard and track every agent that
-        appeared at least once. I keep tracking them even if they disappear from
-        the official leaderboard. I decided to do it like that to keep the
-        number of agents to track low (because of the rate-limit).
+        To get the collection of agents under surveillance I'm checking the
+        official leaderboard and track every agent that appeared at least once
+        and keep tracking them even if they disappear again. I decided to do it
+        like that to keep the number of agents to track low (because of the
+        rate-limit) without the need to maintain a list manually.
       </p>
       <p>
         It also tracks the construction of the jump gates. I'm taking their

@@ -13,7 +13,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     component: () => (
       <>
         <div>
-          <div className="p-2 flex gap-2 ">
+          <div className="p-2 flex gap-2 items-end">
+            <Link to="/" className="text-2xl font-bold">
+              Flwi SpaceTraders Leaderboard
+            </Link>
             <Link to="/resets" className="[&.active]:font-bold">
               Resets
             </Link>
@@ -23,10 +26,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             <a
               className="ml-auto"
               href="/docs/swagger-ui"
-              title="Github Repository"
+              title="Swagger API docs"
               target="_blank"
             >
-              <SwaggerIcon.icon className="mr-2 h-8 w-8" />
+              <SwaggerIcon.icon
+                className="mr-2 h-8 w-8"
+                title="Swagger API docs"
+              />
             </a>
             <a
               href="https://github.com/FloWi/rust-flwi-spacetraders-leaderboard"

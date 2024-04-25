@@ -10,11 +10,7 @@ import React, { JSX } from "react";
 import { prettyTable } from "../../components/prettyTable.tsx";
 import { Duration } from "luxon";
 import { ApiJumpGateAssignmentEntry, CrateService } from "../../../generated";
-import {
-  queryOptions,
-  useQuery,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
+import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
 const prettyDuration = (durationMs: number) => {
   let d = Duration.fromMillis(durationMs);
