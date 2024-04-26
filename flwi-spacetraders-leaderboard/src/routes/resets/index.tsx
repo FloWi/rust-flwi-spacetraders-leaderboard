@@ -1,21 +1,22 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import {createFileRoute, Link, Outlet} from "@tanstack/react-router";
 
-import { CrateService, OpenAPI } from "../../../generated";
-import { useFetchState } from "../../lib/utils.ts";
+import {CrateService, OpenAPI} from "../../../generated";
+import {queryOptions} from "@tanstack/react-query";
 
 OpenAPI.BASE = "http://localhost:8080";
 
+const resetQueryOptions = queryOptions({
+  queryKey: ["resetDates"],
+  queryFn: () => CrateService.getResetDates().then((r) => r.resetDates),
+});
+
 export const Route = createFileRoute("/resets/")({
   component: ResetRouteComponent,
-  loader: async () => {
-    const current = useFetchState.getState();
-
-    await current.refreshResetDatesIfNecessary(() =>
-      //Promises are eager
-      CrateService.getResetDates().then((r) => r.resetDates),
-    );
-
-    return useFetchState.getState().resetDates;
+  loader: async ({
+                   //deps: { agents },
+                   context: {queryClient},
+                 }) => {
+    return queryClient.ensureQueryData(resetQueryOptions);
   },
 });
 
@@ -36,7 +37,7 @@ function ResetRouteComponent() {
                   <li key={idx}>
                     <Link
                       to="/resets/$resetDate/leaderboard"
-                      params={{ resetDate: date }}
+                      params={{resetDate: date}}
                       // search={{agents: ["WHYANDO", "SG-1-DEVX56"]}}
                       className="[&.active]:font-bold"
                     >
@@ -48,7 +49,7 @@ function ResetRouteComponent() {
           </nav>
         </div>
 
-        <Outlet />
+        <Outlet/>
       </div>
     </>
   );

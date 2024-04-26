@@ -63,7 +63,10 @@ export function prettyTable<T>(table: TanStackTable<T>) {
             return (
               <TableRow
                 key={row.id}
-                className={row.getIsSelected() ? "selected" : undefined}
+                className={
+                  (row.getIsSelected() ? "selected" : undefined) +
+                  " cursor-pointer"
+                }
                 onClick={row.getToggleSelectedHandler()}
               >
                 {row.getVisibleCells().map((cell) => {
