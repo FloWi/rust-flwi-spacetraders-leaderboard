@@ -290,23 +290,37 @@ function LeaderboardComponent() {
                 },
               ]}
               layout={{
+                // remove margin reserved for title area
+                margin: {
+                  l: 50,
+                  r: 50,
+                  b: 50,
+                  t: 50,
+                  //pad: 4,
+                },
                 modebar: { orientation: "h" },
                 showlegend: false,
                 height: 500,
                 font: {
                   size: 10,
-                  color: "white",
+                  color: "lightgray",
                 },
                 paper_bgcolor: "rgba(0,0,0,0)",
                 plot_bgcolor: "rgba(0,0,0,0)",
 
+                xaxis: {
+                  showline: true,
+                  linecolor: "lightgray",
+                },
+
                 yaxis: {
                   type: isLog ? "log" : "linear",
+                  tick0: 0,
                   zeroline: true,
+                  showline: false,
                   linecolor: "lightgray",
-                  zerolinecolor: "lightgray",
                   gridcolor: "lightgray",
-                  tickformat: ",d",
+                  tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
                 },
               }}
               config={{ displayModeBar: false, responsive: true }}
@@ -329,17 +343,33 @@ function LeaderboardComponent() {
                 },
               ]}
               layout={{
+                // remove margin reserved for title area
+                margin: {
+                  l: 50,
+                  r: 50,
+                  b: 50,
+                  t: 50,
+                  //pad: 4,
+                },
                 showlegend: false,
                 height: 500,
                 font: {
                   size: 10,
-                  color: "white",
+                  color: "lightgray",
                 },
                 paper_bgcolor: "rgba(0,0,0,0)",
                 plot_bgcolor: "rgba(0,0,0,0)",
 
+                xaxis: {
+                  showline: true,
+                  linecolor: "lightgray",
+                },
+
                 yaxis: {
+                  type: "linear",
+                  tick0: 0,
                   zeroline: true,
+                  showline: true,
                   linecolor: "lightgray",
                   zerolinecolor: "lightgray",
                   gridcolor: "lightgray",
