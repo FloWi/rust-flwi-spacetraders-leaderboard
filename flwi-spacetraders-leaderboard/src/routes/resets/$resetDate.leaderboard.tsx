@@ -322,6 +322,7 @@ function LeaderboardComponent() {
                   showline: false,
                   linecolor: "lightgray",
                   gridcolor: "lightgray",
+                  hoverformat: ",d",
                   tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
                 },
               }}
