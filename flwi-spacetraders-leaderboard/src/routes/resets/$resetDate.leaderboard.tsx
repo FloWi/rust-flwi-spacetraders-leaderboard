@@ -32,6 +32,7 @@ import {
   SheetTrigger,
 } from "../../@/components/ui/sheet";
 import {Button} from "../../@/components/ui/button.tsx";
+import {ScrollArea} from "../../@/components/ui/scroll-area.tsx";
 
 type LeaderboardSearch = {
   agents?: string[];
@@ -256,17 +257,16 @@ function LeaderboardComponent() {
           <SheetContent side="left" className="min-w-[375px] max-w-[375px]">
             <SheetHeader>
               <SheetTitle>Agent Selection</SheetTitle>
-              <SheetDescription>
-                <div className="flex flex-col gap-2">
-                  {prettyTable(table)}
-                  <div>
-                    {table.getRowModel().rows.length.toLocaleString()} Rows
-                  </div>
-                </div>
-              </SheetDescription>
             </SheetHeader>
+            <SheetDescription>{agents?.length ?? 0} selected</SheetDescription>
+            <ScrollArea className="h-5/6">
+              <div className="flex flex-col gap-2 mt-2">
+                {prettyTable(table)}
+              </div>
+            </ScrollArea>
           </SheetContent>
         </Sheet>
+
         <div className="w-full flex flex-col">
           <div>
             <h3 className="text-xl font-bold">
