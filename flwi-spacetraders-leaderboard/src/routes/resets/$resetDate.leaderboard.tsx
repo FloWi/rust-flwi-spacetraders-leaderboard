@@ -27,6 +27,7 @@ import {
   Sheet,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -220,7 +221,7 @@ function LeaderboardComponent() {
   const table = useReactTable({
     data: memoizedLeaderboard.sortedAndColoredLeaderboard,
     // defaultColumn: {
-    //   size: 200,
+    //   size: 100,
     //   minSize: 50,
     // },
     columns,
@@ -246,6 +247,23 @@ function LeaderboardComponent() {
     });
   }, [resetDateToUse, rowSelection]);
 
+  const selectTop10 = () => {
+    let top10Agents = memoizedLeaderboard.sortedAndColoredLeaderboard
+      .slice(0, 10)
+      .map((e) => e.agentSymbol);
+    const newSelection: RowSelectionState = top10Agents.reduce(
+      (o, key) => ({...o, [key]: true}),
+      {},
+    );
+    setRowSelection((_) => newSelection);
+  };
+
+  const clearSelection = () => {
+    setRowSelection((_) => {
+      return {};
+    });
+  };
+
   return (
     <>
       <div className="flex flex-col gap-4 w-full">
@@ -254,16 +272,30 @@ function LeaderboardComponent() {
           <SheetTrigger asChild>
             <Button variant="outline">Change Selection</Button>
           </SheetTrigger>
-          <SheetContent side="left" className="min-w-[375px] max-w-[375px]">
+          <SheetContent
+            side="left"
+            className="w-11/12 md:w-fit flex flex-col gap-4"
+          >
             <SheetHeader>
               <SheetTitle>Agent Selection</SheetTitle>
+              <SheetDescription>
+                {agents?.length ?? 0} selected
+              </SheetDescription>
             </SheetHeader>
-            <SheetDescription>{agents?.length ?? 0} selected</SheetDescription>
-            <ScrollArea className="h-5/6">
+            <ScrollArea>
               <div className="flex flex-col gap-2 mt-2">
                 {prettyTable(table)}
               </div>
             </ScrollArea>
+            <SheetFooter>
+              <Button variant="outline" size="sm" onClick={selectTop10}>
+                Select Top 10
+              </Button>
+
+              <Button variant="outline" size="sm" onClick={clearSelection}>
+                Clear Selection
+              </Button>
+            </SheetFooter>
           </SheetContent>
         </Sheet>
 
