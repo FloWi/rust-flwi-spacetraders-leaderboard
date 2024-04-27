@@ -10,11 +10,11 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
   validateSearch: (search: Record<string, unknown>): AgentSelectionSearch => {
     // validate and parse the search params into a typed state
     return {
-      selectedAgents: search?.agents as string[],
+      selectedAgents: search?.selectedAgents as string[],
     };
   },
 
-  loaderDeps: ({ search: { selectedAgents } }) => ({ agents: selectedAgents }),
+  loaderDeps: ({ search: { selectedAgents } }) => ({ selectedAgents }),
 });
 
 function HistoryComponent() {
