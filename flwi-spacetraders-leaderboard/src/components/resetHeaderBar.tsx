@@ -1,5 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { Separator } from "../@/components/ui/separator.tsx";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "../@/components/ui/navigation-menu.tsx";
 
 interface ResetHeaderBarProps {
   resetDate: string;
@@ -13,45 +21,68 @@ export const ResetHeaderBar = ({
   return (
     <div className="min-w-full flex flex-col gap-4">
       <div className="flex flex-row items-center h-5 space-x-2">
-        <div className="space-y-1">
+        <div className="space-y-1 text-left">
           <h4 className="text-sm font-medium leading-none">Reset</h4>
           <p className="text-sm text-muted-foreground">{resetDate}</p>
         </div>
-        <Link
-          to="/resets/$resetDate/leaderboard"
-          params={{ resetDate }}
-          search={{ agents: selectedAgents }}
-          className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+        <NavigationMenu>
+          <NavigationMenuList>
+            <NavigationMenuItem>
+              <NavigationMenuTrigger>Page</NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <ul className="flex flex-col w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
+                  <li>
+                    <NavigationMenuLink asChild>
+                      <Link
+                        to="/resets/$resetDate/leaderboard"
+                        params={{ resetDate }}
+                        search={{ agents: selectedAgents }}
+                        className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground
               [&.active]:bg-muted
               [&.active]:font-medium
               [&.active]:text-primary
 "
-        >
-          Leaderboard
-        </Link>
-        <Link
-          to="/resets/$resetDate/history"
-          params={{ resetDate }}
-          search={{ selectedAgents: selectedAgents }}
-          className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+                      >
+                        Leaderboard
+                      </Link>
+                    </NavigationMenuLink>
+                  </li>
+                  <li>
+                    <NavigationMenuLink asChild>
+                      <Link
+                        to="/resets/$resetDate/history"
+                        params={{ resetDate }}
+                        search={{ selectedAgents: selectedAgents }}
+                        className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground
               [&.active]:bg-muted
               [&.active]:font-medium
               [&.active]:text-primary
 "
-        >
-          History
-        </Link>
-        <Link
-          to="/resets/$resetDate/jump-gate"
-          params={{ resetDate }}
-          className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+                      >
+                        History
+                      </Link>
+                    </NavigationMenuLink>
+                  </li>
+                  <li>
+                    <NavigationMenuLink asChild>
+                      <Link
+                        to="/resets/$resetDate/jump-gate"
+                        params={{ resetDate }}
+                        className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground
               [&.active]:bg-muted
               [&.active]:font-medium
               [&.active]:text-primary
 "
-        >
-          Jump-Gate Overview
-        </Link>
+                      >
+                        Jump-Gate Overview
+                      </Link>
+                    </NavigationMenuLink>
+                  </li>
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
+          </NavigationMenuList>
+        </NavigationMenu>
       </div>
       <Separator />
     </div>
