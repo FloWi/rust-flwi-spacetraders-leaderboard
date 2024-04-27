@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import {createFileRoute, Outlet} from "@tanstack/react-router";
 
 export const Route = createFileRoute("/resets")({
   component: ResetRouteComponent,
@@ -6,8 +6,8 @@ export const Route = createFileRoute("/resets")({
 
 function ResetRouteComponent() {
   return (
-    <>
-      <Outlet />
-    </>
+    <div className="p-2 md:p-4">
+      <Outlet/>
+    </div>
   );
 }

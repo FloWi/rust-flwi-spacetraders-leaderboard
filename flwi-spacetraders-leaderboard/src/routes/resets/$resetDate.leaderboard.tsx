@@ -34,8 +34,10 @@ import {
 } from "../../@/components/ui/sheet";
 import {Button} from "../../@/components/ui/button.tsx";
 import {ScrollArea} from "../../@/components/ui/scroll-area.tsx";
+import {ResetHeaderBar} from "../../components/resetHeaderBar.tsx";
+import {HamburgerMenuIcon} from "@radix-ui/react-icons";
 
-type LeaderboardSearch = {
+type AgentSelectionSearch = {
   agents?: string[];
 };
 
@@ -136,7 +138,7 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
     return queryClient.ensureQueryData(options);
   },
 
-  validateSearch: (search: Record<string, unknown>): LeaderboardSearch => {
+  validateSearch: (search: Record<string, unknown>): AgentSelectionSearch => {
     // validate and parse the search params into a typed state
     return {
       agents: search?.agents as string[],
@@ -266,19 +268,21 @@ function LeaderboardComponent() {
 
   return (
     <>
+      <ResetHeaderBar resetDate={resetDate} selectedAgents={agents}/>
       <div className="flex flex-col gap-4 w-full">
-        <h1>Leaderboard for reset {resetDateToUse}</h1>
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="outline">Change Selection</Button>
+            <HamburgerMenuIcon/>
           </SheetTrigger>
           <SheetContent
             side="left"
             className="w-11/12 md:w-fit flex flex-col gap-4"
           >
-            <SheetHeader>
-              <SheetTitle>Agent Selection</SheetTitle>
-              <SheetDescription>
+            <SheetHeader className="space-y-1">
+              <SheetTitle className="text-sm font-medium leading-none">
+                Agent Selection
+              </SheetTitle>
+              <SheetDescription className="text-sm text-muted-foreground">
                 {agents?.length ?? 0} selected
               </SheetDescription>
             </SheetHeader>
@@ -297,125 +301,127 @@ function LeaderboardComponent() {
               </Button>
             </SheetFooter>
           </SheetContent>
-        </Sheet>
 
-        <div className="w-full flex flex-col">
-          <div>
-            <h3 className="text-xl font-bold">
-              Credits {isLog ? "(log axis)" : ""}
-            </h3>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="log-y-axis"
-                checked={isLog}
-                onCheckedChange={setIsLog}
+          <div className="w-full flex flex-col">
+            <div>
+              <h3 className="text-sm font-bold">
+                Credits {isLog ? "(log axis)" : ""}
+              </h3>
+
+              <div className="flex items-center space-x-2 text-sm">
+                <Switch
+                  id="log-y-axis"
+                  checked={isLog}
+                  onCheckedChange={setIsLog}
+                />
+                <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
+              </div>
+              <Plot
+                className="w-full"
+                data={[
+                  {
+                    type: "bar",
+                    x: chartData.xValues,
+                    y: chartData.yValuesCredits,
+                    name: "Credits",
+                    marker: {color: chartData.colors},
+                  },
+                ]}
+                layout={{
+                  // remove margin reserved for title area
+                  margin: {
+                    l: 50,
+                    r: 50,
+                    b: 50,
+                    t: 50,
+                    //pad: 4,
+                  },
+                  modebar: {orientation: "h"},
+                  showlegend: false,
+                  height: 500,
+                  font: {
+                    size: 10,
+                    color: "lightgray",
+                  },
+                  paper_bgcolor: "rgba(0,0,0,0)",
+                  plot_bgcolor: "rgba(0,0,0,0)",
+
+                  xaxis: {
+                    showline: true,
+                    linecolor: "lightgray",
+                  },
+
+                  yaxis: {
+                    type: isLog ? "log" : "linear",
+                    tick0: 0,
+                    zeroline: true,
+                    showline: false,
+                    linecolor: "lightgray",
+                    gridcolor: "lightgray",
+                    hoverformat: ",d",
+                    tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
+                  },
+                }}
+                config={{displayModeBar: false, responsive: true}}
               />
-              <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
             </div>
-            <Plot
-              className="w-full"
-              data={[
-                {
-                  type: "bar",
-                  x: chartData.xValues,
-                  y: chartData.yValuesCredits,
-                  name: "Credits",
-                  marker: {color: chartData.colors},
-                },
-              ]}
-              layout={{
-                // remove margin reserved for title area
-                margin: {
-                  l: 50,
-                  r: 50,
-                  b: 50,
-                  t: 50,
-                  //pad: 4,
-                },
-                modebar: {orientation: "h"},
-                showlegend: false,
-                height: 500,
-                font: {
-                  size: 10,
-                  color: "lightgray",
-                },
-                paper_bgcolor: "rgba(0,0,0,0)",
-                plot_bgcolor: "rgba(0,0,0,0)",
 
-                xaxis: {
-                  showline: true,
-                  linecolor: "lightgray",
-                },
+            <div>
+              <h3 className="text-xl font-bold">Ships</h3>
+              <Plot
+                className="w-full"
+                data={[
+                  {
+                    type: "bar",
+                    x: chartData.xValues,
+                    y: chartData.yValuesShips,
+                    xaxis: "x",
+                    yaxis: "y2",
+                    name: "Ships",
+                    marker: {color: chartData.colors},
+                  },
+                ]}
+                layout={{
+                  // remove margin reserved for title area
+                  margin: {
+                    l: 50,
+                    r: 50,
+                    b: 50,
+                    t: 50,
+                    //pad: 4,
+                  },
+                  showlegend: false,
+                  height: 500,
+                  font: {
+                    size: 10,
+                    color: "lightgray",
+                  },
+                  paper_bgcolor: "rgba(0,0,0,0)",
+                  plot_bgcolor: "rgba(0,0,0,0)",
 
-                yaxis: {
-                  type: isLog ? "log" : "linear",
-                  tick0: 0,
-                  zeroline: true,
-                  showline: false,
-                  linecolor: "lightgray",
-                  gridcolor: "lightgray",
-                  hoverformat: ",d",
-                  tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
-                },
-              }}
-              config={{displayModeBar: false, responsive: true}}
-            />
+                  xaxis: {
+                    showline: true,
+                    linecolor: "lightgray",
+                  },
+
+                  yaxis: {
+                    type: "linear",
+                    tick0: 0,
+                    zeroline: true,
+                    showline: true,
+                    linecolor: "lightgray",
+                    zerolinecolor: "lightgray",
+                    gridcolor: "lightgray",
+                    tickformat: ",d",
+                  }, //integer
+                }}
+                config={{displayModeBar: false, responsive: true}}
+              />
+            </div>
           </div>
-
-          <div>
-            <h3 className="text-xl font-bold">Ships</h3>
-            <Plot
-              className="w-full"
-              data={[
-                {
-                  type: "bar",
-                  x: chartData.xValues,
-                  y: chartData.yValuesShips,
-                  xaxis: "x",
-                  yaxis: "y2",
-                  name: "Ships",
-                  marker: {color: chartData.colors},
-                },
-              ]}
-              layout={{
-                // remove margin reserved for title area
-                margin: {
-                  l: 50,
-                  r: 50,
-                  b: 50,
-                  t: 50,
-                  //pad: 4,
-                },
-                showlegend: false,
-                height: 500,
-                font: {
-                  size: 10,
-                  color: "lightgray",
-                },
-                paper_bgcolor: "rgba(0,0,0,0)",
-                plot_bgcolor: "rgba(0,0,0,0)",
-
-                xaxis: {
-                  showline: true,
-                  linecolor: "lightgray",
-                },
-
-                yaxis: {
-                  type: "linear",
-                  tick0: 0,
-                  zeroline: true,
-                  showline: true,
-                  linecolor: "lightgray",
-                  zerolinecolor: "lightgray",
-                  gridcolor: "lightgray",
-                  tickformat: ",d",
-                }, //integer
-              }}
-              config={{displayModeBar: false, responsive: true}}
-            />
-          </div>
-        </div>
+        </Sheet>
       </div>
+
     </>
   );
 }
