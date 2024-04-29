@@ -243,9 +243,11 @@ function JumpGateComponent(): JSX.Element {
 
   const {data} = useSuspenseQuery(jumpGateQueryOptions(resetDate));
 
-  let constructionProgressData = mockDataConstructionProgress.filter(
-    (d) => d.reset === resetDate,
-  );
+  let constructionProgressData = useMemo(() => {
+    return mockDataConstructionProgress.filter(
+      (d) => d.reset === resetDate,
+    )
+  }, [resetDate])
 
   const jumpGateSummary = useMemo(() => {
     return aggregateJumpGateStats(constructionProgressData, data);
@@ -289,7 +291,13 @@ function JumpGateComponent(): JSX.Element {
 
   return (
     <>
-      <ResetHeaderBar resetDate={resetDate}/>
+      <ResetHeaderBar resetDate={resetDate} linkToSamePageDifferentResetProps={(rd) => {
+        return {
+          to: "/resets/$resetDate/jump-gate",
+          params: {resetDate: rd},
+        };
+      }}
+      />
       <div className="flex flex-col gap-x-2 gap-y-4">
         <Separator orientation="horizontal"/>
         {renderJumpGateSummary(jumpGateSummary)}
@@ -301,7 +309,6 @@ function JumpGateComponent(): JSX.Element {
         {prettyTable(assignmentTable)}
         <h2 className="text-2xl font-bold pt-4">Construction Overview</h2>
         {prettyTable(table)}
-        <pre>{JSON.stringify(jumpGateSummary, null, 2)}</pre>
       </div>
     </>
   );

@@ -13,6 +13,7 @@ import {
 interface ResetHeaderBarProps {
   resetDate: string;
   selectedAgents?: string[];
+  linkToSamePageDifferentResetProps: (resetDate: string) => LinkProps;
 }
 
 function MyLink(props: LinkProps & { className?: string; content: string }) {
@@ -33,7 +34,13 @@ function MyLink(props: LinkProps & { className?: string; content: string }) {
 export const ResetHeaderBar = ({
                                  resetDate,
                                  selectedAgents,
+                                 linkToSamePageDifferentResetProps,
                                }: ResetHeaderBarProps) => {
+  // type Routes = RoutesByPath<typeof routeTree>
+
+  const linkProps = linkToSamePageDifferentResetProps("2023-04-09");
+
+  console.log("linkProps", linkProps);
 
   return (
     <div className="min-w-full flex flex-col gap-4">
@@ -58,20 +65,20 @@ export const ResetHeaderBar = ({
                   </li>
                   <li>
                     <MyLink
+                      to="/resets/$resetDate/jump-gate"
+                      params={{resetDate}}
+                      className={navigationMenuTriggerStyle()}
+                      content="Jump-Gate Overview"
+                    ></MyLink>
+                  </li>
+                  <li>
+                    <MyLink
                       to="/resets/$resetDate/history"
                       params={{resetDate: resetDate}}
                       search={{selectedAgents: selectedAgents}}
                       className={navigationMenuTriggerStyle()}
                       content="History"
                     />
-                  </li>
-                  <li>
-                    <MyLink
-                      to="/resets/$resetDate/jump-gate"
-                      params={{resetDate}}
-                      className={navigationMenuTriggerStyle()}
-                      content="Jump-Gate Overview"
-                    ></MyLink>
                   </li>
                 </ul>
               </NavigationMenuContent>

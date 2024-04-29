@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ResetHeaderBar } from "../../components/resetHeaderBar.tsx";
+import {createFileRoute} from "@tanstack/react-router";
+import {ResetHeaderBar} from "../../components/resetHeaderBar.tsx";
 
 type AgentSelectionSearch = {
   selectedAgents?: string[];
@@ -14,16 +14,26 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
     };
   },
 
-  loaderDeps: ({ search: { selectedAgents } }) => ({ selectedAgents }),
+  loaderDeps: ({search: {selectedAgents}}) => ({selectedAgents}),
 });
 
 function HistoryComponent() {
-  const { resetDate } = Route.useParams();
-  const { selectedAgents } = Route.useSearch();
+  const {resetDate} = Route.useParams();
+  const {selectedAgents} = Route.useSearch();
 
   return (
     <>
-      <ResetHeaderBar resetDate={resetDate} selectedAgents={selectedAgents} />
+      <ResetHeaderBar
+        resetDate={resetDate}
+        selectedAgents={selectedAgents}
+        linkToSamePageDifferentResetProps={(rd) => {
+          return {
+            to: "/resets/$resetDate/history",
+            params: {resetDate: rd},
+            search: {selectedAgents},
+          };
+        }}
+      />
       <div className="flex flex-col gap-4">
         <h2 className="text-2xl font-bold pt-4">
           Hello /reset/{resetDate}/history!

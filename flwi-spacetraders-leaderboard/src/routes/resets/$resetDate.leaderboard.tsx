@@ -268,12 +268,29 @@ function LeaderboardComponent() {
 
   return (
     <>
-      <ResetHeaderBar resetDate={resetDate} selectedAgents={agents}/>
+      <ResetHeaderBar resetDate={resetDate} selectedAgents={agents} linkToSamePageDifferentResetProps={(rd) => {
+        return {
+          to: "/resets/$resetDate/leaderboard",
+          params: {resetDate: rd},
+          search: {agents},
+        };
+      }}
+      />
       <div className="flex flex-col gap-4 w-full">
         <Sheet>
-          <SheetTrigger asChild>
-            <HamburgerMenuIcon/>
-          </SheetTrigger>
+          <div className="flex flex-row gap-2 mt-4">
+            <SheetTrigger asChild>
+              <HamburgerMenuIcon/>
+            </SheetTrigger>
+            <div className="flex items-center space-x-2 text-sm">
+              <Switch
+                id="log-y-axis"
+                checked={isLog}
+                onCheckedChange={setIsLog}
+              />
+              <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
+            </div>
+          </div>
           <SheetContent
             side="left"
             className="w-11/12 md:w-fit flex flex-col gap-4"
@@ -295,27 +312,18 @@ function LeaderboardComponent() {
               <Button variant="outline" size="sm" onClick={selectTop10}>
                 Select Top 10
               </Button>
-
               <Button variant="outline" size="sm" onClick={clearSelection}>
                 Clear Selection
               </Button>
             </SheetFooter>
           </SheetContent>
 
-          <div className="w-full flex flex-col">
+          <div className="w-full grid grid-cols-1  md:grid-cols-2">
             <div>
               <h3 className="text-sm font-bold">
                 Credits {isLog ? "(log axis)" : ""}
               </h3>
 
-              <div className="flex items-center space-x-2 text-sm">
-                <Switch
-                  id="log-y-axis"
-                  checked={isLog}
-                  onCheckedChange={setIsLog}
-                />
-                <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
-              </div>
               <Plot
                 className="w-full"
                 data={[
@@ -365,7 +373,6 @@ function LeaderboardComponent() {
                 config={{displayModeBar: false, responsive: true}}
               />
             </div>
-
             <div>
               <h3 className="text-xl font-bold">Ships</h3>
               <Plot
@@ -421,7 +428,6 @@ function LeaderboardComponent() {
           </div>
         </Sheet>
       </div>
-
     </>
   );
 }
