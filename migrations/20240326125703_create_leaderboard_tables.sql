@@ -5,7 +5,7 @@ create table reset_date
     reset_id integer  not null primary key,
     reset    date     not null,
     first_ts datetime not null
-) ;
+);
 
 create table construction_site
 (
@@ -14,7 +14,7 @@ create table construction_site
     jump_gate_waypoint_symbol text    not null,
     foreign key (reset_id) references reset_date (reset_id),
     unique (reset_id, jump_gate_waypoint_symbol)
-) ;
+);
 
 create table construction_requirement
 (
@@ -24,7 +24,7 @@ create table construction_requirement
     required     int     not null,
     foreign key (reset_id) references reset_date (reset_id),
     unique (reset_id, trade_symbol)
-) ;
+);
 
 create table static_agent_info
 (
@@ -45,17 +45,17 @@ create table job_run
     reset_id   integer  not null,
     query_time datetime not null,
     foreign key (reset_id) references reset_date (reset_id)
-) ;
+);
 
 create table agent_log
 (
     agent_id   integer not null,
     job_id     integer not null,
-    credits    INT8  not null,
+    credits    INT8    not null,
     ship_count integer not null,
     foreign key (agent_id) references static_agent_info (id),
     foreign key (job_id) references job_run (id)
-) ;
+);
 
 create table construction_log
 (
@@ -65,7 +65,7 @@ create table construction_log
     is_complete          bool    not null,
     foreign key (job_id) references job_run (id),
     foreign key (construction_site_id) references construction_site (id)
-) ;
+);
 
 create table construction_material_log
 (
@@ -74,7 +74,7 @@ create table construction_material_log
     fulfilled                   integer not null,
     foreign key (construction_log_id) references construction_log (id),
     foreign key (construction_requirement_id) references construction_requirement (id)
-) ;
+);
 
 
 
@@ -105,7 +105,6 @@ select lagged.reset_id
      , construction_requirement_id
      , first_ts
      , query_time
-     , timediff(query_time, first_ts)                        as duration
      , strftime('%s', query_time) - strftime('%s', first_ts) as duration_seconds
      , case
            when prev_fulfilled = 0 then 'first'
@@ -117,3 +116,32 @@ where abs(fulfilled - prev_fulfilled) < required --filter out broken entries
   and ((prev_fulfilled = 0 and fulfilled > 0)
     or fulfilled = required and prev_fulfilled < required)
 ;
+
+
+create table mat_view_material_delivery_events
+(
+    reset_id                    INT      not null,
+    construction_site_id        INT      not null,
+    construction_requirement_id INT      not null,
+    first_ts                    datetime not null,
+    query_time                  datetime not null,
+    duration_seconds            int      not null,
+    delivery_event              text     not null,
+    foreign key (construction_site_id) references construction_site (id),
+    foreign key (construction_requirement_id) references construction_requirement (id),
+    foreign key (reset_id) references reset_date (reset_id)
+
+);
+
+create table mat_view_current_construction_progress
+(
+    is_jump_gate_complete       boolean not null,
+    construction_site_id        INT     not null,
+    construction_requirement_id INT     not null,
+    fulfilled                   INT     not null,
+    reset_id                    INT     not null,
+    foreign key (construction_site_id) references construction_site (id),
+    foreign key (construction_requirement_id) references construction_requirement (id),
+    foreign key (reset_id) references reset_date (reset_id)
+
+);
