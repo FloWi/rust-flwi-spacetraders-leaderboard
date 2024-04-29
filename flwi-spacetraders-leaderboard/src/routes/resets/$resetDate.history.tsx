@@ -33,3 +33,6 @@ function HistoryComponent() {
     </>
   );
 }
+
+// It's a deep rabbit-hole. The gist is, that some of the marketplaces import raw (or intermediate) goods and produce other goods from it. The import- and export relations are listed in the wiki page. I created mermaid charts for each to make it easier to get started. If you just want to trade, you can ignore all that, but if you want to boost the production of some export goods, you have to deliver the required imports to that marketplace.
+// https://discord.com/channels/792864705139048469/792864705139048472/1212776626325168169

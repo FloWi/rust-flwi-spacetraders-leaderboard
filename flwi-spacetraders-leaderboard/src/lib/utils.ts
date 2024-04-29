@@ -13,3 +13,7 @@ export function zip<T, U>(a: T[], b: U[]): [T, U][] {
   }
   return result;
 }
+
+export function durationMillis(from: Date, to: Date): number {
+  return to.getTime() - from.getTime();
+}
