@@ -31,7 +31,6 @@ import {
 
 import {durationMillis} from "../../lib/utils.ts";
 import {
-  dateFmt,
   intNumberFmt,
   percentNumberFmt,
   prettyDuration,
@@ -40,6 +39,8 @@ import {
   jumpGateQueryOptions,
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
+import {CircleCheckBigIcon} from "lucide-react";
+import {ScrollArea} from "../../@/components/ui/scroll-area.tsx";
 
 const columnHelperConstructionOverview =
   createColumnHelper<ConstructionProgressEntry>();
@@ -48,18 +49,22 @@ const columnHelperJumpGateAssignment =
 
 const columns = [
   columnHelperConstructionOverview.accessor("jumpGateWaypointSymbol", {
+    header: "Waypoint Symbol",
     cell: (info) => info.getValue(),
     footer: (info) => info.column.id,
   }),
   columnHelperConstructionOverview.accessor("isJumpGateComplete", {
-    cell: (info) => info.getValue(),
+    header: "Is Gate Complete",
+    cell: (info) => (info.getValue() ? <CircleCheckBigIcon/> : <></>),
     footer: (info) => info.column.id,
   }),
   columnHelperConstructionOverview.accessor("tradeSymbol", {
+    header: "TradeSymbol",
     cell: (info) => info.getValue(),
     footer: (info) => info.column.id,
   }),
   columnHelperConstructionOverview.accessor("fulfilled", {
+    header: "Fulfilled",
     cell: (info) => intNumberFmt.format(info.getValue()),
     footer: (info) => info.column.id,
     meta: {
@@ -67,6 +72,7 @@ const columns = [
     },
   }),
   columnHelperConstructionOverview.accessor("required", {
+    header: "Required",
     cell: (info) => intNumberFmt.format(info.getValue()),
     footer: (info) => info.column.id,
     meta: {
@@ -77,21 +83,22 @@ const columns = [
     (row) => `${percentNumberFmt.format(row.fulfilled / row.required)}`,
     {
       id: "completed",
+      header: "Progress",
       meta: {
         align: "right",
       },
     },
   ),
-  columnHelperConstructionOverview.accessor("tsFirstConstructionEvent", {
-    header: "First Construction Event",
-    cell: (info) => dateFmt.format(info.getValue()),
-    footer: (info) => info.column.id,
-    sortingFn: "datetime",
-    size: 200,
-    meta: {
-      align: "right",
-    },
-  }),
+  // columnHelperConstructionOverview.accessor("tsFirstConstructionEvent", {
+  //   header: "First Construction Event",
+  //   cell: (info) => dateFmt.format(info.getValue()),
+  //   footer: (info) => info.column.id,
+  //   sortingFn: "datetime",
+  //   size: 200,
+  //   meta: {
+  //     align: "right",
+  //   },
+  // }),
   columnHelperConstructionOverview.accessor(
     (row) => durationMillis(row.tsStartOfReset, row.tsFirstConstructionEvent),
     {
@@ -103,20 +110,20 @@ const columns = [
       },
     },
   ),
-  columnHelperConstructionOverview.accessor("tsLastConstructionEvent", {
-    header: "Last Construction Event",
-    cell: (info) => {
-      // beware: formatting null returns 01/01/190 - formatting undefined return current date :facepalm:
-      return info.getValue() ? dateFmt.format(info.getValue()) : "";
-    },
-    footer: (info) => info.column.id,
-    sortingFn: "datetime",
-    sortUndefined: -1,
-    size: 200,
-    meta: {
-      align: "right",
-    },
-  }),
+  // columnHelperConstructionOverview.accessor("tsLastConstructionEvent", {
+  //   header: "Last Construction Event",
+  //   cell: (info) => {
+  //     // beware: formatting null returns 01/01/190 - formatting undefined return current date :facepalm:
+  //     return info.getValue() ? dateFmt.format(info.getValue()) : "";
+  //   },
+  //   footer: (info) => info.column.id,
+  //   sortingFn: "datetime",
+  //   sortUndefined: -1,
+  //   size: 200,
+  //   meta: {
+  //     align: "right",
+  //   },
+  // }),
   columnHelperConstructionOverview.accessor(
     (row) =>
       row.tsLastConstructionEvent
@@ -164,14 +171,12 @@ const jumpGateAssignmentColumns = [
     header: "Gate Waypoint",
     cell: (info) => extractSystemSymbol(info.getValue()),
     footer: (info) => info.column.id,
-    size: 250,
   }),
   columnHelperJumpGateAssignment.accessor((row) => row.agentsInSystem.length, {
     id: "numAgentsInSystem",
     header: "Num Agents",
     cell: (info) => info.getValue(),
     sortUndefined: -1,
-    size: 200,
     meta: {
       align: "right",
     },
@@ -243,7 +248,9 @@ function JumpGateComponent(): JSX.Element {
   const [sortingAssignment, setSortingAssignment] =
     React.useState<SortingState>([]);
 
-  const {data: jumpGateData} = useSuspenseQuery(jumpGateQueryOptions(resetDate));
+  const {data: jumpGateData} = useSuspenseQuery(
+    jumpGateQueryOptions(resetDate),
+  );
   const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
 
   let constructionProgressData = useMemo(() => {
@@ -262,10 +269,7 @@ function JumpGateComponent(): JSX.Element {
 
   const assignmentTable = useReactTable({
     data: jumpGateData.jumpGateAssignmentEntries,
-    defaultColumn: {
-      size: 200,
-      minSize: 50,
-    },
+    enableRowSelection: false,
     columns: jumpGateAssignmentColumns,
     getRowId: (row) => `${row.jumpGateWaypointSymbol}`,
     getCoreRowModel: getCoreRowModel(),
@@ -277,10 +281,7 @@ function JumpGateComponent(): JSX.Element {
 
   const table = useReactTable({
     data: constructionProgressData,
-    defaultColumn: {
-      size: 200,
-      minSize: 50,
-    },
+    enableRowSelection: false,
     columns,
     getRowId: (row) => `${row.jumpGateWaypointSymbol}-${row.tradeSymbol}`,
     getCoreRowModel: getCoreRowModel(),

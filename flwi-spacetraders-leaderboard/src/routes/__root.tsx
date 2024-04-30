@@ -3,10 +3,10 @@ import {
   Link,
   Outlet,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/router-devtools";
-import { QueryClient } from "@tanstack/react-query";
-import { SwaggerIcon } from "../components/swagger-icon.tsx";
-import { GitHubLogoIcon } from "@radix-ui/react-icons";
+import {TanStackRouterDevtools} from "@tanstack/router-devtools";
+import {QueryClient} from "@tanstack/react-query";
+import {SwaggerIcon} from "../components/swagger-icon.tsx";
+import {GitHubLogoIcon} from "@radix-ui/react-icons";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   {
@@ -61,16 +61,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                 title="Github Repository"
                 target="_blank"
               >
-                <GitHubLogoIcon className="mr-2 h-6 w-6" />
+                <GitHubLogoIcon className="mr-2 h-6 w-6"/>
               </a>
             </div>
           </div>
-          <hr />
+          <hr/>
           <div className="p-4">
-            <Outlet />
+            <Outlet/>
           </div>
         </div>
-        <TanStackRouterDevtools />
+        <TanStackRouterDevtools/>
       </>
     ),
   },
