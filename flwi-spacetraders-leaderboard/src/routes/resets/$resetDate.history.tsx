@@ -1,5 +1,8 @@
 import {createFileRoute} from "@tanstack/react-router";
 import {ResetHeaderBar} from "../../components/resetHeaderBar.tsx";
+import {resetDatesQueryOptions} from "../../utils/queryOptions.ts";
+
+import {useSuspenseQuery} from "@tanstack/react-query";
 
 type AgentSelectionSearch = {
   selectedAgents?: string[];
@@ -7,6 +10,7 @@ type AgentSelectionSearch = {
 
 export const Route = createFileRoute("/resets/$resetDate/history")({
   component: HistoryComponent,
+  pendingComponent: () => <div>Loading...</div>,
   validateSearch: (search: Record<string, unknown>): AgentSelectionSearch => {
     // validate and parse the search params into a typed state
     return {
@@ -15,15 +19,29 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
   },
 
   loaderDeps: ({search: {selectedAgents}}) => ({selectedAgents}),
+
+  loader: async ({
+                   //deps: { agents },
+                   context: {queryClient},
+                 }) => {
+    // intentional fire-and-forget according to docs :-/
+    // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
+    //queryClient.prefetchQuery(jumpGateQueryOptions(resetDate));
+
+    return await queryClient.prefetchQuery(resetDatesQueryOptions);
+  },
 });
 
 function HistoryComponent() {
   const {resetDate} = Route.useParams();
   const {selectedAgents} = Route.useSearch();
 
+  const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
+
   return (
     <>
       <ResetHeaderBar
+        resetDates={resetDates}
         resetDate={resetDate}
         selectedAgents={selectedAgents}
         linkToSamePageDifferentResetProps={(rd) => {

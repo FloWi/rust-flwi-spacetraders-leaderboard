@@ -8,8 +8,8 @@ import {
 } from "@tanstack/react-table";
 import React, {JSX, useMemo} from "react";
 import {prettyTable} from "../../components/prettyTable.tsx";
-import {ApiJumpGateAssignmentEntry, CrateService} from "../../../generated";
-import {queryOptions, useSuspenseQuery} from "@tanstack/react-query";
+import {ApiJumpGateAssignmentEntry} from "../../../generated";
+import {useSuspenseQuery} from "@tanstack/react-query";
 import {ResetHeaderBar} from "../../components/resetHeaderBar.tsx";
 import {Separator} from "../../@/components/ui/separator.tsx";
 import {
@@ -36,6 +36,10 @@ import {
   percentNumberFmt,
   prettyDuration,
 } from "../../lib/formatters.ts";
+import {
+  jumpGateQueryOptions,
+  resetDatesQueryOptions,
+} from "../../utils/queryOptions.ts";
 
 const columnHelperConstructionOverview =
   createColumnHelper<ConstructionProgressEntry>();
@@ -184,21 +188,19 @@ const jumpGateAssignmentColumns = [
   }),
 ];
 
-export const jumpGateQueryOptions = (resetDate: string) =>
-  queryOptions({
-    queryKey: ["jumpGateData", resetDate],
-    queryFn: () => CrateService.getJumpGateAgentsAssignment({resetDate}),
-  });
-
 export const Route = createFileRoute("/resets/$resetDate/jump-gate")({
   component: JumpGateComponent,
+  pendingComponent: () => <div>Loading...</div>,
   loader: async ({
                    //deps: { agents },
                    params: {resetDate},
                    context: {queryClient},
                  }) => {
-    let options = jumpGateQueryOptions(resetDate);
-    return queryClient.ensureQueryData(options);
+    // intentional fire-and-forget according to docs :-/
+    // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
+    queryClient.prefetchQuery(jumpGateQueryOptions(resetDate));
+
+    return await queryClient.prefetchQuery(resetDatesQueryOptions);
   },
 });
 
@@ -241,26 +243,25 @@ function JumpGateComponent(): JSX.Element {
   const [sortingAssignment, setSortingAssignment] =
     React.useState<SortingState>([]);
 
-  const {data} = useSuspenseQuery(jumpGateQueryOptions(resetDate));
+  const {data: jumpGateData} = useSuspenseQuery(jumpGateQueryOptions(resetDate));
+  const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
 
   let constructionProgressData = useMemo(() => {
-    return mockDataConstructionProgress.filter(
-      (d) => d.reset === resetDate,
-    )
-  }, [resetDate])
+    return mockDataConstructionProgress.filter((d) => d.reset === resetDate);
+  }, [resetDate]);
 
   const jumpGateSummary = useMemo(() => {
-    return aggregateJumpGateStats(constructionProgressData, data);
-  }, [data]);
+    return aggregateJumpGateStats(constructionProgressData, jumpGateData);
+  }, [jumpGateData]);
 
   const constructionMaterialSummary = useMemo(() => {
     return aggregateMaterialsSummary(constructionProgressData);
-  }, [data]);
+  }, [jumpGateData]);
 
-  console.log("jumpGateAssignment", data);
+  console.log("jumpGateAssignment", jumpGateData);
 
   const assignmentTable = useReactTable({
-    data: data.jumpGateAssignmentEntries,
+    data: jumpGateData.jumpGateAssignmentEntries,
     defaultColumn: {
       size: 200,
       minSize: 50,
@@ -291,12 +292,15 @@ function JumpGateComponent(): JSX.Element {
 
   return (
     <>
-      <ResetHeaderBar resetDate={resetDate} linkToSamePageDifferentResetProps={(rd) => {
-        return {
-          to: "/resets/$resetDate/jump-gate",
-          params: {resetDate: rd},
-        };
-      }}
+      <ResetHeaderBar
+        resetDates={resetDates}
+        resetDate={resetDate}
+        linkToSamePageDifferentResetProps={(rd) => {
+          return {
+            to: "/resets/$resetDate/jump-gate",
+            params: {resetDate: rd},
+          };
+        }}
       />
       <div className="flex flex-col gap-x-2 gap-y-4">
         <Separator orientation="horizontal"/>

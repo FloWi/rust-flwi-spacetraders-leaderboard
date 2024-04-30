@@ -1,14 +1,9 @@
 import {createFileRoute, Link, Outlet} from "@tanstack/react-router";
 
-import {CrateService, OpenAPI} from "../../../generated";
-import {queryOptions} from "@tanstack/react-query";
+import {OpenAPI} from "../../../generated";
+import {resetDatesQueryOptions} from "../../utils/queryOptions.ts";
 
 OpenAPI.BASE = "http://localhost:8080";
-
-const resetQueryOptions = queryOptions({
-  queryKey: ["resetDates"],
-  queryFn: () => CrateService.getResetDates().then((r) => r.resetDates),
-});
 
 export const Route = createFileRoute("/resets/")({
   component: ResetRouteComponent,
@@ -16,7 +11,7 @@ export const Route = createFileRoute("/resets/")({
                    //deps: { agents },
                    context: {queryClient},
                  }) => {
-    return queryClient.ensureQueryData(resetQueryOptions);
+    return queryClient.ensureQueryData(resetDatesQueryOptions);
   },
 });
 
