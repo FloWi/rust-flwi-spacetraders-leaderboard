@@ -11,7 +11,8 @@ import {
   NavigationMenuItem,
   NavigationMenuTrigger,
 } from "../@/components/ui/navigation-menu.tsx";
-import { MyLink } from "../components/myLink.tsx";
+import {MyLink} from "../components/myLink.tsx";
+import {Separator} from "../@/components/ui/separator.tsx";
 
 type ResetLink = {
   resetDate: string;
@@ -23,11 +24,12 @@ function createLinksToOtherResets(
   routerState: RouterState<RegisteredRouter["routeTree"]>,
 ):
   | {
-      allResets: ResetLink[];
-      currentlySelectedResetDate: string;
-      nextReset?: ResetLink;
-      previousReset?: ResetLink;
-    }
+  allResets: ResetLink[];
+  currentlySelectedResetDate: string;
+  nextReset?: ResetLink;
+  previousReset?: ResetLink;
+  latestReset?: ResetLink;
+}
   | undefined {
   const deepestMatch = routerState.matches.at(-1);
 
@@ -55,11 +57,11 @@ function createLinksToOtherResets(
         props: (
           <Link
             to="/resets/$resetDate/leaderboard"
-            params={{ resetDate: r }}
-            search={{ agents: current?.selectedAgents }}
+            params={{resetDate: r}}
+            search={{agents: current?.selectedAgents}}
             className="[&.active]:font-bold"
           >
-            Hello leaderboard for Reset {r}
+            Reset {r}
           </Link>
         ).props,
       };
@@ -81,11 +83,11 @@ function createLinksToOtherResets(
         props: (
           <Link
             to="/resets/$resetDate/history"
-            params={{ resetDate: r }}
-            search={{ selectedAgents: current?.selectedAgents }}
+            params={{resetDate: r}}
+            search={{selectedAgents: current?.selectedAgents}}
             className="[&.active]:font-bold"
           >
-            Hello leaderboard for Reset {r}
+            {r}
           </Link>
         ).props,
       };
@@ -107,7 +109,7 @@ function createLinksToOtherResets(
         props: (
           <Link
             to="/resets/$resetDate/jump-gate"
-            params={{ resetDate: r }}
+            params={{resetDate: r}}
             className="[&.active]:font-bold"
           >
             Hello jump-gate overview for Reset {r}
@@ -117,10 +119,10 @@ function createLinksToOtherResets(
     });
   }
 
-  let sortedEntries = _.sortBy(resetLinks, ({ resetDate }) => resetDate);
+  let sortedEntries = _.sortBy(resetLinks, ({resetDate}) => resetDate);
   if (current?.currentResetDate) {
     let currentResetIdx = sortedEntries.findIndex(
-      ({ resetDate }) => resetDate == current?.currentResetDate,
+      ({resetDate}) => resetDate == current?.currentResetDate,
     );
     if (currentResetIdx >= 0) {
       let previousIndex =
@@ -136,46 +138,68 @@ function createLinksToOtherResets(
         previousReset: previousIndex
           ? sortedEntries.at(previousIndex)
           : undefined,
+        latestReset: sortedEntries.at(-1),
       };
     }
   }
 }
 
+function intersperse<T>(arr: T[], separator: (n: number) => T): T[] {
+  return arr.flatMap((a, i) => (i > 0 ? [separator(i - 1), a] : [a]));
+}
+
 export function createSamePageOtherResetNavigationMenuItem(
   resetDates: string[],
   currentState: RouterState<RegisteredRouter["routeTree"]>,
-) {
+): JSX.Element | undefined {
   let res = createLinksToOtherResets(resetDates, currentState);
 
   if (res) {
-    let { allResets, currentlySelectedResetDate, nextReset, previousReset } =
-      res;
+    let {
+      allResets,
+      currentlySelectedResetDate,
+      nextReset,
+      previousReset,
+      latestReset,
+    } = res;
 
+    let directNavigationLinks = intersperse(
+      [
+        previousReset ? (
+          <MyLink {...previousReset.props}>Previous Reset</MyLink>
+        ) : null,
+        nextReset ? <MyLink {...nextReset.props}>Next Reset</MyLink> : null,
+        latestReset ? (
+          <MyLink {...latestReset.props}>Latest Reset</MyLink>
+        ) : null,
+      ],
+      (idx) => <Separator orientation="vertical" key={`separator_${idx}`}/>,
+    );
     return (
-      <NavigationMenuItem>
-        <NavigationMenuTrigger>
-          <div className="space-y-1 text-left">
-            <h4 className="text-sm font-medium leading-none">Reset</h4>
-            <p className="text-sm text-muted-foreground">
-              {currentlySelectedResetDate}
-            </p>
-          </div>
-        </NavigationMenuTrigger>
-        <NavigationMenuContent>
-          <ul className="flex flex-col w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
-            {allResets.toReversed().map(({ resetDate, props }) => {
-              return (
-                <MyLink
-                  key={`other-reset-${resetDate}`}
-                  {...props}
-                  content={`Reset ${resetDate}`}
-                />
-              );
-            })}
-          </ul>
-        </NavigationMenuContent>
-      </NavigationMenuItem>
+      <>
+        <NavigationMenuItem>
+          <NavigationMenuTrigger>
+            <div className="space-y-1 text-left">
+              <h4 className="text-sm font-medium leading-none">Reset</h4>
+              <p className="text-sm text-muted-foreground">
+                {currentlySelectedResetDate}
+              </p>
+            </div>
+          </NavigationMenuTrigger>
+          <NavigationMenuContent>
+            <ul className="flex flex-col w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
+              <li className="flex flex-row gap-4">{directNavigationLinks}</li>
+              {allResets.toReversed().map(({resetDate, props}) => {
+                return (
+                  <li>
+                    <MyLink key={`other-reset-${resetDate}`} {...props} />
+                  </li>
+                );
+              })}
+            </ul>
+          </NavigationMenuContent>
+        </NavigationMenuItem>
+      </>
     );
   }
-  return <></>;
 }

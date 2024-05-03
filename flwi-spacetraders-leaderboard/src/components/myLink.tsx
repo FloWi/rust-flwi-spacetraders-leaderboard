@@ -4,8 +4,10 @@ import {
   navigationMenuTriggerStyle,
 } from "../@/components/ui/navigation-menu.tsx";
 
+type MyLinkProps = LinkProps & { className?: string }
+
 export function MyLink(
-  props: LinkProps
+  props: MyLinkProps
 ) {
   const matchRoute = useMatchRoute();
 

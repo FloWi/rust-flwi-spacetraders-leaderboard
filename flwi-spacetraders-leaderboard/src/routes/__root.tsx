@@ -1,6 +1,5 @@
 import {
   createRootRouteWithContext,
-  Link,
   LinkProps,
   Outlet,
   useRouterState,
@@ -47,38 +46,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         currentState,
       );
 
-      let homeLink = (
-        <Link
-          to="/"
-          className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
-              [&.active]:bg-muted
-              [&.active]:font-medium
-              [&.active]:text-primary
-"
-        />
-      );
+      let maybeLatestResetDate = resetDates.toSorted().at(-1);
 
-      let resetsLink = (
-        <Link
-          to="/resets"
+      let currentResetLeaderboardLink = maybeLatestResetDate ? (
+        <MyLink
+          to="/resets/$resetDate/leaderboard"
+          params={{ resetDate: maybeLatestResetDate }}
           className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
               [&.active]:bg-muted
               [&.active]:font-medium
               [&.active]:text-primary
 "
-        />
-      );
-
-      let allTimeComparisonLink = (
-        <Link
-          to="/all-time"
-          className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
-              [&.active]:bg-muted
-              [&.active]:font-medium
-              [&.active]:text-primary
-"
-        />
-      );
+        >
+          Latest Reset
+        </MyLink>
+      ) : null;
 
       return (
         <>
@@ -92,13 +74,40 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                       <NavigationMenuContent>
                         <ul className="flex flex-col gap-4 p-6 md:w-[400px] lg:w-[500px] ">
                           <li className="">
-                            <MyLink {...homeLink.props}> Home</MyLink>
+                            <MyLink
+                              to="/"
+                              className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+              [&.active]:bg-muted
+              [&.active]:font-medium
+              [&.active]:text-primary"
+                            >
+                              Home
+                            </MyLink>
                           </li>
                           <li className="">
-                            <MyLink {...resetsLink.props}> Resets</MyLink>
+                            <MyLink
+                              to="/resets"
+                              className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+              [&.active]:bg-muted
+              [&.active]:font-medium
+              [&.active]:text-primary
+"
+                            >
+                              Resets
+                            </MyLink>
                           </li>
+                          {currentResetLeaderboardLink ? (
+                            <li>{currentResetLeaderboardLink}</li>
+                          ) : null}
                           <li className="">
-                            <MyLink {...allTimeComparisonLink.props}>
+                            <MyLink
+                              to="/all-time"
+                              className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+              [&.active]:bg-muted
+              [&.active]:font-medium
+              [&.active]:text-primary
+"
+                            >
                               All Time Comparison
                             </MyLink>
                           </li>
