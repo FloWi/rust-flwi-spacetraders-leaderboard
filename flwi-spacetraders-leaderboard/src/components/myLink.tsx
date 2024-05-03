@@ -5,7 +5,7 @@ import {
 } from "../@/components/ui/navigation-menu.tsx";
 
 export function MyLink(
-  props: LinkProps & { className?: string; content: string },
+  props: LinkProps
 ) {
   const matchRoute = useMatchRoute();
 
@@ -16,7 +16,7 @@ export function MyLink(
       active={isMatch}
       className={navigationMenuTriggerStyle()}
     >
-      <Link {...props}>{props.content}</Link>
+      <Link {...props}>{props.children}</Link>
     </NavigationMenuLink>
   );
 }
