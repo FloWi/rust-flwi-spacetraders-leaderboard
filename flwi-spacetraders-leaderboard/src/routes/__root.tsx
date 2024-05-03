@@ -1,62 +1,199 @@
 import {
   createRootRouteWithContext,
   Link,
+  LinkProps,
   Outlet,
+  RegisteredRouter,
+  RouterState,
+  useMatch,
   useRouterState,
 } from "@tanstack/react-router";
-import {TanStackRouterDevtools} from "@tanstack/router-devtools";
-import {QueryClient} from "@tanstack/react-query";
-import {SwaggerIcon} from "../components/swagger-icon.tsx";
-import {GitHubLogoIcon} from "@radix-ui/react-icons";
-import {resetDatesQueryOptions} from "../utils/queryOptions.ts";
+import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+import { QueryClient } from "@tanstack/react-query";
+import { SwaggerIcon } from "../components/swagger-icon.tsx";
+import { GitHubLogoIcon } from "@radix-ui/react-icons";
+import { resetDatesQueryOptions } from "../utils/queryOptions.ts";
+import * as _ from "lodash";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "../@/components/ui/navigation-menu.tsx";
+import { MyLink } from "../components/myLink.tsx";
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
     customData?: string;
+    otherResetDateLinkFn?: (agentSelection: {
+      agents: string[];
+    }) => (arg: { resetDate: string }) => LinkProps;
   }
+}
+
+type ResetLink = {
+  resetDate: string;
+  props: LinkProps;
+};
+
+function createLinksToOtherResets(
+  resetDates: string[],
+  routerState: RouterState<RegisteredRouter["routeTree"]>,
+):
+  | {
+      allResets: ResetLink[];
+      currentResetDate: string;
+      nextReset?: ResetLink;
+      previousReset?: ResetLink;
+    }
+  | undefined {
+  const deepestMatch = routerState.matches.at(-1);
+
+  console.log("routerState", routerState);
+
+  let resetLinks: ResetLink[] = [];
+  let current:
+    | { currentResetDate: string; selectedAgents?: string[] }
+    | undefined;
+
+  if (deepestMatch?.routeId == "/resets/$resetDate/leaderboard") {
+    current = useMatch({
+      from: "/resets/$resetDate/leaderboard",
+      select: (m) => {
+        return {
+          currentResetDate: m.params.resetDate,
+          selectedAgents: m.search.agents,
+        };
+      },
+    });
+
+    resetLinks = resetDates.map((r) => {
+      return {
+        resetDate: r,
+        props: (
+          <Link
+            to="/resets/$resetDate/leaderboard"
+            params={{ resetDate: r }}
+            search={{ agents: current?.selectedAgents }}
+            className="[&.active]:font-bold"
+          >
+            Hello leaderboard for Reset {r}
+          </Link>
+        ).props,
+      };
+    });
+  } else if (deepestMatch?.routeId == "/resets/$resetDate/history") {
+    current = useMatch({
+      from: "/resets/$resetDate/history",
+      select: (m) => {
+        return {
+          currentResetDate: m.params.resetDate,
+          selectedAgents: m.search.selectedAgents,
+        };
+      },
+    });
+
+    resetLinks = resetDates.map((r) => {
+      return {
+        resetDate: r,
+        props: (
+          <Link
+            to="/resets/$resetDate/history"
+            params={{ resetDate: r }}
+            search={{ selectedAgents: current?.selectedAgents }}
+            className="[&.active]:font-bold"
+          >
+            Hello leaderboard for Reset {r}
+          </Link>
+        ).props,
+      };
+    });
+  }
+
+  let sortedEntries = _.sortBy(resetLinks, ({ resetDate }) => resetDate);
+  if (current?.currentResetDate) {
+    let currentResetIdx = sortedEntries.findIndex(
+      ({ resetDate }) => resetDate == current?.currentResetDate,
+    );
+    if (currentResetIdx >= 0) {
+      let previousIndex =
+        currentResetIdx >= 1 ? currentResetIdx - 1 : undefined;
+      let nextIndex =
+        currentResetIdx < sortedEntries.length - 1
+          ? currentResetIdx + 1
+          : undefined;
+      return {
+        allResets: sortedEntries,
+        currentResetDate: current?.currentResetDate,
+        nextReset: nextIndex ? sortedEntries.at(nextIndex) : undefined,
+        previousReset: previousIndex
+          ? sortedEntries.at(previousIndex)
+          : undefined,
+      };
+    }
+  }
+}
+
+function createSamePageOtherResetNavigationMenu(
+  resetDates: string[],
+  currentState: RouterState<RegisteredRouter["routeTree"]>,
+) {
+  let res = createLinksToOtherResets(resetDates, currentState);
+
+  if (res) {
+    let { allResets, currentResetDate, nextReset, previousReset } = res;
+
+    return (
+      <NavigationMenu>
+        <NavigationMenuList>
+          <NavigationMenuItem>
+            <NavigationMenuTrigger>
+              <div className="space-y-1 text-left">
+                <h4 className="text-sm font-medium leading-none">Reset</h4>
+                <p className="text-sm text-muted-foreground">
+                  {currentResetDate}
+                </p>
+              </div>
+            </NavigationMenuTrigger>
+            <NavigationMenuContent>
+              <ul className="flex flex-col w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
+                {allResets.toReversed().map(({ resetDate, props }) => {
+                  return (
+                    <MyLink
+                      key={`other-reset-${resetDate}`}
+                      {...props}
+                      content={`Reset ${resetDate}`}
+                    />
+                  );
+                })}
+              </ul>
+            </NavigationMenuContent>
+          </NavigationMenuItem>
+        </NavigationMenuList>
+      </NavigationMenu>
+    );
+  }
+  return <></>;
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   {
     loader: async ({
-                     //deps: { agents },
-                     context: {queryClient},
-                   }) => {
+      //deps: { agents },
+      context: { queryClient },
+    }) => {
       return queryClient.ensureQueryData(resetDatesQueryOptions);
     },
 
     component: () => {
+      const currentState = useRouterState();
       const resetDates = Route.useLoaderData();
 
-      const currentState = useRouterState();
-
-      const deepestMatch = currentState.matches.at(-1);
-      const currentLocation = currentState.location;
-      const currentAgents = currentLocation.search.agents;
-
-      console.log("currentState", currentState);
-      console.log("currentLocation", currentLocation);
-      console.log("currentAgents", currentAgents);
-
-      if (deepestMatch?.routeId == "/resets/$resetDate/leaderboard") {
-        let links = resetDates.map((r) => {
-          return (
-            <Link
-              to="/resets/$resetDate/leaderboard"
-              params={{resetDate: r}}
-              search={{agents: currentAgents}}
-              className="[&.active]:font-bold"
-            >
-              Hello leaderboard for Reset {r}
-            </Link>
-          );
-        });
-
-        console.log(
-          "Props of first link to other leaderboard",
-          links.slice(0, 1).map((l) => l.props),
-        );
-      }
+      const navMenu = createSamePageOtherResetNavigationMenu(
+        resetDates,
+        currentState,
+      );
 
       return (
         <>
@@ -73,16 +210,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                 >
                   Home
                 </Link>
-                <Link
-                  to="/resets"
-                  className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
-              [&.active]:bg-muted
-              [&.active]:font-medium
-              [&.active]:text-primary
-"
-                >
-                  Resets
-                </Link>
+                {navMenu}
                 <Link
                   to="/all-time"
                   className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
@@ -109,16 +237,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                   title="Github Repository"
                   target="_blank"
                 >
-                  <GitHubLogoIcon className="mr-2 h-6 w-6"/>
+                  <GitHubLogoIcon className="mr-2 h-6 w-6" />
                 </a>
               </div>
             </div>
-            <hr/>
+            <hr />
             <div className="p-4">
-              <Outlet/>
+              <Outlet />
             </div>
           </div>
-          <TanStackRouterDevtools/>
+          <TanStackRouterDevtools />
         </>
       );
     },

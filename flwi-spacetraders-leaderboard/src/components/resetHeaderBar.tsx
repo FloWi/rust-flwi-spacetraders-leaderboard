@@ -1,15 +1,15 @@
-import { Link, LinkProps, useMatchRoute } from "@tanstack/react-router";
-import { Separator } from "../@/components/ui/separator.tsx";
+import {LinkProps} from "@tanstack/react-router";
+import {Separator} from "../@/components/ui/separator.tsx";
 import {
   NavigationMenu,
   NavigationMenuContent,
   NavigationMenuItem,
-  NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "../@/components/ui/navigation-menu.tsx";
-import { ApiResetDate } from "../../generated";
+import {ApiResetDate} from "../../generated";
+import {MyLink} from "./myLink.tsx";
 
 interface ResetHeaderBarProps {
   resetDate: string;
@@ -18,27 +18,12 @@ interface ResetHeaderBarProps {
   linkToSamePageDifferentResetProps: (resetDate: string) => LinkProps;
 }
 
-function MyLink(props: LinkProps & { className?: string; content: string }) {
-  const matchRoute = useMatchRoute();
-
-  let isMatch = !!matchRoute({ to: props.to, params: props.params });
-  return (
-    <NavigationMenuLink
-      asChild
-      active={isMatch}
-      className={navigationMenuTriggerStyle()}
-    >
-      <Link {...props}>{props.content}</Link>
-    </NavigationMenuLink>
-  );
-}
-
 export const ResetHeaderBar = ({
-  resetDate,
-  selectedAgents,
-  linkToSamePageDifferentResetProps,
-  resetDates,
-}: ResetHeaderBarProps) => {
+                                 resetDate,
+                                 selectedAgents,
+                                 linkToSamePageDifferentResetProps,
+                                 resetDates,
+                               }: ResetHeaderBarProps) => {
   // type Routes = RoutesByPath<typeof routeTree>
 
   let otherResetsNavMenu = (
@@ -88,15 +73,15 @@ export const ResetHeaderBar = ({
                   <li>
                     <MyLink
                       to="/resets/$resetDate/leaderboard"
-                      params={{ resetDate }}
-                      search={{ agents: selectedAgents }}
+                      params={{resetDate}}
+                      search={{agents: selectedAgents}}
                       content="Leaderboard"
                     ></MyLink>
                   </li>
                   <li>
                     <MyLink
                       to="/resets/$resetDate/jump-gate"
-                      params={{ resetDate }}
+                      params={{resetDate}}
                       className={navigationMenuTriggerStyle()}
                       content="Jump-Gate Overview"
                     ></MyLink>
@@ -104,8 +89,8 @@ export const ResetHeaderBar = ({
                   <li>
                     <MyLink
                       to="/resets/$resetDate/history"
-                      params={{ resetDate: resetDate }}
-                      search={{ selectedAgents: selectedAgents }}
+                      params={{resetDate: resetDate}}
+                      search={{selectedAgents: selectedAgents}}
                       className={navigationMenuTriggerStyle()}
                       content="History"
                     />
@@ -116,7 +101,7 @@ export const ResetHeaderBar = ({
           </NavigationMenuList>
         </NavigationMenu>
       </div>
-      <Separator />
+      <Separator/>
     </div>
   );
 };

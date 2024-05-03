@@ -1,4 +1,4 @@
-import {createFileRoute, useNavigate} from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ApiLeaderboardEntry,
   GetLeaderboardForResetResponseContent,
@@ -12,15 +12,15 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import React, {useEffect} from "react";
+import React, { useEffect } from "react";
 import Plot from "react-plotly.js";
-import {Switch} from "../../@/components/ui/switch.tsx";
-import {Label} from "../../@/components/ui/label.tsx";
+import { Switch } from "../../@/components/ui/switch.tsx";
+import { Label } from "../../@/components/ui/label.tsx";
 
-import {prettyTable} from "../../components/prettyTable.tsx";
-import {chartColors} from "../../utils/chartColors.ts";
-import {zip} from "../../lib/utils.ts";
-import {useSuspenseQuery} from "@tanstack/react-query";
+import { prettyTable } from "../../components/prettyTable.tsx";
+import { chartColors } from "../../utils/chartColors.ts";
+import { zip } from "../../lib/utils.ts";
+import { useSuspenseQuery } from "@tanstack/react-query";
 
 import {
   Sheet,
@@ -31,10 +31,10 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../../@/components/ui/sheet";
-import {Button} from "../../@/components/ui/button.tsx";
-import {ScrollArea} from "../../@/components/ui/scroll-area.tsx";
-import {ResetHeaderBar} from "../../components/resetHeaderBar.tsx";
-import {HamburgerMenuIcon} from "@radix-ui/react-icons";
+import { Button } from "../../@/components/ui/button.tsx";
+import { ScrollArea } from "../../@/components/ui/scroll-area.tsx";
+import { ResetHeaderBar } from "../../components/resetHeaderBar.tsx";
+import { HamburgerMenuIcon } from "@radix-ui/react-icons";
 import {
   leaderboardQueryOptions,
   resetDatesQueryOptions,
@@ -78,7 +78,7 @@ const columns = [
       };
 
       return (
-        <span className="border-2 w-4 h-4 rounded inline-block" style={style}/>
+        <span className="border-2 w-4 h-4 rounded inline-block" style={style} />
       );
     },
     header: "",
@@ -101,9 +101,11 @@ const columns = [
 export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
   component: LeaderboardComponent,
   pendingComponent: () => <div>Loading...</div>,
-  staticData: {customData: "I'm the leaderboard route"},
+  staticData: {
+    customData: "I'm the leaderboard route",
+  },
 
-  loaderDeps: ({search: {agents}}) => ({agents}),
+  loaderDeps: ({ search: { agents } }) => ({ agents }),
   beforeLoad: async (arg) => {
     console.log("before load:");
     let selectedAgents = arg.search.agents ?? [];
@@ -130,16 +132,16 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
     if (needsInvalidation) {
       console.log("invalidating query");
 
-      await queryClient.invalidateQueries({queryKey: options.queryKey});
+      await queryClient.invalidateQueries({ queryKey: options.queryKey });
     }
 
     // console.log("current state of query", query);
   },
   loader: async ({
-                   //deps: { agents },
-                   params: {resetDate},
-                   context: {queryClient},
-                 }) => {
+    //deps: { agents },
+    params: { resetDate },
+    context: { queryClient },
+  }) => {
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
     queryClient.prefetchQuery(leaderboardQueryOptions(resetDate));
@@ -168,21 +170,21 @@ function calcSortedAndColoredLeaderboard(leaderboard: ApiLeaderboardEntry[]) {
     ...e,
   }));
 
-  return {sortedAndColoredLeaderboard};
+  return { sortedAndColoredLeaderboard };
 }
 
 function LeaderboardComponent() {
-  const {resetDate} = Route.useParams();
+  const { resetDate } = Route.useParams();
   const resetDateToUse = resetDate;
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({}); //manage your own row selection state
 
-  const {data: leaderboardData} = useSuspenseQuery(
+  const { data: leaderboardData } = useSuspenseQuery(
     leaderboardQueryOptions(resetDate),
   );
-  const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
+  const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
   const leaderboardEntries = leaderboardData.leaderboardEntries;
-  const {agents} = Route.useSearch(); //leaderboardEntries.map((e) => e.agentSymbol);
+  const { agents } = Route.useSearch(); //leaderboardEntries.map((e) => e.agentSymbol);
 
   // let states = useFetchState((state) => state.fetchStates);
   // let agents = useFetchState((state) => state.selectedAgents);
@@ -193,7 +195,7 @@ function LeaderboardComponent() {
   //   historyData: [],
   // };
 
-  let current = {leaderboard: leaderboardEntries};
+  let current = { leaderboard: leaderboardEntries };
 
   let memoizedLeaderboard = React.useMemo(() => {
     //select top 10 by default
@@ -216,12 +218,12 @@ function LeaderboardComponent() {
       (e) => selectedAgents.includes(e.agentSymbol),
     );
 
-    let colors = chartEntries.map(({displayColor}) => displayColor);
+    let colors = chartEntries.map(({ displayColor }) => displayColor);
     let xValues = chartEntries.map((e) => e.agentSymbol);
     let yValuesCredits = chartEntries.map((e) => e.credits);
     let yValuesShips = chartEntries.map((e) => e.shipCount);
 
-    return {chartEntries, colors, xValues, yValuesCredits, yValuesShips};
+    return { chartEntries, colors, xValues, yValuesCredits, yValuesShips };
   }, [rowSelection, current.leaderboard]);
 
   const [isLog, setIsLog] = React.useState(true);
@@ -235,14 +237,14 @@ function LeaderboardComponent() {
     columns,
     getRowId: (row) => row.agentSymbol,
     onRowSelectionChange: setRowSelection, //hoist up the row selection state to your own scope
-    state: {sorting, rowSelection},
+    state: { sorting, rowSelection },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     debugTable: true,
   });
 
-  const navigate = useNavigate({from: Route.fullPath});
+  const navigate = useNavigate({ from: Route.fullPath });
 
   useEffect(() => {
     let newAgentSelection = Object.keys(rowSelection);
@@ -260,7 +262,7 @@ function LeaderboardComponent() {
       .slice(0, 10)
       .map((e) => e.agentSymbol);
     const newSelection: RowSelectionState = top10Agents.reduce(
-      (o, key) => ({...o, [key]: true}),
+      (o, key) => ({ ...o, [key]: true }),
       {},
     );
     setRowSelection((_) => newSelection);
@@ -274,23 +276,23 @@ function LeaderboardComponent() {
 
   return (
     <>
-      <ResetHeaderBar
-        resetDate={resetDate}
-        resetDates={resetDates}
-        selectedAgents={agents}
-        linkToSamePageDifferentResetProps={(rd) => {
-          return {
-            to: "/resets/$resetDate/leaderboard",
-            params: {resetDate: rd},
-            search: {agents},
-          };
-        }}
-      />
+      {/*<ResetHeaderBar*/}
+      {/*  resetDate={resetDate}*/}
+      {/*  resetDates={resetDates}*/}
+      {/*  selectedAgents={agents}*/}
+      {/*  linkToSamePageDifferentResetProps={(rd) => {*/}
+      {/*    return {*/}
+      {/*      to: "/resets/$resetDate/leaderboard",*/}
+      {/*      params: {resetDate: rd},*/}
+      {/*      search: {agents},*/}
+      {/*    };*/}
+      {/*  }}*/}
+      {/*/>*/}
       <div className="flex flex-col gap-4 w-full">
         <Sheet>
           <div className="flex flex-row gap-2 mt-4">
             <SheetTrigger asChild>
-              <HamburgerMenuIcon/>
+              <HamburgerMenuIcon />
             </SheetTrigger>
             <div className="flex items-center space-x-2 text-sm">
               <Switch
@@ -342,7 +344,7 @@ function LeaderboardComponent() {
                     x: chartData.xValues,
                     y: chartData.yValuesCredits,
                     name: "Credits",
-                    marker: {color: chartData.colors},
+                    marker: { color: chartData.colors },
                   },
                 ]}
                 layout={{
@@ -354,7 +356,7 @@ function LeaderboardComponent() {
                     t: 50,
                     //pad: 4,
                   },
-                  modebar: {orientation: "h"},
+                  modebar: { orientation: "h" },
                   showlegend: false,
                   height: 500,
                   font: {
@@ -380,7 +382,7 @@ function LeaderboardComponent() {
                     tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
                   },
                 }}
-                config={{displayModeBar: false, responsive: true}}
+                config={{ displayModeBar: false, responsive: true }}
               />
             </div>
             <div>
@@ -395,7 +397,7 @@ function LeaderboardComponent() {
                     xaxis: "x",
                     yaxis: "y2",
                     name: "Ships",
-                    marker: {color: chartData.colors},
+                    marker: { color: chartData.colors },
                   },
                 ]}
                 layout={{
@@ -432,7 +434,7 @@ function LeaderboardComponent() {
                     tickformat: ",d",
                   }, //integer
                 }}
-                config={{displayModeBar: false, responsive: true}}
+                config={{ displayModeBar: false, responsive: true }}
               />
             </div>
           </div>

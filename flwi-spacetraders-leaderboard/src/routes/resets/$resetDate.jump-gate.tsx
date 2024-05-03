@@ -1,4 +1,4 @@
-import {createFileRoute} from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -6,12 +6,12 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import React, {JSX, useMemo} from "react";
-import {prettyTable} from "../../components/prettyTable.tsx";
-import {ApiJumpGateAssignmentEntry} from "../../../generated";
-import {useSuspenseQuery} from "@tanstack/react-query";
-import {ResetHeaderBar} from "../../components/resetHeaderBar.tsx";
-import {Separator} from "../../@/components/ui/separator.tsx";
+import React, { JSX, useMemo } from "react";
+import { prettyTable } from "../../components/prettyTable.tsx";
+import { ApiJumpGateAssignmentEntry } from "../../../generated";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { ResetHeaderBar } from "../../components/resetHeaderBar.tsx";
+import { Separator } from "../../@/components/ui/separator.tsx";
 import {
   Card,
   CardContent,
@@ -29,7 +29,7 @@ import {
   rawData,
 } from "../../lib/constructionHelper.ts";
 
-import {durationMillis} from "../../lib/utils.ts";
+import { durationMillis } from "../../lib/utils.ts";
 import {
   intNumberFmt,
   percentNumberFmt,
@@ -39,8 +39,8 @@ import {
   jumpGateQueryOptions,
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
-import {CircleCheckBigIcon} from "lucide-react";
-import {ScrollArea} from "../../@/components/ui/scroll-area.tsx";
+import { CircleCheckBigIcon } from "lucide-react";
+import { ScrollArea } from "../../@/components/ui/scroll-area.tsx";
 
 const columnHelperConstructionOverview =
   createColumnHelper<ConstructionProgressEntry>();
@@ -55,7 +55,7 @@ const columns = [
   }),
   columnHelperConstructionOverview.accessor("isJumpGateComplete", {
     header: "Is Gate Complete",
-    cell: (info) => (info.getValue() ? <CircleCheckBigIcon/> : <></>),
+    cell: (info) => (info.getValue() ? <CircleCheckBigIcon /> : <></>),
     footer: (info) => info.column.id,
   }),
   columnHelperConstructionOverview.accessor("tradeSymbol", {
@@ -147,9 +147,9 @@ const columns = [
     (row) =>
       row.tsLastConstructionEvent
         ? durationMillis(
-          row.tsFirstConstructionEvent,
-          row.tsLastConstructionEvent,
-        )
+            row.tsFirstConstructionEvent,
+            row.tsLastConstructionEvent,
+          )
         : undefined,
     {
       id: "durationConstruction",
@@ -196,12 +196,12 @@ const jumpGateAssignmentColumns = [
 export const Route = createFileRoute("/resets/$resetDate/jump-gate")({
   component: JumpGateComponent,
   pendingComponent: () => <div>Loading...</div>,
-  staticData: {customData: "I'm the jump gate route"},
+  staticData: { customData: "I'm the jump gate route" },
   loader: async ({
-                   //deps: { agents },
-                   params: {resetDate},
-                   context: {queryClient},
-                 }) => {
+    //deps: { agents },
+    params: { resetDate },
+    context: { queryClient },
+  }) => {
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
     queryClient.prefetchQuery(jumpGateQueryOptions(resetDate));
@@ -241,7 +241,7 @@ function renderJumpGateSummary(jumpGateSummary: {
 }
 
 function JumpGateComponent(): JSX.Element {
-  const {resetDate} = Route.useParams();
+  const { resetDate } = Route.useParams();
 
   const [sortingConstruction, setSortingConstruction] =
     React.useState<SortingState>([]);
@@ -249,10 +249,10 @@ function JumpGateComponent(): JSX.Element {
   const [sortingAssignment, setSortingAssignment] =
     React.useState<SortingState>([]);
 
-  const {data: jumpGateData} = useSuspenseQuery(
+  const { data: jumpGateData } = useSuspenseQuery(
     jumpGateQueryOptions(resetDate),
   );
-  const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
+  const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
 
   let constructionProgressData = useMemo(() => {
     return mockDataConstructionProgress.filter((d) => d.reset === resetDate);
@@ -275,7 +275,7 @@ function JumpGateComponent(): JSX.Element {
     getRowId: (row) => `${row.jumpGateWaypointSymbol}`,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    state: {sorting: sortingAssignment},
+    state: { sorting: sortingAssignment },
     onSortingChange: setSortingAssignment,
     debugTable: true,
   });
@@ -287,27 +287,27 @@ function JumpGateComponent(): JSX.Element {
     getRowId: (row) => `${row.jumpGateWaypointSymbol}-${row.tradeSymbol}`,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    state: {sorting: sortingConstruction},
+    state: { sorting: sortingConstruction },
     onSortingChange: setSortingConstruction,
     debugTable: true,
   });
 
   return (
     <>
-      <ResetHeaderBar
-        resetDates={resetDates}
-        resetDate={resetDate}
-        linkToSamePageDifferentResetProps={(rd) => {
-          return {
-            to: "/resets/$resetDate/jump-gate",
-            params: {resetDate: rd},
-          };
-        }}
-      />
+      {/*<ResetHeaderBar*/}
+      {/*  resetDates={resetDates}*/}
+      {/*  resetDate={resetDate}*/}
+      {/*  linkToSamePageDifferentResetProps={(rd) => {*/}
+      {/*    return {*/}
+      {/*      to: "/resets/$resetDate/jump-gate",*/}
+      {/*      params: {resetDate: rd},*/}
+      {/*    };*/}
+      {/*  }}*/}
+      {/*/>*/}
       <div className="flex flex-col gap-x-2 gap-y-4">
-        <Separator orientation="horizontal"/>
+        <Separator orientation="horizontal" />
         {renderJumpGateSummary(jumpGateSummary)}
-        <Separator orientation="horizontal"/>
+        <Separator orientation="horizontal" />
         <div className="flex flex-col md:flex-row gap-4">
           {constructionMaterialSummary.map(renderConstructionMaterialSummary)}
         </div>
@@ -334,13 +334,13 @@ const renderKvPair = (label: string, value: any) => {
 };
 
 const renderConstructionMaterialSummary = ({
-                                             tradeSymbol,
-                                             numStartedDeliveries,
-                                             numCompletedDeliveries,
-                                             fastestFirstDeliveryMs,
-                                             fastestLastDeliveryMs,
-                                             fastestConstructionMs,
-                                           }: MaterialSummary) => {
+  tradeSymbol,
+  numStartedDeliveries,
+  numCompletedDeliveries,
+  fastestFirstDeliveryMs,
+  fastestLastDeliveryMs,
+  fastestConstructionMs,
+}: MaterialSummary) => {
   return (
     <Card key={`material-summary-${tradeSymbol}`} className="w-[350px]">
       <CardHeader>
