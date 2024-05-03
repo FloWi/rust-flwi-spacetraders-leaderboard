@@ -196,6 +196,7 @@ const jumpGateAssignmentColumns = [
 export const Route = createFileRoute("/resets/$resetDate/jump-gate")({
   component: JumpGateComponent,
   pendingComponent: () => <div>Loading...</div>,
+  staticData: {customData: "I'm the jump gate route"},
   loader: async ({
                    //deps: { agents },
                    params: {resetDate},

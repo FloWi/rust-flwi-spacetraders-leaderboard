@@ -11,6 +11,8 @@ type AgentSelectionSearch = {
 export const Route = createFileRoute("/resets/$resetDate/history")({
   component: HistoryComponent,
   pendingComponent: () => <div>Loading...</div>,
+  staticData: {customData: "I'm the history route"},
+
   validateSearch: (search: Record<string, unknown>): AgentSelectionSearch => {
     // validate and parse the search params into a typed state
     return {
