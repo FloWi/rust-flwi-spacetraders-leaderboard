@@ -39,6 +39,7 @@ import {
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
 import {CircleCheckBigIcon} from "lucide-react";
+import {renderKvPair} from "../../lib/key-value-card-helper.tsx";
 
 const columnHelperConstructionOverview =
   createColumnHelper<ConstructionProgressEntry>();
@@ -317,19 +318,6 @@ function JumpGateComponent(): JSX.Element {
     </>
   );
 }
-
-const renderKvPair = (label: string, value: any) => {
-  return (
-    <>
-      <div className="space-y-1 text-left">
-        <h4 className="text-sm text-muted-foreground font-medium leading-none">
-          {label}
-        </h4>
-        <p className="text-2xl ">{value}</p>
-      </div>
-    </>
-  );
-};
 
 const renderConstructionMaterialSummary = ({
                                              tradeSymbol,

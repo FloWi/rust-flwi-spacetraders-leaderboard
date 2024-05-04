@@ -3255,49 +3255,49 @@ const mockDataAllTimeRanks = `
   {
     "reset": "2024-04-28",
     "agentSymbol": "SG-1-DEVX65",
-    "credits": 20304838,
+    "credits": 23449695,
     "rank": 1
   },
   {
     "reset": "2024-04-28",
     "agentSymbol": "ARVEL_GREEN46",
-    "credits": 16141651,
+    "credits": 16793754,
     "rank": 2
   },
   {
     "reset": "2024-04-28",
-    "agentSymbol": "SAFPLUSPLUS",
-    "credits": 9898596,
+    "agentSymbol": "SG-1-DEVX35",
+    "credits": 12196749,
     "rank": 3
   },
   {
     "reset": "2024-04-28",
-    "agentSymbol": "SG-1-DEVX35",
-    "credits": 9141145,
+    "agentSymbol": "SAFPLUSPLUS",
+    "credits": 10006988,
     "rank": 4
   },
   {
     "reset": "2024-04-28",
     "agentSymbol": "CTRI-S-",
-    "credits": 8702211,
+    "credits": 9746332,
     "rank": 5
   },
   {
     "reset": "2024-04-28",
     "agentSymbol": "PERTHIUS",
-    "credits": 7998822,
+    "credits": 8232314,
     "rank": 6
   },
   {
     "reset": "2024-04-28",
     "agentSymbol": "DAGON",
-    "credits": 7192888,
+    "credits": 7438866,
     "rank": 7
   },
   {
     "reset": "2024-04-28",
     "agentSymbol": "PAUL-PLANLOS",
-    "credits": 2904088,
+    "credits": 3623460,
     "rank": 8
   },
   {
@@ -3308,20 +3308,20 @@ const mockDataAllTimeRanks = `
   },
   {
     "reset": "2024-04-28",
-    "agentSymbol": "NOUSE",
-    "credits": 2476552,
+    "agentSymbol": "RUUDI-RATLOS",
+    "credits": 1941600,
     "rank": 10
   },
   {
     "reset": "2024-04-28",
-    "agentSymbol": "RUUDI-RATLOS",
-    "credits": 1864733,
+    "agentSymbol": "NOUSE",
+    "credits": 1789618,
     "rank": 11
   },
   {
     "reset": "2024-04-28",
     "agentSymbol": "BLACKFORCEV1",
-    "credits": 1289165,
+    "credits": 1627394,
     "rank": 12
   },
   {
@@ -3332,20 +3332,20 @@ const mockDataAllTimeRanks = `
   },
   {
     "reset": "2024-04-28",
+    "agentSymbol": "SNAKESINSPACE",
+    "credits": 968428,
+    "rank": 14
+  },
+  {
+    "reset": "2024-04-28",
     "agentSymbol": "SG-1-DEVX29",
     "credits": 940081,
-    "rank": 14
+    "rank": 15
   },
   {
     "reset": "2024-04-28",
     "agentSymbol": "ER1T-0H21",
     "credits": 886533,
-    "rank": 15
-  },
-  {
-    "reset": "2024-04-28",
-    "agentSymbol": "SNAKESINSPACE",
-    "credits": 829034,
     "rank": 16
   },
   {
@@ -3627,7 +3627,7 @@ const mockDataAllTimeRanks = `
   {
     "reset": "2024-04-28",
     "agentSymbol": "THEO",
-    "credits": 5639,
+    "credits": 5669,
     "rank": 63
   }
 ]
