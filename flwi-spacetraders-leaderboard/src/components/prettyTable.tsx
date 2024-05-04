@@ -1,4 +1,4 @@
-import {flexRender, Table as TanStackTable} from "@tanstack/react-table";
+import { flexRender, Table as TanStackTable } from "@tanstack/react-table";
 import {
   Table,
   TableBody,
@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "../@/components/ui/table.tsx";
+import { ArrowDownAzIcon, ArrowUpAzIcon } from "lucide-react";
 
 export function prettyTable<T>(table: TanStackTable<T>) {
   return (
@@ -22,7 +23,7 @@ export function prettyTable<T>(table: TanStackTable<T>) {
                     colSpan={header.colSpan}
                     align={(header.column.columnDef.meta as any)?.align}
                     className="border"
-                    style={{width: `${header.getSize()}px`}}
+                    style={{ width: `${header.getSize()}px` }}
                   >
                     {header.isPlaceholder ? null : (
                       <div
@@ -47,8 +48,8 @@ export function prettyTable<T>(table: TanStackTable<T>) {
                           header.getContext(),
                         )}
                         {{
-                          asc: " 🔼",
-                          desc: " 🔽",
+                          asc: <ArrowUpAzIcon />,
+                          desc: <ArrowDownAzIcon />,
                         }[header.column.getIsSorted() as string] ?? null}
                       </div>
                     )}
@@ -64,8 +65,8 @@ export function prettyTable<T>(table: TanStackTable<T>) {
               <TableRow
                 key={row.id}
                 className={
-                  ((row.getIsSelected() ? "selected" : "") +
-                    (row.getCanSelect() ? " cursor-pointer" : "")) ?? ""
+                  (row.getIsSelected() ? "selected" : "") +
+                  (row.getCanSelect() ? " cursor-pointer" : "")
                 }
                 onClick={row.getToggleSelectedHandler()}
               >
