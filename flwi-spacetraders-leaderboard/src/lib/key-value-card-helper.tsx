@@ -1,5 +1,3 @@
-import React from "react";
-
 export const renderKvPair = (label: string, value: any) => {
   return (
     <>

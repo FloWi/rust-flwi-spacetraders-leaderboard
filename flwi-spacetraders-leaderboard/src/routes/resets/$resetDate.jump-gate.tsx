@@ -251,7 +251,7 @@ function JumpGateComponent(): JSX.Element {
   const {data: jumpGateData} = useSuspenseQuery(
     jumpGateQueryOptions(resetDate),
   );
-  const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
+  //const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
 
   let constructionProgressData = useMemo(() => {
     return mockDataConstructionProgress.filter((d) => d.reset === resetDate);
