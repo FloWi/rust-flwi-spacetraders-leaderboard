@@ -38,6 +38,10 @@ pub async fn http_server(db: Pool<Sqlite>, address: String) -> Result<(), Error>
             "/api/jump-gate-assignment/:reset_date",
             routing::get(leaderboard::get_jump_gate_agents_assignment),
         )
+        .route(
+            "/api/history/:reset_date",
+            routing::post(leaderboard::get_history_data_for_reset),
+        )
         .layer(CorsLayer::very_permissive())
         .layer(TraceLayer::new_for_http().on_failure(
             |error: ServerErrorsFailureClass, latency: Duration, _span: &Span| {
@@ -61,9 +65,10 @@ mod leaderboard {
     use axum::Json;
     use chrono::format::StrftimeItems;
     use chrono::NaiveDate;
+    use itertools::Itertools;
     use serde::{Deserialize, Serialize};
     use sqlx::{Pool, Sqlite};
-    use utoipa::{OpenApi, ToSchema};
+    use utoipa::{IntoParams, OpenApi, ToSchema};
 
     use crate::db::{
         load_jump_gate_agent_assignment_for_reset, load_leaderboard_for_reset, load_reset_dates,
@@ -71,7 +76,12 @@ mod leaderboard {
 
     #[derive(OpenApi)]
     #[openapi(
-        paths(get_reset_dates, get_leaderboard, get_jump_gate_agents_assignment),
+        paths(
+            get_reset_dates,
+            get_leaderboard,
+            get_jump_gate_agents_assignment,
+            get_history_data_for_reset
+        ),
         components(
             schemas(ApiAgentSymbol),
             schemas(ApiJumpGateAssignmentEntry),
@@ -81,6 +91,7 @@ mod leaderboard {
             schemas(GetJumpGateAgentsAssignmentForResetResponseContent),
             schemas(GetLeaderboardForResetResponseContent),
             schemas(ListResetDatesResponseContent),
+            schemas(AgentSymbolSearchFilter),
         )
     )]
     pub(crate) struct ApiDoc;
@@ -109,11 +120,11 @@ mod leaderboard {
     #[serde(rename_all = "camelCase")]
     pub(crate) struct ApiResetDate(pub String);
 
-    #[derive(Serialize, Deserialize, ToSchema)]
+    #[derive(Serialize, Deserialize, ToSchema, Debug)]
     #[serde(rename_all = "camelCase")]
     pub(crate) struct ApiAgentSymbol(pub String);
 
-    #[derive(Serialize, Deserialize, ToSchema)]
+    #[derive(Serialize, Deserialize, ToSchema, Debug)]
     #[serde(rename_all = "camelCase")]
     pub(crate) struct ApiWaypointSymbol(pub String);
 
@@ -125,7 +136,7 @@ mod leaderboard {
         ship_count: i64,
     }
 
-    #[derive(Serialize, Deserialize, ToSchema)]
+    #[derive(Serialize, Deserialize, ToSchema, Debug)]
     #[serde(rename_all = "camelCase")]
     pub(crate) struct ApiJumpGateAssignmentEntry {
         agent_headquarters_waypoint_symbol: ApiWaypointSymbol,
@@ -192,12 +203,24 @@ mod leaderboard {
         State(pool): State<Pool<Sqlite>>,
         Path(reset_date): Path<NaiveDate>,
     ) -> Json<GetJumpGateAgentsAssignmentForResetResponseContent> {
-        let jump_gate_assignment_entries =
+        let jump_gate_assignments = load_jump_gate_assignments(&pool, reset_date).await;
+
+        Json(GetJumpGateAgentsAssignmentForResetResponseContent {
+            reset_date: ApiResetDate(reset_date.format("%Y-%m-%d").to_string()),
+            jump_gate_assignment_entries: jump_gate_assignments,
+        })
+    }
+
+    async fn load_jump_gate_assignments(
+        pool: &Pool<Sqlite>,
+        reset_date: NaiveDate,
+    ) -> Vec<ApiJumpGateAssignmentEntry> {
+        let db_jump_gate_assignment_entries =
             load_jump_gate_agent_assignment_for_reset(&pool, reset_date)
                 .await
                 .unwrap();
 
-        let response = jump_gate_assignment_entries
+        let jump_gate_assignments = db_jump_gate_assignment_entries
             .iter()
             .map(|r| ApiJumpGateAssignmentEntry {
                 agent_headquarters_waypoint_symbol: ApiWaypointSymbol(
@@ -211,10 +234,48 @@ mod leaderboard {
                     .collect(),
             })
             .collect();
+        jump_gate_assignments
+    }
 
-        Json(GetJumpGateAgentsAssignmentForResetResponseContent {
-            reset_date: ApiResetDate(reset_date.format("%Y-%m-%d").to_string()),
-            jump_gate_assignment_entries: response,
-        })
+    /// Agent Symbols Filter
+    #[derive(Deserialize, ToSchema)]
+    pub(crate) struct AgentSymbolSearchFilter {
+        pub(crate) agent_symbols: Vec<String>,
+    }
+
+    /// Get the history data for a reset
+    #[utoipa::path(
+    post,
+    path = "/api/history/{resetDate}",
+    responses((status = 200, body = String)),
+    params(
+        ("resetDate" = NaiveDate, Path, description = "The reset date"),
+    ),
+    request_body = AgentSymbolSearchFilter
+    )]
+    pub(crate) async fn get_history_data_for_reset(
+        State(pool): State<Pool<Sqlite>>,
+        Path(reset_date): Path<NaiveDate>,
+        Json(filter): Json<AgentSymbolSearchFilter>,
+    ) -> Json<String> {
+        let jump_gate_assignments = load_jump_gate_assignments(&pool, reset_date).await;
+
+        let agent_symbols = filter.agent_symbols; //.unwrap_or(vec![]);
+
+        let jump_gate_symbols: Vec<String> = jump_gate_assignments
+            .iter()
+            .filter(|j| {
+                j.agents_in_system
+                    .iter()
+                    .any(|a| agent_symbols.contains(&a.0))
+            })
+            .map(|j| j.jump_gate_waypoint_symbol.0.clone())
+            .unique()
+            .collect();
+
+        dbg!(jump_gate_assignments);
+        dbg!(jump_gate_symbols);
+
+        Json("???".into())
     }
 }

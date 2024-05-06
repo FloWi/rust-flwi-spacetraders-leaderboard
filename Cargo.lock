@@ -484,6 +484,7 @@ dependencies = [
  "reqwest",
  "reqwest-middleware",
  "serde",
+ "serde_json",
  "sqlx",
  "task-local-extensions",
  "tokio",

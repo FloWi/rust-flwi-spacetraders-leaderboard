@@ -289,6 +289,62 @@ select id
     .await
 }
 
+pub(crate) async fn select_construction_progress_for_reset(
+    pool: &Pool<Sqlite>,
+    reset_date: ResetDate,
+    from_event_time_minutes_gte: i64,
+    to_event_time_minutes_lte: i64,
+    resolution_minutes: i64,
+    jump_gate_waypoint_symbols: Vec<String>,
+) -> Result<Vec<DbConstructionMaterialProgress>, Error> {
+    // TODO: resolution (include latest ts even if it's not included in modulo)
+    let or_gte_value_to_include_latest = to_event_time_minutes_lte - resolution_minutes;
+    let jump_gate_waypoint_json_string =
+        serde_json::to_string(&jump_gate_waypoint_symbols).unwrap();
+
+    // sqlx doesn't understand a group-concat with int-values apparently
+    // using an alias with a type handles that
+    sqlx::query_as!(
+        DbConstructionMaterialProgress,
+        "
+with construction_material_details as (
+    select cs.jump_gate_waypoint_symbol
+         , cr.trade_symbol
+         , event_time_minutes
+         , fulfilled
+    from reset_date rd
+             join job_run jr on rd.reset_id = jr.reset_id
+             join construction_log cl on jr.id = cl.job_id
+             join main.construction_material_log cml on cl.id = cml.construction_log_id
+             join main.construction_requirement cr on cml.construction_requirement_id = cr.id
+             join main.construction_site cs on cl.construction_site_id = cs.id
+    where rd.reset = ?
+      and event_time_minutes >= ?
+      and event_time_minutes <= ?
+      and (event_time_minutes % ? = 0 or event_time_minutes >= ? )
+      and cr.required > 1
+      and cs.jump_gate_waypoint_symbol in (select json_each.value as jump_gate_waypoint_symbol
+                                           from json_each(json(?)))
+)
+select jump_gate_waypoint_symbol
+     , trade_symbol
+     , group_concat(event_time_minutes, ',') as \"event_time_minutes_csv: String\"
+     , group_concat(fulfilled, ',') as \"fulfilled_csv: String\"
+from construction_material_details
+group by jump_gate_waypoint_symbol
+       , trade_symbol
+        ",
+        reset_date.reset_id,
+        from_event_time_minutes_gte,
+        to_event_time_minutes_lte,
+        resolution_minutes,
+        or_gte_value_to_include_latest,
+        jump_gate_waypoint_json_string
+    )
+    .fetch_all(pool)
+    .await
+}
+
 async fn insert_agent_log_entry(
     pool: &Pool<Sqlite>,
     job_run: DbJobRun,
@@ -472,6 +528,14 @@ pub(crate) struct DbConstructionSite {
     id: i64,
     reset_id: i64,
     pub(crate) jump_gate_waypoint_symbol: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub(crate) struct DbConstructionMaterialProgress {
+    jump_gate_waypoint_symbol: String,
+    trade_symbol: String,
+    event_time_minutes_csv: Option<String>,
+    fulfilled_csv: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

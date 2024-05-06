@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\nselect rd.reset\n     , agent_headquarters_waypoint_symbol\n     , jump_gate_waypoint_symbol\n     , group_concat(agent_symbol order by agent_symbol, ',') as agents_in_system_csv\nfrom static_agent_info sai\n         join main.construction_site cs on sai.construction_site_id = cs.id\n         join main.reset_date rd on cs.reset_id = rd.reset_id\nwhere reset = ?\ngroup by rd.reset\n       , agent_headquarters_waypoint_symbol\n       , cs.jump_gate_waypoint_symbol\n       , construction_site_id\norder by rd.reset\n       , jump_gate_waypoint_symbol\n",
+  "describe": {
+    "columns": [
+      {
+        "name": "reset",
+        "ordinal": 0,
+        "type_info": "Date"
+      },
+      {
+        "name": "agent_headquarters_waypoint_symbol",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "jump_gate_waypoint_symbol",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "agents_in_system_csv",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "57800a8b5eae7418e371a2d46253f30288324b91fe2c097b228c13caf3b01642"
+}
