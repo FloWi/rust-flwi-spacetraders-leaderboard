@@ -1,5 +1,5 @@
-import {queryOptions} from "@tanstack/react-query";
-import {CrateService} from "../../generated";
+import { queryOptions } from "@tanstack/react-query";
+import { CrateService } from "../../generated";
 
 export const resetDatesQueryOptions = queryOptions({
   queryKey: ["resetDates"],
@@ -10,12 +10,27 @@ export const resetDatesQueryOptions = queryOptions({
 export const jumpGateQueryOptions = (resetDate: string) =>
   queryOptions({
     queryKey: ["jumpGateData", resetDate],
-    queryFn: () => CrateService.getJumpGateAgentsAssignment({resetDate}),
+    queryFn: () => CrateService.getJumpGateAgentsAssignment({ resetDate }),
     staleTime: 5 * 60 * 1000,
   });
+
 export const leaderboardQueryOptions = (resetDate: string) =>
   queryOptions({
     queryKey: ["leaderboardData", resetDate],
-    queryFn: () => CrateService.getLeaderboard({resetDate}),
+    queryFn: () => CrateService.getLeaderboard({ resetDate }),
+    staleTime: 5 * 60 * 1000,
+  });
+
+export const historyQueryOptions = (
+  resetDate: string,
+  agentSymbols: string[],
+) =>
+  queryOptions({
+    queryKey: ["historyData", resetDate],
+    queryFn: () =>
+      CrateService.getHistoryDataForReset({
+        resetDate,
+        requestBody: { agent_symbols: agentSymbols },
+      }),
     staleTime: 5 * 60 * 1000,
   });

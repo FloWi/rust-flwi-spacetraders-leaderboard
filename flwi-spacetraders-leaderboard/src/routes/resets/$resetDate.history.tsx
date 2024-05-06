@@ -1,5 +1,9 @@
 import {createFileRoute} from "@tanstack/react-router";
-import {resetDatesQueryOptions} from "../../utils/queryOptions.ts";
+import {
+  historyQueryOptions,
+  resetDatesQueryOptions,
+} from "../../utils/queryOptions.ts";
+import {useSuspenseQuery} from "@tanstack/react-query";
 
 type AgentSelectionSearch = {
   selectedAgents?: string[];
@@ -20,14 +24,17 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
   loaderDeps: ({search: {selectedAgents}}) => ({selectedAgents}),
 
   loader: async ({
-                   //deps: { agents },
+                   params: {resetDate},
                    context: {queryClient},
+                   deps: {selectedAgents},
                  }) => {
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
-    //queryClient.prefetchQuery(jumpGateQueryOptions(resetDate));
+    queryClient.prefetchQuery(
+      historyQueryOptions(resetDate, selectedAgents ?? []),
+    );
 
-    return await queryClient.prefetchQuery(resetDatesQueryOptions);
+    await queryClient.prefetchQuery(resetDatesQueryOptions);
   },
 });
 
@@ -36,6 +43,9 @@ function HistoryComponent() {
   const {selectedAgents} = Route.useSearch();
 
   // const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
+  const {data: historyData} = useSuspenseQuery(
+    historyQueryOptions(resetDate, selectedAgents ?? []),
+  );
 
   return (
     <>
@@ -55,7 +65,10 @@ function HistoryComponent() {
         <h2 className="text-2xl font-bold pt-4">
           Hello /reset/{resetDate}/history!
         </h2>
-        <pre>selectedAgents: {(selectedAgents ?? []).join(", ")}</pre>
+        <h3 className="text-xl font-bold">Selected Agents</h3>
+        <pre>{(selectedAgents ?? []).join(", ")}</pre>
+        <h3 className="text-xl font-bold">History Data</h3>
+        <pre>{JSON.stringify(historyData, null, 2)}</pre>
       </div>
     </>
   );
