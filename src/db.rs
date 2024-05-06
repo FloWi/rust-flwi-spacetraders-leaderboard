@@ -253,15 +253,18 @@ pub(crate) async fn insert_job_run(
     reset_date: ResetDate,
     now: NaiveDateTime,
 ) -> Result<DbJobRun, Error> {
+    let event_time_minutes = (now - reset_date.first_ts).num_minutes();
+
     sqlx::query_as!(
         DbJobRun,
         "
-insert into job_run (reset_id, query_time) 
-VALUES (?, ?)
-returning id, reset_id, query_time
+insert into job_run (reset_id, query_time, event_time_minutes)
+VALUES (?, ?, ?)
+returning id, reset_id, query_time, event_time_minutes
         ",
         reset_date.reset_id,
-        now
+        now,
+        event_time_minutes
     )
     .fetch_one(pool)
     .await
@@ -484,6 +487,7 @@ pub(crate) struct DbJobRun {
     id: i64,
     reset_id: i64,
     query_time: NaiveDate,
+    event_time_minutes: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

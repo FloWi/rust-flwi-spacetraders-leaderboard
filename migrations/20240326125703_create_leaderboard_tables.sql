@@ -41,11 +41,14 @@ create table static_agent_info
 
 create table job_run
 (
-    id         integer  not null primary key,
-    reset_id   integer  not null,
-    query_time datetime not null,
+    id                 integer  not null primary key,
+    reset_id           integer  not null,
+    query_time         datetime not null,
+    event_time_minutes integer  not null,
     foreign key (reset_id) references reset_date (reset_id)
 );
+
+
 
 create table agent_log
 (
@@ -57,6 +60,8 @@ create table agent_log
     foreign key (job_id) references job_run (id)
 );
 
+
+
 create table construction_log
 (
     id                   integer not null primary key,
@@ -66,6 +71,8 @@ create table construction_log
     foreign key (job_id) references job_run (id),
     foreign key (construction_site_id) references construction_site (id)
 );
+
+
 
 create table construction_material_log
 (
@@ -145,3 +152,12 @@ create table mat_view_current_construction_progress
     foreign key (reset_id) references reset_date (reset_id)
 
 );
+
+
+create index ix_job_run__reset_event_time_minutes on job_run (reset_id, event_time_minutes);
+create index ix_job_run__event_time_minutes_reset on job_run (event_time_minutes, reset_id);
+create index ix_job_run__event_time_minutes on job_run (event_time_minutes);
+create index ix_agent_log__agent_id_job_id on agent_log (agent_id, job_id);
+create index ix_static_agent_info__construction_site_id on static_agent_info (construction_site_id);
+create index ix_construction_log__construction_site_id on construction_log (construction_site_id, job_id);
+create index ix_construction_material_log__construction_log_id on construction_material_log (construction_log_id);
