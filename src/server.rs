@@ -68,10 +68,12 @@ mod leaderboard {
     use itertools::Itertools;
     use serde::{Deserialize, Serialize};
     use sqlx::{Pool, Sqlite};
+    use tracing::{event, Level};
     use utoipa::{IntoParams, OpenApi, ToSchema};
 
     use crate::db::{
         load_jump_gate_agent_assignment_for_reset, load_leaderboard_for_reset, load_reset_dates,
+        select_construction_progress_for_reset,
     };
 
     #[derive(OpenApi)]
@@ -114,6 +116,25 @@ mod leaderboard {
     pub(crate) struct GetJumpGateAgentsAssignmentForResetResponseContent {
         reset_date: ApiResetDate,
         jump_gate_assignment_entries: Vec<ApiJumpGateAssignmentEntry>,
+    }
+
+    #[derive(Serialize, Deserialize, ToSchema, Debug)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct ApiHistoryEntry {
+        agent_symbol: ApiAgentSymbol,
+        event_times_minutes: Vec<u32>,
+        min_event_time_minutes: String,
+        max_event_time_minutes: String,
+        num_entries: String,
+        credits_timeline: Vec<i64>,
+        ship_count_timeline: Vec<u32>,
+    }
+
+    #[derive(Serialize, Deserialize, ToSchema)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct GetHistoryDataForResetResponseContent {
+        reset_date: ApiResetDate,
+        agent_history: Vec<ApiHistoryEntry>,
     }
 
     #[derive(Serialize, Deserialize, ToSchema)]
@@ -273,8 +294,32 @@ mod leaderboard {
             .unique()
             .collect();
 
-        dbg!(jump_gate_assignments);
+        let construction_progress = select_construction_progress_for_reset(
+            &pool,
+            reset_date,
+            0,
+            1 * 24 * 60,
+            30,
+            jump_gate_symbols.clone(),
+        )
+        .await
+        .unwrap();
+
+        let num_jump_gates = jump_gate_symbols.len();
+        let num_agents = agent_symbols.len();
+
+        event!(
+            Level::DEBUG,
+            "Done collecting construction data for {num_agents} and {num_jump_gates} jump gates",
+        );
+        event!(
+            Level::DEBUG,
+            "Jump Gate symbols are {}",
+            jump_gate_symbols.join(", ")
+        );
+
         dbg!(jump_gate_symbols);
+        dbg!(construction_progress);
 
         Json("???".into())
     }

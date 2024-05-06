@@ -291,7 +291,7 @@ select id
 
 pub(crate) async fn select_construction_progress_for_reset(
     pool: &Pool<Sqlite>,
-    reset_date: ResetDate,
+    reset_date: NaiveDate,
     from_event_time_minutes_gte: i64,
     to_event_time_minutes_lte: i64,
     resolution_minutes: i64,
@@ -334,7 +334,7 @@ from construction_material_details
 group by jump_gate_waypoint_symbol
        , trade_symbol
         ",
-        reset_date.reset_id,
+        reset_date,
         from_event_time_minutes_gte,
         to_event_time_minutes_lte,
         resolution_minutes,
