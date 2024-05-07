@@ -35,7 +35,10 @@ pub(crate) async fn load_or_create_reset_date(
     let maybe_db_reset = load_reset_date(pool, reset_date).await?;
     match maybe_db_reset {
         Some(rd) => Ok(rd),
-        None => insert_reset_date(pool, reset_date, now).await,
+        None => {
+            let reset_date = insert_reset_date(pool, reset_date, now).await?;
+            Ok(load_reset_date(pool, reset_date).await?.unwrap())
+        }
     }
 }
 
@@ -43,16 +46,15 @@ async fn insert_reset_date(
     pool: &Pool<Sqlite>,
     reset_date: NaiveDate,
     now: NaiveDateTime,
-) -> Result<ResetDate, Error> {
-    sqlx::query_as!(
-        ResetDate,
+) -> Result<NaiveDate, Error> {
+    sqlx::query_scalar!(
         "
-insert into reset_date (reset, first_ts) 
+insert into reset_date (reset, first_ts)
 VALUES (?, ?)
-returning reset_id, reset, first_ts
+returning reset
         ",
         reset_date,
-        now
+        now,
     )
     .fetch_one(pool)
     .await
@@ -61,11 +63,17 @@ returning reset_id, reset, first_ts
 async fn load_latest_reset_date(pool: &Pool<Sqlite>) -> Result<Option<ResetDate>, Error> {
     sqlx::query_as!(
         ResetDate,
-        "
-select reset_id, reset, first_ts
-from reset_date
-order by reset desc
-        ",
+        r#"
+select r.reset_id as "reset_id!"
+     , r.reset as "reset!"
+     , r.first_ts as "first_ts!"
+     , max(jr.query_time) as "latest_ts! :_"
+  from reset_date r
+  join main.job_run jr
+       on r.reset_id = jr.reset_id
+group by r.reset_id, r.first_ts, r.reset
+order by r.reset desc
+        "#,
     )
     .fetch_optional(pool)
     .await
@@ -77,13 +85,17 @@ async fn load_reset_date(
 ) -> Result<Option<ResetDate>, Error> {
     sqlx::query_as!(
         ResetDate,
-        "
-select reset_id
-     , reset
-     , first_ts
-  from reset_date
- where reset = ?
-        ",
+        r#"
+select r.reset_id as "reset_id!"
+     , r.reset as "reset!"
+     , r.first_ts as "first_ts!"
+     , max(jr.query_time) as "latest_ts!"
+  from reset_date r
+  join main.job_run jr
+       on r.reset_id = jr.reset_id
+where reset = ?
+group by r.reset_id, r.first_ts, r.reset
+        "#,
         reset_date
     )
     .fetch_optional(pool)
@@ -93,13 +105,16 @@ select reset_id
 pub(crate) async fn load_reset_dates(pool: &Pool<Sqlite>) -> Result<Vec<ResetDate>, Error> {
     sqlx::query_as!(
         ResetDate,
-        "
-select reset_id
-     , reset
-     , first_ts
-  from reset_date
- order by reset
-        "
+        r#"
+select r.reset_id as "reset_id!"
+     , r.reset as "reset!"
+     , r.first_ts as "first_ts!"
+     , max(jr.query_time) as "latest_ts! :_"
+from reset_date r
+         join main.job_run jr
+              on r.reset_id = jr.reset_id
+group by r.reset_id, r.first_ts, r.reset
+        "#
     )
     .fetch_all(pool)
     .await
@@ -556,7 +571,8 @@ select id, reset_id, trade_symbol, required
 pub(crate) struct ResetDate {
     reset_id: i64,
     pub reset: NaiveDate,
-    first_ts: NaiveDateTime,
+    pub first_ts: NaiveDateTime,
+    pub latest_ts: NaiveDateTime,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

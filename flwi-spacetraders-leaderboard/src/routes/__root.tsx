@@ -4,12 +4,12 @@ import {
   Outlet,
   useRouterState,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/router-devtools";
-import { QueryClient } from "@tanstack/react-query";
-import { SwaggerIcon } from "../components/swagger-icon.tsx";
-import { GitHubLogoIcon } from "@radix-ui/react-icons";
-import { resetDatesQueryOptions } from "../utils/queryOptions.ts";
-import { createSamePageOtherResetNavigationMenuItem } from "../utils/resetNavigationHelper.tsx";
+import {TanStackRouterDevtools} from "@tanstack/router-devtools";
+import {QueryClient} from "@tanstack/react-query";
+import {SwaggerIcon} from "../components/swagger-icon.tsx";
+import {GitHubLogoIcon} from "@radix-ui/react-icons";
+import {resetDatesQueryOptions} from "../utils/queryOptions.ts";
+import {createSamePageOtherResetNavigationMenuItem} from "../utils/resetNavigationHelper.tsx";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -17,7 +17,7 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "../@/components/ui/navigation-menu.tsx";
-import { MyLink } from "../components/myLink.tsx";
+import {MyLink} from "../components/myLink.tsx";
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
@@ -31,9 +31,9 @@ declare module "@tanstack/react-router" {
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   {
     loader: async ({
-      //deps: { agents },
-      context: { queryClient },
-    }) => {
+                     //deps: { agents },
+                     context: {queryClient},
+                   }) => {
       return queryClient.ensureQueryData(resetDatesQueryOptions);
     },
 
@@ -42,7 +42,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       const resetDates = Route.useLoaderData();
 
       const otherResetsNavMenuItem = createSamePageOtherResetNavigationMenuItem(
-        resetDates,
+        resetDates.map(r => r.resetDate),
         currentState,
       );
 
@@ -51,7 +51,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       let currentResetLeaderboardLink = maybeLatestResetDate ? (
         <MyLink
           to="/resets/$resetDate/leaderboard"
-          params={{ resetDate: maybeLatestResetDate }}
+          params={{resetDate: maybeLatestResetDate}}
           className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
               [&.active]:bg-muted
               [&.active]:font-medium
@@ -134,16 +134,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                   title="Github Repository"
                   target="_blank"
                 >
-                  <GitHubLogoIcon className="mr-2 h-6 w-6" />
+                  <GitHubLogoIcon className="mr-2 h-6 w-6"/>
                 </a>
               </div>
             </div>
-            <hr />
+            <hr/>
             <div className="p-4">
-              <Outlet />
+              <Outlet/>
             </div>
           </div>
-          <TanStackRouterDevtools />
+          <TanStackRouterDevtools/>
         </>
       );
     },

@@ -72,7 +72,7 @@ mod leaderboard {
     use axum::extract::{Path, State};
     use axum::Json;
     use chrono::format::StrftimeItems;
-    use chrono::NaiveDate;
+    use chrono::{NaiveDate, NaiveDateTime};
     use itertools::Itertools;
     use serde::{Deserialize, Serialize};
     use sqlx::{Pool, Sqlite};
@@ -97,6 +97,7 @@ mod leaderboard {
             schemas(ApiJumpGateAssignmentEntry),
             schemas(ApiLeaderboardEntry),
             schemas(ApiResetDate),
+            schemas(ApiResetDateMeta),
             schemas(ApiWaypointSymbol),
             schemas(GetJumpGateAgentsAssignmentForResetResponseContent),
             schemas(GetLeaderboardForResetResponseContent),
@@ -113,7 +114,16 @@ mod leaderboard {
     #[derive(Serialize, Deserialize, ToSchema)]
     #[serde(rename_all = "camelCase")]
     pub(crate) struct ListResetDatesResponseContent {
-        reset_dates: Vec<ApiResetDate>,
+        reset_dates: Vec<ApiResetDateMeta>,
+    }
+
+    #[derive(Serialize, Deserialize, ToSchema)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct ApiResetDateMeta {
+        reset_date: ApiResetDate,
+        first_ts: NaiveDateTime,
+        latest_ts: NaiveDateTime,
+        duration_minutes: u32,
     }
 
     #[derive(Serialize, Deserialize, ToSchema)]
@@ -198,7 +208,12 @@ mod leaderboard {
         let reset_dates = load_reset_dates(&pool).await.unwrap();
         let response = reset_dates
             .iter()
-            .map(|r| ApiResetDate(r.reset.format_with_items(fmt.clone()).to_string()))
+            .map(|r| ApiResetDateMeta {
+                reset_date: ApiResetDate(r.reset.format_with_items(fmt.clone()).to_string()),
+                first_ts: r.first_ts,
+                latest_ts: r.latest_ts,
+                duration_minutes: (r.latest_ts - r.first_ts).num_minutes().abs() as u32,
+            })
             .collect();
 
         Json(ListResetDatesResponseContent {

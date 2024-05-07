@@ -42,7 +42,7 @@ function HistoryComponent() {
   const {resetDate} = Route.useParams();
   const {selectedAgents} = Route.useSearch();
 
-  // const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
+  const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
   const {data: historyData} = useSuspenseQuery(
     historyQueryOptions(resetDate, selectedAgents ?? []),
   );
@@ -65,6 +65,8 @@ function HistoryComponent() {
         <h2 className="text-2xl font-bold pt-4">
           Hello /reset/{resetDate}/history!
         </h2>
+        <h3 className="text-xl font-bold">Reset Dates</h3>
+        <pre>{JSON.stringify(resetDates, null, 2)}</pre>
         <h3 className="text-xl font-bold">Selected Agents</h3>
         <pre>{(selectedAgents ?? []).join(", ")}</pre>
         <h3 className="text-xl font-bold">History Data</h3>
