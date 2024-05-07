@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import React, { useMemo } from "react";
+import {createFileRoute} from "@tanstack/react-router";
+import React, {useMemo} from "react";
 import {
   ApiAllTimeRankEntry,
   mockDataAllTime,
@@ -11,16 +11,16 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { intNumberFmt } from "../../lib/formatters.ts";
+import {intNumberFmt} from "../../lib/formatters.ts";
 import {
   ToggleGroup,
   ToggleGroupItem,
 } from "../../@/components/ui/toggle-group.tsx";
-import { prettyTable } from "../../components/prettyTable.tsx";
+import {prettyTable} from "../../components/prettyTable.tsx";
 import Plot from "react-plotly.js";
-import { PlotType } from "plotly.js";
-import { Switch } from "../../@/components/ui/switch.tsx";
-import { Label } from "../../@/components/ui/label.tsx";
+import {PlotType} from "plotly.js";
+import {Switch} from "../../@/components/ui/switch.tsx";
+import {Label} from "../../@/components/ui/label.tsx";
 import {
   Sheet,
   SheetContent,
@@ -28,8 +28,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../../@/components/ui/sheet.tsx";
-import { HamburgerMenuIcon } from "@radix-ui/react-icons";
-import { ScrollArea } from "../../@/components/ui/scroll-area.tsx";
+import {HamburgerMenuIcon} from "@radix-ui/react-icons";
+import {ScrollArea} from "../../@/components/ui/scroll-area.tsx";
 import {
   Card,
   CardContent,
@@ -37,10 +37,12 @@ import {
   CardHeader,
   CardTitle,
 } from "../../@/components/ui/card.tsx";
-import { renderKvPair } from "../../lib/key-value-card-helper.tsx";
+import {renderKvPair} from "../../lib/key-value-card-helper.tsx";
 
 export const Route = createFileRoute("/all-time/")({
   component: AllTimeComponent,
+  pendingComponent: () => <div>Loading...</div>,
+
 });
 
 const columnHelperAllTimeData = createColumnHelper<ApiAllTimeRankEntry>();
@@ -110,11 +112,11 @@ const resetFilters: ResetFilter[] = [
 ];
 
 function AllTimeComponent() {
-  let { allTimeData, resetDates } = useMemo(() => {
+  let {allTimeData, resetDates} = useMemo(() => {
     let resetDates = Array.from(new Set(mockDataAllTime.map((d) => d.reset)))
       .toSorted()
       .toReversed();
-    return { allTimeData: mockDataAllTime, resetDates };
+    return {allTimeData: mockDataAllTime, resetDates};
   }, []);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -147,7 +149,7 @@ function AllTimeComponent() {
     //getRowId: (row) => `${row}-${row.tradeSymbol}`,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    state: { sorting },
+    state: {sorting},
     onSortingChange: setSorting,
     debugTable: true,
   });
@@ -211,7 +213,7 @@ function AllTimeComponent() {
           tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
         },
       }}
-      config={{ displayModeBar: false, responsive: true }}
+      config={{displayModeBar: false, responsive: true}}
     />
   );
   let top_n_AgentSelectionComponent = (
@@ -287,7 +289,7 @@ function AllTimeComponent() {
       <div className="flex flex-col gap-4 md:flex-row">
         <Sheet>
           <SheetTrigger asChild>
-            <HamburgerMenuIcon />
+            <HamburgerMenuIcon/>
           </SheetTrigger>
           {sheetContentComponent}
           <div className="flex flex-col gap-2">

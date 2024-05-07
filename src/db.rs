@@ -296,7 +296,7 @@ pub(crate) async fn select_construction_progress_for_reset(
     to_event_time_minutes_lte: i64,
     resolution_minutes: i64,
     jump_gate_waypoint_symbols: Vec<String>,
-) -> Result<Vec<DbConstructionMaterialProgress>, Error> {
+) -> Result<Vec<DbConstructionMaterialHistoryEntry>, Error> {
     // TODO: resolution (include latest ts even if it's not included in modulo)
     let or_gte_value_to_include_latest = to_event_time_minutes_lte - resolution_minutes;
     let jump_gate_waypoint_json_string =
@@ -305,11 +305,12 @@ pub(crate) async fn select_construction_progress_for_reset(
     // sqlx doesn't understand a group-concat with int-values apparently
     // using an alias with a type handles that
     sqlx::query_as!(
-        DbConstructionMaterialProgress,
+        DbConstructionMaterialHistoryEntry,
         "
 with construction_material_details as (
     select cs.jump_gate_waypoint_symbol
          , cr.trade_symbol
+         , cr.required
          , event_time_minutes
          , fulfilled
     from reset_date rd
@@ -328,6 +329,7 @@ with construction_material_details as (
 )
 select jump_gate_waypoint_symbol
      , trade_symbol
+     , max(required) as \"required: i64\"
      , group_concat(event_time_minutes, ',') as \"event_time_minutes_csv: String\"
      , group_concat(fulfilled, ',') as \"fulfilled_csv: String\"
 from construction_material_details
@@ -340,6 +342,60 @@ group by jump_gate_waypoint_symbol
         resolution_minutes,
         or_gte_value_to_include_latest,
         jump_gate_waypoint_json_string
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub(crate) async fn select_agent_history(
+    pool: &Pool<Sqlite>,
+    reset_date: NaiveDate,
+    from_event_time_minutes_gte: i64,
+    to_event_time_minutes_lte: i64,
+    resolution_minutes: i64,
+    agent_symbols: Vec<String>,
+) -> Result<Vec<DbAgentHistoryEntry>, Error> {
+    // TODO: resolution (include latest ts even if it's not included in modulo)
+    let or_gte_value_to_include_latest = to_event_time_minutes_lte - resolution_minutes;
+    let agent_symbols_json_string = serde_json::to_string(&agent_symbols).unwrap();
+
+    // sqlx doesn't understand a group-concat with int-values apparently
+    // using an alias with a type handles that
+    sqlx::query_as!(
+        DbAgentHistoryEntry,
+        "
+with agent_details as (select jr.event_time_minutes
+                            , sai.agent_symbol
+                            , sai.construction_site_id
+                            , al.credits
+                            , al.ship_count
+                            , jr.id as job_run_id
+                       from reset_date rd
+                                join main.job_run jr on rd.reset_id = jr.reset_id
+                                join main.agent_log al on jr.id = al.job_id
+                                join main.static_agent_info sai on al.agent_id = sai.id
+                               where rd.reset = ?
+                                 and event_time_minutes >= ?
+                                 and event_time_minutes <= ?
+                                 and (event_time_minutes % ? = 0 or event_time_minutes >= ?)
+                                 and sai.agent_symbol in (select json_each.value as jump_gate_waypoint_symbol
+                                                                      from json_each(json(?)))
+                             order by agent_symbol
+                              , event_time_minutes)
+select ad.agent_symbol
+     , max(ad.construction_site_id)         as \"construction_site_id: i64\"
+     , json_group_array(event_time_minutes) as \"event_times_minutes: _\"
+     , json_group_array(credits)            as \"credits_timeline: _\"
+     , json_group_array(ship_count)         as \"ship_count_timeline: _\"
+from agent_details ad
+group by ad.agent_symbol
+        ",
+        reset_date,
+        from_event_time_minutes_gte,
+        to_event_time_minutes_lte,
+        resolution_minutes,
+        or_gte_value_to_include_latest,
+        agent_symbols_json_string
     )
     .fetch_all(pool)
     .await
@@ -531,11 +587,21 @@ pub(crate) struct DbConstructionSite {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct DbConstructionMaterialProgress {
-    jump_gate_waypoint_symbol: String,
-    trade_symbol: String,
-    event_time_minutes_csv: Option<String>,
-    fulfilled_csv: Option<String>,
+pub(crate) struct DbConstructionMaterialHistoryEntry {
+    pub(crate) jump_gate_waypoint_symbol: String,
+    pub(crate) trade_symbol: String,
+    pub(crate) required: Option<i64>,
+    pub(crate) event_time_minutes_csv: Option<String>,
+    pub(crate) fulfilled_csv: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub(crate) struct DbAgentHistoryEntry {
+    pub(crate) agent_symbol: String,
+    pub(crate) construction_site_id: Option<i64>,
+    pub(crate) event_times_minutes: Option<sqlx::types::Json<Vec<u32>>>,
+    pub(crate) credits_timeline: Option<sqlx::types::Json<Vec<i64>>>,
+    pub(crate) ship_count_timeline: Option<sqlx::types::Json<Vec<u32>>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

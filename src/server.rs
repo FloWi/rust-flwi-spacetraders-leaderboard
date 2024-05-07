@@ -1,4 +1,6 @@
+use std::fmt::Debug;
 use std::io::Error;
+use std::str::FromStr;
 use std::time::Duration;
 
 use axum::{response::Result, routing, Router};
@@ -12,6 +14,12 @@ use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 use utoipa_redoc::{Redoc, Servable};
 use utoipa_swagger_ui::SwaggerUi;
+
+use crate::db::{DbAgentHistoryEntry, DbConstructionMaterialHistoryEntry};
+use crate::server::leaderboard::{
+    ApiAgentHistoryEntry, ApiAgentSymbol, ApiConstructionMaterialHistoryEntry, ApiTradeSymbol,
+    ApiWaypointSymbol,
+};
 
 pub async fn http_server(db: Pool<Sqlite>, address: String) -> Result<(), Error> {
     let app = Router::new()
@@ -73,7 +81,7 @@ mod leaderboard {
 
     use crate::db::{
         load_jump_gate_agent_assignment_for_reset, load_leaderboard_for_reset, load_reset_dates,
-        select_construction_progress_for_reset,
+        select_agent_history, select_construction_progress_for_reset,
     };
 
     #[derive(OpenApi)]
@@ -92,8 +100,12 @@ mod leaderboard {
             schemas(ApiWaypointSymbol),
             schemas(GetJumpGateAgentsAssignmentForResetResponseContent),
             schemas(GetLeaderboardForResetResponseContent),
+            schemas(GetHistoryDataForResetResponseContent),
             schemas(ListResetDatesResponseContent),
-            schemas(AgentSymbolSearchFilter),
+            schemas(AgentSymbolFilterBody),
+            schemas(ApiTradeSymbol),
+            schemas(ApiAgentHistoryEntry),
+            schemas(ApiConstructionMaterialHistoryEntry),
         )
     )]
     pub(crate) struct ApiDoc;
@@ -120,21 +132,29 @@ mod leaderboard {
 
     #[derive(Serialize, Deserialize, ToSchema, Debug)]
     #[serde(rename_all = "camelCase")]
-    pub(crate) struct ApiHistoryEntry {
-        agent_symbol: ApiAgentSymbol,
-        event_times_minutes: Vec<u32>,
-        min_event_time_minutes: String,
-        max_event_time_minutes: String,
-        num_entries: String,
-        credits_timeline: Vec<i64>,
-        ship_count_timeline: Vec<u32>,
+    pub(crate) struct ApiAgentHistoryEntry {
+        pub(crate) agent_symbol: ApiAgentSymbol,
+        pub(crate) event_times_minutes: Vec<u32>,
+        pub(crate) credits_timeline: Vec<i64>,
+        pub(crate) ship_count_timeline: Vec<u32>,
+    }
+
+    #[derive(Serialize, Deserialize, ToSchema, Debug)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct ApiConstructionMaterialHistoryEntry {
+        pub(crate) jump_gate_waypoint_symbol: ApiWaypointSymbol,
+        pub(crate) trade_symbol: ApiTradeSymbol,
+        pub(crate) event_times_minutes: Vec<u32>,
+        pub(crate) fulfilled: Vec<u32>,
+        pub(crate) required: u32,
     }
 
     #[derive(Serialize, Deserialize, ToSchema)]
     #[serde(rename_all = "camelCase")]
     pub(crate) struct GetHistoryDataForResetResponseContent {
         reset_date: ApiResetDate,
-        agent_history: Vec<ApiHistoryEntry>,
+        agent_history: Vec<ApiAgentHistoryEntry>,
+        construction_material_history: Vec<ApiConstructionMaterialHistoryEntry>,
     }
 
     #[derive(Serialize, Deserialize, ToSchema)]
@@ -148,6 +168,10 @@ mod leaderboard {
     #[derive(Serialize, Deserialize, ToSchema, Debug)]
     #[serde(rename_all = "camelCase")]
     pub(crate) struct ApiWaypointSymbol(pub String);
+
+    #[derive(Serialize, Deserialize, ToSchema, Debug)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct ApiTradeSymbol(pub String);
 
     #[derive(Serialize, Deserialize, ToSchema)]
     #[serde(rename_all = "camelCase")]
@@ -260,7 +284,7 @@ mod leaderboard {
 
     /// Agent Symbols Filter
     #[derive(Deserialize, ToSchema)]
-    pub(crate) struct AgentSymbolSearchFilter {
+    pub(crate) struct AgentSymbolFilterBody {
         pub(crate) agent_symbols: Vec<String>,
     }
 
@@ -268,17 +292,17 @@ mod leaderboard {
     #[utoipa::path(
     post,
     path = "/api/history/{resetDate}",
-    responses((status = 200, body = String)),
+    responses((status = 200, body = GetHistoryDataForResetResponseContent)),
     params(
         ("resetDate" = NaiveDate, Path, description = "The reset date"),
     ),
-    request_body = AgentSymbolSearchFilter
+    request_body = AgentSymbolFilterBody
     )]
     pub(crate) async fn get_history_data_for_reset(
         State(pool): State<Pool<Sqlite>>,
         Path(reset_date): Path<NaiveDate>,
-        Json(filter): Json<AgentSymbolSearchFilter>,
-    ) -> Json<String> {
+        Json(filter): Json<AgentSymbolFilterBody>,
+    ) -> Json<GetHistoryDataForResetResponseContent> {
         let jump_gate_assignments = load_jump_gate_assignments(&pool, reset_date).await;
 
         let agent_symbols = filter.agent_symbols; //.unwrap_or(vec![]);
@@ -294,7 +318,7 @@ mod leaderboard {
             .unique()
             .collect();
 
-        let construction_progress = select_construction_progress_for_reset(
+        let construction_material_progress = select_construction_progress_for_reset(
             &pool,
             reset_date,
             0,
@@ -304,6 +328,21 @@ mod leaderboard {
         )
         .await
         .unwrap();
+
+        let agent_history_progress =
+            select_agent_history(&pool, reset_date, 0, 1 * 24 * 60, 30, agent_symbols.clone())
+                .await
+                .unwrap();
+
+        let api_construction_progress: Vec<_> = construction_material_progress
+            .iter()
+            .map(|cmp| ApiConstructionMaterialHistoryEntry::try_from(cmp.clone()).unwrap())
+            .collect();
+
+        let api_agent_history_progress: Vec<_> = agent_history_progress
+            .iter()
+            .map(|cmp| ApiAgentHistoryEntry::try_from(cmp.clone()).unwrap())
+            .collect();
 
         let num_jump_gates = jump_gate_symbols.len();
         let num_agents = agent_symbols.len();
@@ -318,9 +357,53 @@ mod leaderboard {
             jump_gate_symbols.join(", ")
         );
 
-        dbg!(jump_gate_symbols);
-        dbg!(construction_progress);
+        let response = GetHistoryDataForResetResponseContent {
+            reset_date: ApiResetDate(reset_date.format("%Y-%m-%d").to_string()),
+            agent_history: api_agent_history_progress,
+            construction_material_history: api_construction_progress,
+        };
 
-        Json("???".into())
+        dbg!(jump_gate_symbols);
+        dbg!(construction_material_progress);
+
+        Json(response)
+    }
+}
+
+fn parse_csv<T: FromStr>(s: &str) -> Vec<T> {
+    s.split(',')
+        .filter_map(|item| item.trim().parse::<T>().ok())
+        .collect()
+}
+
+impl TryFrom<DbConstructionMaterialHistoryEntry> for ApiConstructionMaterialHistoryEntry {
+    type Error = ();
+    fn try_from(cmp: DbConstructionMaterialHistoryEntry) -> Result<Self, Self::Error> {
+        Ok(ApiConstructionMaterialHistoryEntry {
+            jump_gate_waypoint_symbol: ApiWaypointSymbol(cmp.jump_gate_waypoint_symbol),
+            trade_symbol: ApiTradeSymbol(cmp.trade_symbol),
+            event_times_minutes: parse_csv(
+                cmp.event_time_minutes_csv
+                    .unwrap_or("".to_string())
+                    .as_str(),
+            ),
+            fulfilled: parse_csv(cmp.fulfilled_csv.unwrap_or("".to_string()).as_str()),
+            required: cmp
+                .required
+                .and_then(|v| u32::try_from(v).ok()) // flatMap is called and_then in rust-land
+                .unwrap_or(0),
+        })
+    }
+}
+
+impl TryFrom<DbAgentHistoryEntry> for ApiAgentHistoryEntry {
+    type Error = ();
+    fn try_from(db: DbAgentHistoryEntry) -> Result<Self, Self::Error> {
+        Ok(ApiAgentHistoryEntry {
+            agent_symbol: ApiAgentSymbol(db.agent_symbol),
+            event_times_minutes: db.event_times_minutes.unwrap().0,
+            credits_timeline: db.credits_timeline.unwrap().0,
+            ship_count_timeline: db.ship_count_timeline.unwrap().0,
+        })
     }
 }
