@@ -124,6 +124,7 @@ mod leaderboard {
         first_ts: NaiveDateTime,
         latest_ts: NaiveDateTime,
         duration_minutes: u32,
+        is_ongoing: bool,
     }
 
     #[derive(Serialize, Deserialize, ToSchema)]
@@ -187,6 +188,7 @@ mod leaderboard {
     #[serde(rename_all = "camelCase")]
     pub(crate) struct ApiLeaderboardEntry {
         agent_symbol: ApiAgentSymbol,
+        jump_gate_waypoint_symbol: ApiWaypointSymbol,
         credits: i64,
         ship_count: i64,
     }
@@ -213,6 +215,7 @@ mod leaderboard {
                 first_ts: r.first_ts,
                 latest_ts: r.latest_ts,
                 duration_minutes: (r.latest_ts - r.first_ts).num_minutes().abs() as u32,
+                is_ongoing: r.is_ongoing,
             })
             .collect();
 
@@ -241,6 +244,7 @@ mod leaderboard {
                 agent_symbol: ApiAgentSymbol(r.agent_symbol.clone()),
                 credits: r.credits,
                 ship_count: r.ship_count,
+                jump_gate_waypoint_symbol: ApiWaypointSymbol(r.jump_gate_waypoint_symbol.clone()),
             })
             .collect();
 

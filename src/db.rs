@@ -68,6 +68,7 @@ select r.reset_id as "reset_id!"
      , r.reset as "reset!"
      , r.first_ts as "first_ts!"
      , max(jr.query_time) as "latest_ts! :_"
+     , (select count(*) from reset_date next where next.reset > r.reset ) = 0 as "is_ongoing! :_"
   from reset_date r
   join main.job_run jr
        on r.reset_id = jr.reset_id
@@ -89,10 +90,11 @@ async fn load_reset_date(
 select r.reset_id as "reset_id!"
      , r.reset as "reset!"
      , r.first_ts as "first_ts!"
-     , max(jr.query_time) as "latest_ts!"
-  from reset_date r
-  join main.job_run jr
-       on r.reset_id = jr.reset_id
+     , max(jr.query_time) as "latest_ts! :_"
+     , (select count(*) from reset_date next where next.reset > r.reset ) = 0 as "is_ongoing! :_"
+from reset_date r
+         join main.job_run jr
+              on r.reset_id = jr.reset_id
 where reset = ?
 group by r.reset_id, r.first_ts, r.reset
         "#,
@@ -110,6 +112,7 @@ select r.reset_id as "reset_id!"
      , r.reset as "reset!"
      , r.first_ts as "first_ts!"
      , max(jr.query_time) as "latest_ts! :_"
+     , (select count(*) from reset_date next where next.reset > r.reset ) = 0 as "is_ongoing! :_"
 from reset_date r
          join main.job_run jr
               on r.reset_id = jr.reset_id
@@ -573,6 +576,7 @@ pub(crate) struct ResetDate {
     pub reset: NaiveDate,
     pub first_ts: NaiveDateTime,
     pub latest_ts: NaiveDateTime,
+    pub is_ongoing: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
