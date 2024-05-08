@@ -18,8 +18,6 @@ import {Switch} from "../../@/components/ui/switch.tsx";
 import {Label} from "../../@/components/ui/label.tsx";
 
 import {prettyTable} from "../../components/prettyTable.tsx";
-import {chartColors} from "../../utils/chartColors.ts";
-import {zip} from "../../lib/utils.ts";
 import {useSuspenseQuery} from "@tanstack/react-query";
 
 import {
@@ -39,15 +37,11 @@ import {
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
 import {compactNumberFmt} from "../../lib/formatters.ts";
+import {calcSortedAndColoredLeaderboard, UiLeaderboardEntry} from "../../lib/leaderboard-helper.ts";
 
 type AgentSelectionSearch = {
   agents?: string[];
 };
-
-interface UiLeaderboardEntry extends ApiLeaderboardEntry {
-  //selected: boolean
-  displayColor: string;
-}
 
 const columnHelper = createColumnHelper<UiLeaderboardEntry>();
 
@@ -150,22 +144,6 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
     };
   },
 });
-
-function calcSortedAndColoredLeaderboard(leaderboard: ApiLeaderboardEntry[]) {
-  let sortedEntries = leaderboard
-    .toSorted((a, b) => a.credits - b.credits)
-    .toReversed();
-
-  let sortedAndColoredLeaderboard: UiLeaderboardEntry[] = zip(
-    sortedEntries.slice(0, 30),
-    chartColors,
-  ).map(([e, c]) => ({
-    displayColor: c,
-    ...e,
-  }));
-
-  return {sortedAndColoredLeaderboard};
-}
 
 function renderLeaderboardCharts(
   isLog: boolean,
