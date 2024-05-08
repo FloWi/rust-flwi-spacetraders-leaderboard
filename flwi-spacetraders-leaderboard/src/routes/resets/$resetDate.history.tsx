@@ -1,18 +1,19 @@
-import { createFileRoute } from "@tanstack/react-router";
+import {createFileRoute} from "@tanstack/react-router";
 import {
   historyQueryOptions,
   leaderboardQueryOptions,
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {useSuspenseQuery} from "@tanstack/react-query";
 import Plot from "react-plotly.js";
-import React from "react";
+import React, {useMemo} from "react";
 import {
   ApiAgentHistoryEntry,
   ApiConstructionMaterialHistoryEntry,
+  ApiResetDateMeta,
   GetHistoryDataForResetResponseContent,
 } from "../../../generated";
-import { Data } from "plotly.js";
+import {Data} from "plotly.js";
 import {
   calcSortedAndColoredLeaderboard,
   UiLeaderboardEntry,
@@ -25,7 +26,7 @@ type AgentSelectionSearch = {
 export const Route = createFileRoute("/resets/$resetDate/history")({
   component: HistoryComponent,
   pendingComponent: () => <div>Loading...</div>,
-  staticData: { customData: "I'm the history route" },
+  staticData: {customData: "I'm the history route"},
 
   validateSearch: (search: Record<string, unknown>): AgentSelectionSearch => {
     // validate and parse the search params into a typed state
@@ -34,13 +35,13 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
     };
   },
 
-  loaderDeps: ({ search: { selectedAgents } }) => ({ selectedAgents }),
+  loaderDeps: ({search: {selectedAgents}}) => ({selectedAgents}),
 
   loader: async ({
-    params: { resetDate },
-    context: { queryClient },
-    deps: { selectedAgents },
-  }) => {
+                   params: {resetDate},
+                   context: {queryClient},
+                   deps: {selectedAgents},
+                 }) => {
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
     queryClient.prefetchQuery(
@@ -54,21 +55,21 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
 });
 
 function HistoryComponent() {
-  const { resetDate } = Route.useParams();
-  const { selectedAgents } = Route.useSearch();
+  const {resetDate} = Route.useParams();
+  const {selectedAgents} = Route.useSearch();
 
-  const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
-  const { data: historyData } = useSuspenseQuery(
+  const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
+  const {data: historyData} = useSuspenseQuery(
     historyQueryOptions(resetDate, selectedAgents ?? []),
   );
 
-  const { data: leaderboardData } = useSuspenseQuery(
+  const {data: leaderboardData} = useSuspenseQuery(
     leaderboardQueryOptions(resetDate),
   );
   // const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
   const leaderboardEntries = leaderboardData.leaderboardEntries;
 
-  let current = { leaderboard: leaderboardEntries };
+  let current = {leaderboard: leaderboardEntries};
 
   let memoizedLeaderboard = React.useMemo(() => {
     //select top 10 by default
@@ -86,11 +87,16 @@ function HistoryComponent() {
     return calcSortedAndColoredLeaderboard(current.leaderboard);
   }, [current.leaderboard]);
 
+  let selectedReset = useMemo(() => {
+    return resetDates.find((r) => r.resetDate === resetDate);
+  }, [resetDate, resetDates]);
+
   let charts = renderTimeSeriesCharts(
     true,
     historyData,
     memoizedLeaderboard.sortedAndColoredLeaderboard,
     selectedAgents ?? [],
+    selectedReset,
   );
 
   return (
@@ -128,11 +134,16 @@ interface UiConstructionMaterialHistoryEntry
   displayColor: string;
 }
 
+function convertMinutesIntoDateTime(firstTs: Date, minutes: number[]): Date[] {
+  return minutes.map((m) => new Date(firstTs.getTime() + m * 60 * 1000));
+}
+
 function createMaterialChartTraces(
   sortedAndColoredLeaderboard: UiLeaderboardEntry[],
   tradeGoodSymbol: string,
   constructionMaterialHistory: Array<ApiConstructionMaterialHistoryEntry>,
   selectedAgents: string[],
+  firstTs: Date,
 ): Data[] {
   let relevantHistoryEntries = constructionMaterialHistory.filter(
     (h) => h.tradeSymbol === tradeGoodSymbol,
@@ -150,7 +161,7 @@ function createMaterialChartTraces(
 
     let agentsInThisSystem = sortedAndColoredLeaderboard
       .map((lb, idx) => {
-        return { ...lb, rank: idx + 1 };
+        return {...lb, rank: idx + 1};
       })
       .filter((lb) => lb.jumpGateWaypointSymbol === h.jumpGateWaypointSymbol)
       .map((lb) => lb);
@@ -162,8 +173,14 @@ function createMaterialChartTraces(
     return {
       type: "scatter",
       name: `${h.jumpGateWaypointSymbol}: (${agentsInThisSystem.length} agent(s)\n${agentsDescription})`,
-      x: h.eventTimesMinutes,
+      x: convertMinutesIntoDateTime(firstTs, h.eventTimesMinutes),
       y: h.fulfilled,
+      hovertemplate: `
+<b>${h.jumpGateWaypointSymbol}</b><br>
+<b>Agents: </b>${agentsDescription}<br>
+<b>fulfilled: </b>%{y:,d}<br>
+<b>Date: </b>%{x}
+<extra></extra>`, // the extra-thingy disables the rendering of the trace-name in the hover info.
       marker: {
         color,
       },
@@ -179,21 +196,26 @@ function renderTimeSeriesCharts(
   }: GetHistoryDataForResetResponseContent,
   sortedAndColoredLeaderboard: UiLeaderboardEntry[],
   selectedAgents: string[],
+  selectedReset: ApiResetDateMeta | undefined,
 ) {
+  let maybeFirstTs = selectedReset?.firstTs;
+  const firstTs = maybeFirstTs
+    ? new Date(Date.parse(maybeFirstTs))
+    : new Date(0);
   const agentCreditsTraces: Data[] = agentHistory.map((foo) => {
     return {
       type: "scatter",
       name: foo.agentSymbol,
-      x: foo.eventTimesMinutes,
+      x: convertMinutesIntoDateTime(firstTs, foo.eventTimesMinutes),
       y: foo.creditsTimeline,
+      hovertemplate: `<b>${foo.agentSymbol}</b><br><b>Credits: </b>%{y:,d}<br><b>Date: </b>%{x}<extra></extra>`, // the extra-thingy disables the rendering of the trace-name in the hover info.
+      hoverinfo: "x+y",
       marker: {
         color:
           sortedAndColoredLeaderboard.find(
             (l) => l.agentSymbol === foo.agentSymbol,
           )?.displayColor ?? "black",
       },
-      hoverlabel: null,
-      hovertemplate: null,
     };
   });
 
@@ -201,8 +223,9 @@ function renderTimeSeriesCharts(
     return {
       type: "scatter",
       name: foo.agentSymbol,
-      x: foo.eventTimesMinutes,
+      x: convertMinutesIntoDateTime(firstTs, foo.eventTimesMinutes),
       y: foo.shipCountTimeline,
+      hovertemplate: `<b>${foo.agentSymbol}</b><br><b>Ships: </b>%{y:,d}<br><b>Date: </b>%{x}<extra></extra>`, // the extra-thingy disables the rendering of the trace-name in the hover info.
       marker: {
         color:
           sortedAndColoredLeaderboard.find(
@@ -225,12 +248,13 @@ function renderTimeSeriesCharts(
           tradeGood,
           constructionMaterialHistory,
           selectedAgents,
+          firstTs,
         ),
       };
     });
 
   const materialCharts = materialTraces.map(
-    ({ tradeGood, materialChartTraces }) => {
+    ({tradeGood, materialChartTraces}) => {
       return (
         <div>
           <h3 className="text-sm font-bold">{tradeGood}</h3>
@@ -246,9 +270,9 @@ function renderTimeSeriesCharts(
                 t: 50,
                 //pad: 4,
               },
-              modebar: { orientation: "h" },
+              modebar: {orientation: "h"},
               showlegend: true,
-              legend: { orientation: "h" },
+              legend: {orientation: "h"},
 
               height: 500,
               font: {
@@ -274,7 +298,7 @@ function renderTimeSeriesCharts(
                 tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
               },
             }}
-            config={{ displayModeBar: false, responsive: true }}
+            config={{displayModeBar: false, responsive: true}}
           />
         </div>
       );
@@ -299,9 +323,9 @@ function renderTimeSeriesCharts(
               t: 50,
               //pad: 4,
             },
-            modebar: { orientation: "h" },
+            modebar: {orientation: "h"},
             showlegend: true,
-            legend: { orientation: "h" },
+            legend: {orientation: "h"},
             height: 500,
             font: {
               size: 10,
@@ -316,6 +340,7 @@ function renderTimeSeriesCharts(
             xaxis: {
               showline: true,
               linecolor: "lightgray",
+              //tickformat: "%e %H:%M",
             },
 
             yaxis: {
@@ -325,11 +350,11 @@ function renderTimeSeriesCharts(
               showline: false,
               linecolor: "lightgray",
               gridcolor: "lightgray",
-              hoverformat: ",d",
+              //hoverformat: ",d",
               tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
             },
           }}
-          config={{ displayModeBar: false, responsive: true }}
+          config={{displayModeBar: false, responsive: true}}
         />
       </div>
       <div>
@@ -347,9 +372,9 @@ function renderTimeSeriesCharts(
               t: 50,
               //pad: 4,
             },
-            modebar: { orientation: "h" },
+            modebar: {orientation: "h"},
             showlegend: true,
-            legend: { orientation: "h" },
+            legend: {orientation: "h"},
             height: 500,
             font: {
               size: 10,
@@ -374,7 +399,7 @@ function renderTimeSeriesCharts(
               tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
             },
           }}
-          config={{ displayModeBar: false, responsive: true }}
+          config={{displayModeBar: false, responsive: true}}
         />
       </div>
       {materialCharts}
