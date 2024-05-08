@@ -1,5 +1,5 @@
 import {ApiLeaderboardEntry} from "../../generated";
-import {zip} from "./utils.ts";
+import {zipRepeat2nd} from "./utils.ts";
 import {chartColors} from "../utils/chartColors.ts";
 
 export function calcSortedAndColoredLeaderboard(
@@ -9,8 +9,8 @@ export function calcSortedAndColoredLeaderboard(
     .toSorted((a, b) => a.credits - b.credits)
     .toReversed();
 
-  let sortedAndColoredLeaderboard: UiLeaderboardEntry[] = zip(
-    sortedEntries.slice(0, 30),
+  let sortedAndColoredLeaderboard: UiLeaderboardEntry[] = zipRepeat2nd(
+    sortedEntries,
     chartColors,
   ).map(([e, c]) => ({
     displayColor: c,

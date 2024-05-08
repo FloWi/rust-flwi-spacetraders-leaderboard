@@ -14,6 +14,15 @@ export function zip<T, U>(a: T[], b: U[]): [T, U][] {
   return result;
 }
 
+export function zipRepeat2nd<T, U>(a: T[], b: U[]): [T, U][] {
+  const length = Math.min(a.length);
+  const result: [T, U][] = [];
+  for (let i = 0; i < length; i++) {
+    result.push([a[i], b[i % b.length]]);
+  }
+  return result;
+}
+
 export function durationMillis(from: Date, to: Date): number {
   return to.getTime() - from.getTime();
 }

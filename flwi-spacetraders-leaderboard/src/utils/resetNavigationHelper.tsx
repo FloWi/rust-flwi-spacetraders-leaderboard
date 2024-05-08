@@ -95,7 +95,7 @@ function createLinksToOtherResets(
           <Link
             to="/resets/$resetDate/history"
             params={{resetDate: r}}
-            search={{selectedAgents: current?.selectedAgents}}
+            search={{agents: current?.selectedAgents}}
             className="[&.active]:font-bold"
           >
             {r}

@@ -8,7 +8,6 @@ import {useSuspenseQuery} from "@tanstack/react-query";
 import Plot from "react-plotly.js";
 import React, {useMemo} from "react";
 import {
-  ApiAgentHistoryEntry,
   ApiConstructionMaterialHistoryEntry,
   ApiResetDateMeta,
   GetHistoryDataForResetResponseContent,
@@ -21,7 +20,7 @@ import {
 import * as _ from "lodash";
 
 type AgentSelectionSearch = {
-  selectedAgents?: string[];
+  agents?: string[];
 };
 
 export const Route = createFileRoute("/resets/$resetDate/history")({
@@ -32,22 +31,20 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
   validateSearch: (search: Record<string, unknown>): AgentSelectionSearch => {
     // validate and parse the search params into a typed state
     return {
-      selectedAgents: search?.selectedAgents as string[],
+      agents: search?.agents as string[],
     };
   },
 
-  loaderDeps: ({search: {selectedAgents}}) => ({selectedAgents}),
+  loaderDeps: ({search: {agents}}) => ({agents}),
 
   loader: async ({
                    params: {resetDate},
                    context: {queryClient},
-                   deps: {selectedAgents},
+                   deps: {agents},
                  }) => {
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
-    queryClient.prefetchQuery(
-      historyQueryOptions(resetDate, selectedAgents ?? []),
-    );
+    queryClient.prefetchQuery(historyQueryOptions(resetDate, agents ?? []));
 
     queryClient.prefetchQuery(leaderboardQueryOptions(resetDate));
 
@@ -57,11 +54,11 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
 
 function HistoryComponent() {
   const {resetDate} = Route.useParams();
-  const {selectedAgents} = Route.useSearch();
+  const {agents} = Route.useSearch();
 
   const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
   const {data: historyData} = useSuspenseQuery(
-    historyQueryOptions(resetDate, selectedAgents ?? []),
+    historyQueryOptions(resetDate, agents ?? []),
   );
 
   const {data: leaderboardData} = useSuspenseQuery(
@@ -80,7 +77,7 @@ function HistoryComponent() {
     // sortedEntries.slice(0, 10).forEach((e) => {
     //   selectedAgents[e.agentSymbol] = true;
     // });
-    selectedAgents?.forEach(
+    agents?.forEach(
       (agentSymbol) => (selectedAgentsRecord[agentSymbol] = true),
     );
 
@@ -96,7 +93,7 @@ function HistoryComponent() {
     true,
     historyData,
     memoizedLeaderboard.sortedAndColoredLeaderboard,
-    selectedAgents ?? [],
+    agents ?? [],
     selectedReset,
   );
 
@@ -122,17 +119,6 @@ function HistoryComponent() {
       </div>
     </>
   );
-}
-
-interface UiAgentHistoryEntry extends ApiAgentHistoryEntry {
-  //selected: boolean
-  displayColor: string;
-}
-
-interface UiConstructionMaterialHistoryEntry
-  extends ApiConstructionMaterialHistoryEntry {
-  //selected: boolean
-  displayColor: string;
 }
 
 function convertMinutesIntoDateTime(firstTs: Date, minutes: number[]): Date[] {

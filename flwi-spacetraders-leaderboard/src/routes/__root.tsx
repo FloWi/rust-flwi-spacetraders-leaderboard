@@ -18,6 +18,7 @@ import {
   NavigationMenuTrigger,
 } from "../@/components/ui/navigation-menu.tsx";
 import {MyLink} from "../components/myLink.tsx";
+import * as _ from "lodash";
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
@@ -42,16 +43,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       const resetDates = Route.useLoaderData();
 
       const otherResetsNavMenuItem = createSamePageOtherResetNavigationMenuItem(
-        resetDates.map(r => r.resetDate),
+        resetDates.map((r) => r.resetDate),
         currentState,
       );
 
-      let maybeLatestResetDate = resetDates.toSorted().at(-1);
+      let maybeLatestResetDate = _.sortBy(resetDates, (rd) => rd.resetDate)
+        .toSorted()
+        .at(-1);
 
       let currentResetLeaderboardLink = maybeLatestResetDate ? (
         <MyLink
           to="/resets/$resetDate/leaderboard"
-          params={{resetDate: maybeLatestResetDate}}
+          params={{resetDate: maybeLatestResetDate?.resetDate}}
           className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
               [&.active]:bg-muted
               [&.active]:font-medium
@@ -76,6 +79,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                           <li className="">
                             <MyLink
                               to="/"
+                              params={{
+                                resetDate: maybeLatestResetDate?.resetDate,
+                              }}
                               className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
               [&.active]:bg-muted
               [&.active]:font-medium
@@ -102,6 +108,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                           <li className="">
                             <MyLink
                               to="/all-time"
+                              params={{
+                                resetDate: maybeLatestResetDate?.resetDate,
+                              }}
                               className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
               [&.active]:bg-muted
               [&.active]:font-medium
@@ -115,6 +124,54 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                       </NavigationMenuContent>
                     </NavigationMenuItem>
                     {otherResetsNavMenuItem}
+                    <NavigationMenuItem>
+                      <NavigationMenuTrigger>This reset</NavigationMenuTrigger>
+                      <NavigationMenuContent>
+                        <ul className="flex flex-col gap-4 p-6 md:w-[400px] lg:w-[500px] ">
+                          <li className="">
+                            <MyLink
+                              to="/resets/$resetDate/leaderboard"
+                              params={{
+                                resetDate: maybeLatestResetDate?.resetDate,
+                              }}
+                              search={true}
+                              className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+              [&.active]:bg-muted
+              [&.active]:font-medium
+              [&.active]:text-primary"
+                            >
+                              Leaderboard
+                            </MyLink>
+                          </li>
+                          <li className="">
+                            <MyLink
+                              to="/resets/$resetDate/jump-gate"
+                              search={true}
+                              className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+              [&.active]:bg-muted
+              [&.active]:font-medium
+              [&.active]:text-primary
+"
+                            >
+                              Jump-Gate
+                            </MyLink>
+                          </li>
+                          <li className="">
+                            <MyLink
+                              to="/resets/$resetDate/history"
+                              search={true}
+                              className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+              [&.active]:bg-muted
+              [&.active]:font-medium
+              [&.active]:text-primary
+"
+                            >
+                              History
+                            </MyLink>
+                          </li>
+                        </ul>
+                      </NavigationMenuContent>
+                    </NavigationMenuItem>
                   </NavigationMenuList>
                 </NavigationMenu>
 
