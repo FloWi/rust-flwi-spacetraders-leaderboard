@@ -18,6 +18,7 @@ import {
   calcSortedAndColoredLeaderboard,
   UiLeaderboardEntry,
 } from "../../lib/leaderboard-helper.ts";
+import * as _ from "lodash";
 
 type AgentSelectionSearch = {
   selectedAgents?: string[];
@@ -180,7 +181,7 @@ function createMaterialChartTraces(
 <b>Agents: </b>${agentsDescription}<br>
 <b>fulfilled: </b>%{y:,d}<br>
 <b>Date: </b>%{x}
-<extra></extra>`, // the extra-thingy disables the rendering of the trace-name in the hover info.
+<extra></extra>`, // the empty extra-thingy disables the rendering of the trace-name in the hover info.
       marker: {
         color,
       },
@@ -208,7 +209,7 @@ function renderTimeSeriesCharts(
       name: foo.agentSymbol,
       x: convertMinutesIntoDateTime(firstTs, foo.eventTimesMinutes),
       y: foo.creditsTimeline,
-      hovertemplate: `<b>${foo.agentSymbol}</b><br><b>Credits: </b>%{y:,d}<br><b>Date: </b>%{x}<extra></extra>`, // the extra-thingy disables the rendering of the trace-name in the hover info.
+      hovertemplate: `<b>${foo.agentSymbol}</b><br><b>Credits: </b>%{y:,d}<br><b>Date: </b>%{x}<extra></extra>`, // the empty extra-thingy disables the rendering of the trace-name in the hover info.
       hoverinfo: "x+y",
       marker: {
         color:
@@ -225,7 +226,7 @@ function renderTimeSeriesCharts(
       name: foo.agentSymbol,
       x: convertMinutesIntoDateTime(firstTs, foo.eventTimesMinutes),
       y: foo.shipCountTimeline,
-      hovertemplate: `<b>${foo.agentSymbol}</b><br><b>Ships: </b>%{y:,d}<br><b>Date: </b>%{x}<extra></extra>`, // the extra-thingy disables the rendering of the trace-name in the hover info.
+      hovertemplate: `<b>${foo.agentSymbol}</b><br><b>Ships: </b>%{y:,d}<br><b>Date: </b>%{x}<extra></extra>`, // the empty extra-thingy disables the rendering of the trace-name in the hover info.
       marker: {
         color:
           sortedAndColoredLeaderboard.find(
@@ -235,29 +236,41 @@ function renderTimeSeriesCharts(
     };
   });
 
-  const constructionMaterialTradeSymbols = Array.from(
-    new Set(constructionMaterialHistory.map((e) => e.tradeSymbol)),
-  ).toSorted();
+  const constructionMaterialTradeSymbols = _.uniqBy(
+    constructionMaterialHistory,
+    (cm) => cm.tradeSymbol,
+  );
 
-  const materialTraces: { tradeGood: string; materialChartTraces: Data[] }[] =
-    constructionMaterialTradeSymbols.map((tradeGood) => {
+  const materialTraces: {
+    tradeSymbol: string;
+    required: number;
+    materialChartTraces: Data[];
+  }[] = _.sortBy(constructionMaterialTradeSymbols, (cm) => cm.tradeSymbol).map(
+    ({tradeSymbol, required}) => {
       return {
-        tradeGood,
+        tradeSymbol,
+        required,
         materialChartTraces: createMaterialChartTraces(
           sortedAndColoredLeaderboard,
-          tradeGood,
+          tradeSymbol,
           constructionMaterialHistory,
           selectedAgents,
           firstTs,
         ),
       };
-    });
+    },
+  );
 
   const materialCharts = materialTraces.map(
-    ({tradeGood, materialChartTraces}) => {
+    ({tradeSymbol, required, materialChartTraces}) => {
       return (
         <div>
-          <h3 className="text-sm font-bold">{tradeGood}</h3>
+          <div className="flex flex-row">
+            <h3 className="text-sm font-bold">{tradeSymbol}</h3>
+            <p className="text-sm text-muted-foreground">
+              &nbsp; | {required} required
+            </p>
+          </div>
           <Plot
             className="w-full"
             data={materialChartTraces}
@@ -285,6 +298,8 @@ function renderTimeSeriesCharts(
               xaxis: {
                 showline: true,
                 linecolor: "lightgray",
+                tickformat: "%H:%M \n%-b %-d", // using a newline instead of <br> for the 2nd row (month and day). That way plotly diffs the current tick-value with the previous one and only renders when the value changed
+                tickangle: 0,
               },
 
               yaxis: {
@@ -340,7 +355,8 @@ function renderTimeSeriesCharts(
             xaxis: {
               showline: true,
               linecolor: "lightgray",
-              //tickformat: "%e %H:%M",
+              tickformat: "%H:%M \n%-b %-d", // using a newline instead of <br> for the 2nd row (month and day). That way plotly diffs the current tick-value with the previous one and only renders when the value changed
+              //tickangle: 0,
             },
 
             yaxis: {
@@ -386,6 +402,7 @@ function renderTimeSeriesCharts(
             xaxis: {
               showline: true,
               linecolor: "lightgray",
+              tickformat: "%H:%M \n%-b %-d", // using a newline instead of <br> for the 2nd row (month and day). That way plotly diffs the current tick-value with the previous one and only renders when the value changed
             },
 
             yaxis: {
