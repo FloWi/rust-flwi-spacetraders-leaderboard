@@ -1,9 +1,9 @@
+use axum::http::Extensions;
 use std::sync::Arc;
 
 use governor::{DefaultDirectRateLimiter, Quota, RateLimiter};
 use reqwest::{Client, Request};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware, Middleware, Next};
-use task_local_extensions::Extensions;
 
 pub(crate) fn create_client() -> ClientWithMiddleware {
     let reqwest_client = Client::builder().build().unwrap();
