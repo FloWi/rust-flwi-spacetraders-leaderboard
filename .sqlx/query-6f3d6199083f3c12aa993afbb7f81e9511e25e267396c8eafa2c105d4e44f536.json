@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\nwith agent_details as (select jr.event_time_minutes\n                            , sai.agent_symbol\n                            , sai.construction_site_id\n                            , al.credits\n                            , al.ship_count\n                            , jr.id as job_run_id\n                       from reset_date rd\n                                join main.job_run jr on rd.reset_id = jr.reset_id\n                                join main.agent_log al on jr.id = al.job_id\n                                join main.static_agent_info sai on al.agent_id = sai.id\n                               where rd.reset = ?\n                                 and event_time_minutes >= ?\n                                 and event_time_minutes <= ?\n                                 and (event_time_minutes % ? = 0 or event_time_minutes >= ?)\n                                 and sai.agent_symbol in (select json_each.value as jump_gate_waypoint_symbol\n                                                                      from json_each(json(?)))\n                             order by agent_symbol\n                              , event_time_minutes)\nselect ad.agent_symbol\n     , max(ad.construction_site_id)         as \"construction_site_id: i64\"\n     , json_group_array(event_time_minutes) as \"event_times_minutes: _\"\n     , json_group_array(credits)            as \"credits_timeline: _\"\n     , json_group_array(ship_count)         as \"ship_count_timeline: _\"\nfrom agent_details ad\ngroup by ad.agent_symbol\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "agent_symbol",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "construction_site_id: i64",
+        "ordinal": 1,
+        "type_info": "Null"
+      },
+      {
+        "name": "event_times_minutes: _",
+        "ordinal": 2,
+        "type_info": "Null"
+      },
+      {
+        "name": "credits_timeline: _",
+        "ordinal": 3,
+        "type_info": "Null"
+      },
+      {
+        "name": "ship_count_timeline: _",
+        "ordinal": 4,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "6f3d6199083f3c12aa993afbb7f81e9511e25e267396c8eafa2c105d4e44f536"
+}

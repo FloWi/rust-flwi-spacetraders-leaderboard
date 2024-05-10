@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\nselect r.reset_id as \"reset_id!\"\n     , r.reset as \"reset!\"\n     , r.first_ts as \"first_ts!\"\n     , max(jr.query_time) as \"latest_ts! :_\"\n     , (select count(*) from reset_date next where next.reset > r.reset ) = 0 as \"is_ongoing! :_\"\nfrom reset_date r\n         join main.job_run jr\n              on r.reset_id = jr.reset_id\nwhere reset = ?\ngroup by r.reset_id, r.first_ts, r.reset\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "reset_id!",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "reset!",
+        "ordinal": 1,
+        "type_info": "Date"
+      },
+      {
+        "name": "first_ts!",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "latest_ts! :_",
+        "ordinal": 3,
+        "type_info": "Null"
+      },
+      {
+        "name": "is_ongoing! :_",
+        "ordinal": 4,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "1c9ca92c1fa25d73691553335da99ae4b440c08731a67ab2bc35159a42bae5c1"
+}

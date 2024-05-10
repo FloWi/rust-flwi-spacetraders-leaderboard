@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\ninsert into reset_date (reset, first_ts)\nVALUES (?, ?)\nreturning reset\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "reset",
+        "ordinal": 0,
+        "type_info": "Date"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "304ece1cf4dd25268596fae7d4571b91aa3a92163bcb0c755ed4d30c53d80e93"
+}

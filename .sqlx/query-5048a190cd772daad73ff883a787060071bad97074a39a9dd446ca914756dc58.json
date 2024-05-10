@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\nwith construction_material_details as (\n    select cs.jump_gate_waypoint_symbol\n         , cr.trade_symbol\n         , cr.required\n         , event_time_minutes\n         , fulfilled\n    from reset_date rd\n             join job_run jr on rd.reset_id = jr.reset_id\n             join construction_log cl on jr.id = cl.job_id\n             join main.construction_material_log cml on cl.id = cml.construction_log_id\n             join main.construction_requirement cr on cml.construction_requirement_id = cr.id\n             join main.construction_site cs on cl.construction_site_id = cs.id\n    where rd.reset = ?\n      and event_time_minutes >= ?\n      and event_time_minutes <= ?\n      and (event_time_minutes % ? = 0 or event_time_minutes >= ? )\n      and cr.required > 1\n      and cs.jump_gate_waypoint_symbol in (select json_each.value as jump_gate_waypoint_symbol\n                                           from json_each(json(?)))\n)\nselect jump_gate_waypoint_symbol\n     , trade_symbol\n     , max(required) as \"required: i64\"\n     , group_concat(event_time_minutes, ',') as \"event_time_minutes_csv: String\"\n     , group_concat(fulfilled, ',') as \"fulfilled_csv: String\"\nfrom construction_material_details\ngroup by jump_gate_waypoint_symbol\n       , trade_symbol\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "jump_gate_waypoint_symbol",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "trade_symbol",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "required: i64",
+        "ordinal": 2,
+        "type_info": "Null"
+      },
+      {
+        "name": "event_time_minutes_csv: String",
+        "ordinal": 3,
+        "type_info": "Null"
+      },
+      {
+        "name": "fulfilled_csv: String",
+        "ordinal": 4,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "5048a190cd772daad73ff883a787060071bad97074a39a9dd446ca914756dc58"
+}
