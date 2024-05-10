@@ -8,4 +8,5 @@ migrate:
 
 generate-openapi-spec-and-client:
   cargo run -- generate-openapi
+  cp openapi.json ./flwi-spacetraders-leaderboard/openapi-spec
   cd flwi-spacetraders-leaderboard && yarn codegen

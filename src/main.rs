@@ -37,11 +37,7 @@ async fn main() -> Result<()> {
         let docs = server::leaderboard::ApiDoc::openapi()
             .to_pretty_json()
             .unwrap();
-        fs::write(
-            "./flwi-spacetraders-leaderboard/openapi-spec/openapi.json",
-            docs,
-        )
-        .unwrap();
+        fs::write("openapi.json", docs).unwrap();
         Ok(())
     } else {
         tracing_subscriber::registry()
