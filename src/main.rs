@@ -2,6 +2,7 @@ use std::time::Duration;
 use std::{env, fs};
 
 use anyhow::Result;
+use clap::Parser;
 use futures::join;
 use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::{Pool, Sqlite};
@@ -10,8 +11,8 @@ use tracing::{event, Level};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 use utoipa::OpenApi;
 
+use crate::cli_args::{Cli, Commands};
 use crate::leaderboard_collector::perform_tick;
-use crate::leaderboard_config::LeaderboardConfig;
 use crate::reqwest_helpers::create_client;
 use crate::server::http_server;
 use crate::st_client::StClient;
@@ -22,43 +23,54 @@ mod pagination;
 mod reqwest_helpers;
 mod st_client;
 
+mod cli_args;
 mod db;
 mod leaderboard_collector;
-mod leaderboard_config;
 mod server;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let args = cli_args::Cli::parse();
+
+    match args {
+        Cli { command } => match command {
+            Commands::GenerateOpenapi { output_path } => {
+                let docs = server::leaderboard::ApiDoc::openapi()
+                    .to_pretty_json()
+                    .unwrap();
+                fs::write("openapi.json", docs).unwrap();
+                Ok(())
+            }
+            Commands::RunServer {
+                asset_dir,
+                database_url,
+                host,
+                port,
+            } => {
+                tracing_subscriber::registry()
+                    .with(fmt::layer())
+                    .with(EnvFilter::from_default_env())
+                    .init();
+
+                let pool = SqlitePoolOptions::new()
+                    .max_connections(5)
+                    .connect(database_url.as_str())
+                    .await?;
+
+                let bind_address = format!("{}:{}", host, port);
+
+                let _ = join!(
+                    background_collect(pool.clone()),
+                    http_server(pool.clone(), bind_address, asset_dir)
+                );
+
+                Ok(())
+            }
+        },
+    }
+
     // couldn't figure out how to create separate binary that generates the openapi file, since my services require stuff from the db crate.
     // as a workaround I added this step
-    let args: Vec<String> = env::args().collect();
-
-    if args.contains(&"generate-openapi".into()) {
-        let docs = server::leaderboard::ApiDoc::openapi()
-            .to_pretty_json()
-            .unwrap();
-        fs::write("openapi.json", docs).unwrap();
-        Ok(())
-    } else {
-        tracing_subscriber::registry()
-            .with(fmt::layer())
-            .with(EnvFilter::from_default_env())
-            .init();
-
-        let cfg = LeaderboardConfig::from_env_vars()?;
-
-        let pool = SqlitePoolOptions::new()
-            .max_connections(5)
-            .connect(cfg.database_url.as_str())
-            .await?;
-
-        let _ = join!(
-            background_collect(pool.clone()),
-            http_server(pool.clone(), cfg.bind_address())
-        );
-
-        Ok(())
-    }
 }
 
 async fn background_collect(pool: Pool<Sqlite>) -> Result<()> {

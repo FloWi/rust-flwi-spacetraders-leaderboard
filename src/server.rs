@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::io::Error;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -8,6 +9,7 @@ use sqlx::{Pool, Sqlite};
 use tokio::net::TcpListener;
 use tower_http::classify::ServerErrorsFailureClass;
 use tower_http::cors::CorsLayer;
+use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing::{event, Level, Span};
 use utoipa::OpenApi;
@@ -21,7 +23,16 @@ use crate::server::leaderboard::{
     ApiWaypointSymbol,
 };
 
-pub async fn http_server(db: Pool<Sqlite>, address: String) -> Result<(), Error> {
+pub fn with_static_file_server(router: Router, serve_dir: ServeDir) -> Router {
+    // FIXME: ???
+    router
+}
+
+pub async fn http_server(
+    db: Pool<Sqlite>,
+    address: String,
+    maybe_asset_dir: Option<PathBuf>,
+) -> Result<(), Error> {
     let app = Router::new()
         .merge(
             SwaggerUi::new("/docs/swagger-ui")
@@ -57,6 +68,11 @@ pub async fn http_server(db: Pool<Sqlite>, address: String) -> Result<(), Error>
             },
         ))
         .with_state(db);
+
+    let app = match maybe_asset_dir {
+        None => app,
+        Some(asset_dir) => app.nest_service("/", ServeDir::new(asset_dir)),
+    };
 
     let listener = TcpListener::bind(address).await?;
     event!(
