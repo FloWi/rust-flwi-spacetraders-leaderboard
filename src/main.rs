@@ -1,4 +1,5 @@
 use std::time::Duration;
+use std::{env, fs};
 
 use anyhow::Result;
 use futures::join;
@@ -7,6 +8,7 @@ use sqlx::{Pool, Sqlite};
 use tokio_cron_scheduler::{Job, JobScheduler};
 use tracing::{event, Level};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use utoipa::OpenApi;
 
 use crate::leaderboard_collector::perform_tick;
 use crate::leaderboard_config::LeaderboardConfig;
@@ -27,24 +29,40 @@ mod server;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::registry()
-        .with(fmt::layer())
-        .with(EnvFilter::from_default_env())
-        .init();
+    // couldn't figure out how to create separate binary that generates the openapi file, since my services require stuff from the db crate.
+    // as a workaround I added this step
+    let args: Vec<String> = env::args().collect();
 
-    let cfg = LeaderboardConfig::from_env_vars()?;
+    if args.contains(&"generate-openapi".into()) {
+        let docs = server::leaderboard::ApiDoc::openapi()
+            .to_pretty_json()
+            .unwrap();
+        fs::write(
+            "./flwi-spacetraders-leaderboard/openapi-spec/openapi.json",
+            docs,
+        )
+        .unwrap();
+        Ok(())
+    } else {
+        tracing_subscriber::registry()
+            .with(fmt::layer())
+            .with(EnvFilter::from_default_env())
+            .init();
 
-    let pool = SqlitePoolOptions::new()
-        .max_connections(5)
-        .connect(cfg.database_url.as_str())
-        .await?;
+        let cfg = LeaderboardConfig::from_env_vars()?;
 
-    let _ = join!(
-        background_collect(pool.clone()),
-        http_server(pool.clone(), cfg.bind_address())
-    );
+        let pool = SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect(cfg.database_url.as_str())
+            .await?;
 
-    Ok(())
+        let _ = join!(
+            background_collect(pool.clone()),
+            http_server(pool.clone(), cfg.bind_address())
+        );
+
+        Ok(())
+    }
 }
 
 async fn background_collect(pool: Pool<Sqlite>) -> Result<()> {

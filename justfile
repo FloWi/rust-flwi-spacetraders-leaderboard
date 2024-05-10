@@ -5,3 +5,7 @@ pull-data:
 migrate:
   cargo sqlx database reset -y
   cd notebooks && jupyter execute polars_normalize_leaderboard.ipynb
+
+generate-openapi-spec-and-client:
+  cargo run -- generate-openapi
+  cd flwi-spacetraders-leaderboard && yarn codegen

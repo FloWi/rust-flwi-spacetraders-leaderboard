@@ -5,3 +5,4 @@ data/*
 .python-version
 routeTree.gen.ts
 flwi-spacetraders-leaderboard/generated
+openapi.json

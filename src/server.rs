@@ -68,7 +68,7 @@ pub async fn http_server(db: Pool<Sqlite>, address: String) -> Result<(), Error>
     axum::serve(listener, app.into_make_service()).await
 }
 
-mod leaderboard {
+pub mod leaderboard {
     use axum::extract::{Path, State};
     use axum::Json;
     use chrono::format::StrftimeItems;
