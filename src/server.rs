@@ -71,7 +71,14 @@ pub async fn http_server(
 
     let app = match maybe_asset_dir {
         None => app,
-        Some(asset_dir) => app.nest_service("/", ServeDir::new(asset_dir)),
+        Some(asset_dir) => {
+            let serve_dir_with_fallback = Router::new().nest_service(
+                "/",
+                ServeDir::new(asset_dir.clone())
+                    .not_found_service(ServeFile::new(asset_dir.clone().join("index.html"))),
+            );
+            app.fallback_service(serve_dir_with_fallback)
+        }
     };
 
     let listener = TcpListener::bind(address).await?;
