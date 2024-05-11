@@ -33,7 +33,7 @@ COPY ./src ./src
 COPY ./.sqlx ./.sqlx
 COPY ./migrations ./migrations
 RUN SQLX_OFFLINE=true cargo build --locked --release # --features embed_migrations
-RUN SQLX_OFFLINE=true cargo run --locked --release -- generate-openapi # --features embed_migrations
+RUN SQLX_OFFLINE=true cargo run --locked --release -- generate-openapi --output-path openapi.json # --features embed_migrations
 
 
 # run frontend-build
@@ -48,6 +48,7 @@ RUN yarn build
 
 
 # copy the binary to a minimal image
+# after that the executable is called "app"
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install --yes ca-certificates openssl sqlite3 && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/flwi-spacetraders-leaderboard /usr/local/bin/app

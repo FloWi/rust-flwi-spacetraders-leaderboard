@@ -1,0 +1,18 @@
+services:
+  leaderboard:
+    # our SQL database
+    image: flwi-rust-leaderboard
+    container_name: flwi-rust-leaderboard
+    profiles: [ "leaderboard" ]
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./temp_data:/data
+    environment:
+      # DON'T quote strings here :facepalm - if you need to, quote the whole var assignment
+      - "LEADERBOARD_DATABASE_URL=sqlite:///data/flwi-leaderboard.db?mode=rwc"
+      - LEADERBOARD_HOST=0.0.0.0
+      - LEADERBOARD_PORT=8080
+      - LEADERBOARD_ASSET_DIR=/dist
+      - "RUST_LOG=info,flwi_spacetraders_leaderboard::pagination=trace,tower_http=trace"
+    command: [ "/usr/local/bin/app", "run-server" ]
