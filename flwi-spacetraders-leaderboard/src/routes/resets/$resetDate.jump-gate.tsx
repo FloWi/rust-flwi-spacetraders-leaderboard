@@ -11,13 +11,7 @@ import {prettyTable} from "../../components/prettyTable.tsx";
 import {ApiJumpGateAssignmentEntry} from "../../../generated";
 import {useSuspenseQuery} from "@tanstack/react-query";
 import {Separator} from "../../@/components/ui/separator.tsx";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../../@/components/ui/card.tsx";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "../../@/components/ui/card.tsx";
 import {
   aggregateJumpGateStats,
   aggregateMaterialsSummary,
@@ -29,22 +23,13 @@ import {
 } from "../../lib/constructionHelper.ts";
 
 import {durationMillis} from "../../lib/utils.ts";
-import {
-  intNumberFmt,
-  percentNumberFmt,
-  prettyDuration,
-} from "../../lib/formatters.ts";
-import {
-  jumpGateAssignmentsQueryOptions,
-  resetDatesQueryOptions,
-} from "../../utils/queryOptions.ts";
+import {intNumberFmt, percentNumberFmt, prettyDuration} from "../../lib/formatters.ts";
+import {jumpGateAssignmentsQueryOptions, resetDatesQueryOptions} from "../../utils/queryOptions.ts";
 import {CircleCheckBigIcon} from "lucide-react";
 import {renderKvPair} from "../../lib/key-value-card-helper.tsx";
 
-const columnHelperConstructionOverview =
-  createColumnHelper<ConstructionProgressEntry>();
-const columnHelperJumpGateAssignment =
-  createColumnHelper<ApiJumpGateAssignmentEntry>();
+const columnHelperConstructionOverview = createColumnHelper<ConstructionProgressEntry>();
+const columnHelperJumpGateAssignment = createColumnHelper<ApiJumpGateAssignmentEntry>();
 
 const columns = [
   columnHelperConstructionOverview.accessor("jumpGateWaypointSymbol", {
@@ -78,16 +63,13 @@ const columns = [
       align: "right",
     },
   }),
-  columnHelperConstructionOverview.accessor(
-    (row) => `${percentNumberFmt.format(row.fulfilled / row.required)}`,
-    {
-      id: "completed",
-      header: "Progress",
-      meta: {
-        align: "right",
-      },
+  columnHelperConstructionOverview.accessor((row) => `${percentNumberFmt.format(row.fulfilled / row.required)}`, {
+    id: "completed",
+    header: "Progress",
+    meta: {
+      align: "right",
     },
-  ),
+  }),
   // columnHelperConstructionOverview.accessor("tsFirstConstructionEvent", {
   //   header: "First Construction Event",
   //   cell: (info) => dateFmt.format(info.getValue()),
@@ -98,17 +80,14 @@ const columns = [
   //     align: "right",
   //   },
   // }),
-  columnHelperConstructionOverview.accessor(
-    (row) => durationMillis(row.tsStartOfReset, row.tsFirstConstructionEvent),
-    {
-      id: "durationStartResetFirstConstructionEvent",
-      header: "Start Fortnight --> FirstConstruction",
-      cell: (info) => <pre>{prettyDuration(info.getValue())}</pre>,
-      meta: {
-        align: "right",
-      },
+  columnHelperConstructionOverview.accessor((row) => durationMillis(row.tsStartOfReset, row.tsFirstConstructionEvent), {
+    id: "durationStartResetFirstConstructionEvent",
+    header: "Start Fortnight --> FirstConstruction",
+    cell: (info) => <pre>{prettyDuration(info.getValue())}</pre>,
+    meta: {
+      align: "right",
     },
-  ),
+  }),
   // columnHelperConstructionOverview.accessor("tsLastConstructionEvent", {
   //   header: "Last Construction Event",
   //   cell: (info) => {
@@ -125,9 +104,7 @@ const columns = [
   // }),
   columnHelperConstructionOverview.accessor(
     (row) =>
-      row.tsLastConstructionEvent
-        ? durationMillis(row.tsStartOfReset, row.tsLastConstructionEvent)
-        : undefined,
+      row.tsLastConstructionEvent ? durationMillis(row.tsStartOfReset, row.tsLastConstructionEvent) : undefined,
 
     {
       id: "durationStartResetLastConstructionEvent",
@@ -145,10 +122,7 @@ const columns = [
   columnHelperConstructionOverview.accessor(
     (row) =>
       row.tsLastConstructionEvent
-        ? durationMillis(
-          row.tsFirstConstructionEvent,
-          row.tsLastConstructionEvent,
-        )
+        ? durationMillis(row.tsFirstConstructionEvent, row.tsLastConstructionEvent)
         : undefined,
     {
       id: "durationConstruction",
@@ -225,33 +199,22 @@ function renderJumpGateSummary(jumpGateSummary: {
         <div className="grid grid-cols-2 w-fit gap-6">
           {renderKvPair("Tracked Agents", jumpGateSummary.numTrackedAgents)}
           {renderKvPair("Tracked Gates", jumpGateSummary.numTrackedJumpGates)}
-          {renderKvPair(
-            "Started Construction",
-            jumpGateSummary.numJumpGatesWithStartedProduction,
-          )}
-          {renderKvPair(
-            "Finished Construction",
-            jumpGateSummary.numCompletedJumpGates,
-          )}
+          {renderKvPair("Started Construction", jumpGateSummary.numJumpGatesWithStartedProduction)}
+          {renderKvPair("Finished Construction", jumpGateSummary.numCompletedJumpGates)}
         </div>
       </CardContent>
     </Card>
   );
-
 }
 
 function JumpGateComponent(): JSX.Element {
   const {resetDate} = Route.useParams();
 
-  const [sortingConstruction, setSortingConstruction] =
-    React.useState<SortingState>([]);
+  const [sortingConstruction, setSortingConstruction] = React.useState<SortingState>([]);
 
-  const [sortingAssignment, setSortingAssignment] =
-    React.useState<SortingState>([]);
+  const [sortingAssignment, setSortingAssignment] = React.useState<SortingState>([]);
 
-  const {data: jumpGateData} = useSuspenseQuery(
-    jumpGateAssignmentsQueryOptions(resetDate),
-  );
+  const {data: jumpGateData} = useSuspenseQuery(jumpGateAssignmentsQueryOptions(resetDate));
   //const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
 
   let constructionProgressData = useMemo(() => {
@@ -338,20 +301,9 @@ const renderConstructionMaterialSummary = ({
         <div className="grid grid-cols-2 w-fit gap-4 pt-2">
           {renderKvPair("Started Deliveries", numStartedDeliveries)}
           {renderKvPair("Completed Deliveries", numCompletedDeliveries)}
-          {renderKvPair(
-            "Best First Delivery",
-            fastestFirstDeliveryMs
-              ? prettyDuration(fastestFirstDeliveryMs)
-              : "",
-          )}
-          {renderKvPair(
-            "Best Last Delivery",
-            fastestLastDeliveryMs ? prettyDuration(fastestLastDeliveryMs) : "",
-          )}
-          {renderKvPair(
-            "Best Construction",
-            fastestConstructionMs ? prettyDuration(fastestConstructionMs) : "",
-          )}
+          {renderKvPair("Best First Delivery", fastestFirstDeliveryMs ? prettyDuration(fastestFirstDeliveryMs) : "")}
+          {renderKvPair("Best Last Delivery", fastestLastDeliveryMs ? prettyDuration(fastestLastDeliveryMs) : "")}
+          {renderKvPair("Best Construction", fastestConstructionMs ? prettyDuration(fastestConstructionMs) : "")}
         </div>
       </CardContent>
     </Card>

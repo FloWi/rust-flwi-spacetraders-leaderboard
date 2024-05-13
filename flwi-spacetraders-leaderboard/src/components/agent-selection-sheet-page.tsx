@@ -18,7 +18,6 @@ import {ScrollArea} from "../@/components/ui/scroll-area.tsx";
 import {prettyTable} from "./prettyTable.tsx";
 import {Button} from "../@/components/ui/button.tsx";
 
-
 type SheetPageProps = {
   isLog: boolean;
   setIsLog: (value: ((prevState: boolean) => boolean) | boolean) => void;
@@ -42,18 +41,13 @@ export function AgentSelectionSheetPage({
                                           table,
                                           children,
                                         }: SheetPageProps) {
-  let top10Agents = memoizedLeaderboard.sortedAndColoredLeaderboard
-    .slice(0, 10)
-    .map((e) => e.agentSymbol);
+  let top10Agents = memoizedLeaderboard.sortedAndColoredLeaderboard.slice(0, 10).map((e) => e.agentSymbol);
 
-  let jumpGatesUnderConstruction =
-    jumpGateMostRecentConstructionProgress.progressEntries
-      .filter((cpe) => cpe.fulfilled > 0 && cpe.required > 1)
-      .map((cpe) => cpe.jumpGateWaypointSymbol);
+  let jumpGatesUnderConstruction = jumpGateMostRecentConstructionProgress.progressEntries
+    .filter((cpe) => cpe.fulfilled > 0 && cpe.required > 1)
+    .map((cpe) => cpe.jumpGateWaypointSymbol);
   let buildingAgents = memoizedLeaderboard.sortedAndColoredLeaderboard
-    .filter((e) =>
-      jumpGatesUnderConstruction.includes(e.jumpGateWaypointSymbol),
-    )
+    .filter((e) => jumpGatesUnderConstruction.includes(e.jumpGateWaypointSymbol))
     .map((e) => e.agentSymbol);
 
   let selectTop10: () => void = () => {
@@ -74,25 +68,15 @@ export function AgentSelectionSheetPage({
             <HamburgerMenuIcon/>
           </SheetTrigger>
           <div className="flex items-center space-x-2 text-sm">
-            <Switch
-              id="log-y-axis"
-              checked={isLog}
-              onCheckedChange={setIsLog}
-            />
+            <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog}/>
             <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
           </div>
         </div>
-        <SheetContent
-          side="left"
-          className="w-11/12 h-5/6 md:w-fit flex flex-col gap-4"
-        >
+        <SheetContent side="left" className="w-11/12 h-5/6 md:w-fit flex flex-col gap-4">
           <SheetHeader className="space-y-1">
-            <SheetTitle className="text-sm font-medium leading-none">
-              Agent Selection
-            </SheetTitle>
+            <SheetTitle className="text-sm font-medium leading-none">Agent Selection</SheetTitle>
             <SheetDescription className="text-sm text-muted-foreground">
-              {selectedAgents.length} of{" "}
-              {memoizedLeaderboard.sortedAndColoredLeaderboard.length} selected
+              {selectedAgents.length} of {memoizedLeaderboard.sortedAndColoredLeaderboard.length} selected
             </SheetDescription>
           </SheetHeader>
           <ScrollArea>

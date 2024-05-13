@@ -1,9 +1,6 @@
 import {createFileRoute} from "@tanstack/react-router";
 import React, {useMemo} from "react";
-import {
-  ApiAllTimeRankEntry,
-  mockDataAllTime,
-} from "../../lib/all-time-testdata.ts";
+import {ApiAllTimeRankEntry, mockDataAllTime} from "../../lib/all-time-testdata.ts";
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -12,37 +9,21 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import {intNumberFmt} from "../../lib/formatters.ts";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "../../@/components/ui/toggle-group.tsx";
+import {ToggleGroup, ToggleGroupItem} from "../../@/components/ui/toggle-group.tsx";
 import {prettyTable} from "../../components/prettyTable.tsx";
 import Plot from "react-plotly.js";
 import {PlotType} from "plotly.js";
 import {Switch} from "../../@/components/ui/switch.tsx";
 import {Label} from "../../@/components/ui/label.tsx";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "../../@/components/ui/sheet.tsx";
+import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger} from "../../@/components/ui/sheet.tsx";
 import {HamburgerMenuIcon} from "@radix-ui/react-icons";
 import {ScrollArea} from "../../@/components/ui/scroll-area.tsx";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../../@/components/ui/card.tsx";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "../../@/components/ui/card.tsx";
 import {renderKvPair} from "../../lib/key-value-card-helper.tsx";
 
 export const Route = createFileRoute("/all-time/")({
   component: AllTimeComponent,
   pendingComponent: () => <div>Loading...</div>,
-
 });
 
 const columnHelperAllTimeData = createColumnHelper<ApiAllTimeRankEntry>();
@@ -120,25 +101,17 @@ function AllTimeComponent() {
   }, []);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [currentRankFilter, setRankFilter] = React.useState<RankFilter>(
-    rankFilters[1],
-  );
-  const [currentResetFilter, setResetFilter] = React.useState<ResetFilter>(
-    resetFilters[0],
-  );
+  const [currentRankFilter, setRankFilter] = React.useState<RankFilter>(rankFilters[1]);
+  const [currentResetFilter, setResetFilter] = React.useState<ResetFilter>(resetFilters[0]);
   const [isLog, setIsLog] = React.useState(true);
 
   let relevantData = useMemo(() => {
     let relevantResetDates = new Set(
-      currentResetFilter.numberResets
-        ? resetDates.slice(0, currentResetFilter.numberResets)
-        : resetDates,
+      currentResetFilter.numberResets ? resetDates.slice(0, currentResetFilter.numberResets) : resetDates,
     );
     return allTimeData.filter(
       (d) =>
-        (currentRankFilter.maxRank
-          ? d.rank <= currentRankFilter.maxRank
-          : true) && relevantResetDates.has(d.reset),
+        (currentRankFilter.maxRank ? d.rank <= currentRankFilter.maxRank : true) && relevantResetDates.has(d.reset),
     );
   }, [currentRankFilter, currentResetFilter]);
 
@@ -156,15 +129,11 @@ function AllTimeComponent() {
 
   const chartData = React.useMemo(() => {
     let maxRank = currentRankFilter.maxRank ?? 10;
-    let resets = Array.from(
-      new Set(relevantData.map((d) => d.reset)),
-    ).toSorted();
+    let resets = Array.from(new Set(relevantData.map((d) => d.reset))).toSorted();
     let ranks = Array.from(Array(maxRank).keys()).map((r) => r + 1);
 
     let data = ranks.map((rank) => {
-      let rankData = resets.flatMap((r) =>
-        relevantData.filter((d) => d.reset === r && d.rank === rank),
-      );
+      let rankData = resets.flatMap((r) => relevantData.filter((d) => d.reset === r && d.rank === rank));
       let yValues = rankData.map((d) => d.credits);
       let texts = rankData.map((d) => d.agentSymbol);
 
@@ -261,9 +230,7 @@ function AllTimeComponent() {
   let sheetContentComponent = (
     <SheetContent side="left" className="w-11/12 md:w-fit flex flex-col gap-4">
       <SheetHeader className="space-y-1">
-        <SheetTitle className="text-sm font-medium leading-none">
-          Top-N and Reset Selection
-        </SheetTitle>
+        <SheetTitle className="text-sm font-medium leading-none">Top-N and Reset Selection</SheetTitle>
       </SheetHeader>
       <ScrollArea>
         <div className="flex flex-col gap-2 mt-2 place-items-start">
@@ -310,11 +277,7 @@ function AllTimeComponent() {
           <div className="flex flex-col gap-4 md:flex-row w-full">
             <div className="flex flex-col gap-2 w-full">
               <div className="flex items-center space-x-2 text-sm">
-                <Switch
-                  id="log-y-axis"
-                  checked={isLog}
-                  onCheckedChange={setIsLog}
-                />
+                <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog}/>
                 <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
               </div>
               <div className="w-4/5">{allTimeRanksChart}</div>

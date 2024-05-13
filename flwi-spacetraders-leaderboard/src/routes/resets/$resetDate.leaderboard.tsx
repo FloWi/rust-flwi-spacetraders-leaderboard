@@ -19,15 +19,9 @@ import {
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
 import {compactNumberFmt} from "../../lib/formatters.ts";
-import {
-  calcSortedAndColoredLeaderboard,
-  UiLeaderboardEntry,
-} from "../../lib/leaderboard-helper.ts";
+import {calcSortedAndColoredLeaderboard, UiLeaderboardEntry} from "../../lib/leaderboard-helper.ts";
 import * as _ from "lodash";
-import {
-  AgentSelectionSheetPage,
-  sheetPage,
-} from "../../components/agent-selection-sheet-page.tsx";
+import {AgentSelectionSheetPage} from "../../components/agent-selection-sheet-page.tsx";
 
 type AgentSelectionSearch = {
   agents?: string[];
@@ -55,9 +49,7 @@ const columns = [
         backgroundColor: isSelected ? hexColor : "transparent",
       };
 
-      return (
-        <span className="border-2 w-4 h-4 rounded inline-block" style={style}/>
-      );
+      return <span className="border-2 w-4 h-4 rounded inline-block" style={style}/>;
     },
     header: "",
     size: 8,
@@ -99,9 +91,7 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
     let entries = query?.state.data?.leaderboardEntries ?? [];
     let agentsInCache = entries.map((e) => e.agentSymbol);
 
-    let needsInvalidation = selectedAgents.some(
-      (a) => !agentsInCache.includes(a),
-    );
+    let needsInvalidation = selectedAgents.some((a) => !agentsInCache.includes(a));
     console.log("selected agents", selectedAgents);
     console.log("agents in cache", agentsInCache);
     console.log("arg", arg);
@@ -124,9 +114,7 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
     queryClient.prefetchQuery(leaderboardQueryOptions(resetDate));
     queryClient.prefetchQuery(jumpGateAssignmentsQueryOptions(resetDate));
-    queryClient.prefetchQuery(
-      jumpGateMostRecentProgressQueryOptions(resetDate),
-    );
+    queryClient.prefetchQuery(jumpGateMostRecentProgressQueryOptions(resetDate));
 
     await queryClient.prefetchQuery(resetDatesQueryOptions);
   },
@@ -148,28 +136,13 @@ type BarChartConfig = {
   colors: string[];
 };
 
-function renderBarChart({
-                          title,
-                          mutedColorTitle,
-                          isLog,
-                          xValues,
-                          yValues,
-                          colors,
-                        }: BarChartConfig) {
+function renderBarChart({title, mutedColorTitle, isLog, xValues, yValues, colors}: BarChartConfig) {
   return (
     <div>
       <div className="flex flex-row gap-0.5 items-center ">
         <h3 className="text-xl font-bold">{title}</h3>
-        {mutedColorTitle ? (
-          <p className="text-sm text-muted-foreground">&nbsp; | &nbsp;</p>
-        ) : (
-          <></>
-        )}
-        {mutedColorTitle ? (
-          <p className="text-sm text-muted-foreground">{mutedColorTitle}</p>
-        ) : (
-          <></>
-        )}
+        {mutedColorTitle ? <p className="text-sm text-muted-foreground">&nbsp; | &nbsp;</p> : <></>}
+        {mutedColorTitle ? <p className="text-sm text-muted-foreground">{mutedColorTitle}</p> : <></>}
       </div>
 
       <Plot
@@ -231,13 +204,9 @@ function LeaderboardComponent() {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({}); //manage your own row selection state
 
-  const {data: leaderboardData} = useSuspenseQuery(
-    leaderboardQueryOptions(resetDate),
-  );
+  const {data: leaderboardData} = useSuspenseQuery(leaderboardQueryOptions(resetDate));
 
-  const {data: jumpGateAssignmentData} = useSuspenseQuery(
-    jumpGateAssignmentsQueryOptions(resetDate),
-  );
+  const {data: jumpGateAssignmentData} = useSuspenseQuery(jumpGateAssignmentsQueryOptions(resetDate));
 
   const {data: jumpGateMostRecentConstructionProgress} = useSuspenseQuery(
     jumpGateMostRecentProgressQueryOptions(resetDate),
@@ -248,25 +217,10 @@ function LeaderboardComponent() {
 
   const [isLog, setIsLog] = React.useState(true);
 
-  // let states = useFetchState((state) => state.fetchStates);
-  // let agents = useFetchState((state) => state.selectedAgents);
-
-  // let current = states.get(resetDateToUse) ?? {
-  //   lastRefresh: new Date(),
-  //   leaderboard: [],
-  //   historyData: [],
-  // };
-
   let current = {leaderboard: leaderboardEntries};
 
   let memoizedLeaderboard = React.useMemo(() => {
-    //select top 10 by default
     let selectedAgents: Record<string, boolean> = {};
-
-    // // haven't found a way to convert an array into a record
-    // sortedEntries.slice(0, 10).forEach((e) => {
-    //   selectedAgents[e.agentSymbol] = true;
-    // });
     agents?.forEach((agentSymbol) => (selectedAgents[agentSymbol] = true));
 
     setRowSelection(selectedAgents);
@@ -276,10 +230,9 @@ function LeaderboardComponent() {
   let {relevantEntries} = React.useMemo(() => {
     let selectedAgents = Object.keys(rowSelection);
 
-    let relevantEntries =
-      memoizedLeaderboard.sortedAndColoredLeaderboard.filter((e) =>
-        selectedAgents.includes(e.agentSymbol),
-      );
+    let relevantEntries = memoizedLeaderboard.sortedAndColoredLeaderboard.filter((e) =>
+      selectedAgents.includes(e.agentSymbol),
+    );
 
     return {selectedAgents, relevantEntries};
   }, [rowSelection, current.leaderboard]);
@@ -309,35 +262,23 @@ function LeaderboardComponent() {
   }, [rowSelection, current.leaderboard, isLog]);
 
   let materialProgressChartData: BarChartConfig[] = React.useMemo(() => {
-    let relevantJumpGates = _.uniq(
-      relevantEntries.map((r) => r.jumpGateWaypointSymbol),
-    );
+    let relevantJumpGates = _.uniq(relevantEntries.map((r) => r.jumpGateWaypointSymbol));
     const constructionMaterialTradeSymbols = _.uniqBy(
       jumpGateMostRecentConstructionProgress.progressEntries,
       (cm) => cm.tradeSymbol,
     );
 
-    let relevantConstructionProgressEntries =
-      jumpGateMostRecentConstructionProgress.progressEntries.filter(
-        ({jumpGateWaypointSymbol}) => {
-          return relevantJumpGates.includes(jumpGateWaypointSymbol);
-        },
-      );
+    let relevantConstructionProgressEntries = jumpGateMostRecentConstructionProgress.progressEntries.filter(
+      ({jumpGateWaypointSymbol}) => {
+        return relevantJumpGates.includes(jumpGateWaypointSymbol);
+      },
+    );
 
-    return _.sortBy(
-      constructionMaterialTradeSymbols,
-      (cm) => cm.tradeSymbol,
-    ).map(({tradeSymbol, required}) => {
-      let materialEntries = relevantConstructionProgressEntries.filter(
-        (cpe) => cpe.tradeSymbol === tradeSymbol,
-      );
+    return _.sortBy(constructionMaterialTradeSymbols, (cm) => cm.tradeSymbol).map(({tradeSymbol, required}) => {
+      let materialEntries = relevantConstructionProgressEntries.filter((cpe) => cpe.tradeSymbol === tradeSymbol);
 
       let fulfilledValues = relevantEntries.map((r) => {
-        return (
-          materialEntries.find(
-            (cme) => cme.jumpGateWaypointSymbol === r.jumpGateWaypointSymbol,
-          )?.fulfilled ?? 0
-        );
+        return materialEntries.find((cme) => cme.jumpGateWaypointSymbol === r.jumpGateWaypointSymbol)?.fulfilled ?? 0;
       });
 
       return {
@@ -377,10 +318,7 @@ function LeaderboardComponent() {
   }, [resetDateToUse, rowSelection]);
 
   const selectAgents = (newSelectedAgents: string[]) => {
-    const newSelection: RowSelectionState = newSelectedAgents.reduce(
-      (o, key) => ({...o, [key]: true}),
-      {},
-    );
+    const newSelection: RowSelectionState = newSelectedAgents.reduce((o, key) => ({...o, [key]: true}), {});
     setRowSelection((_) => newSelection);
   };
 
@@ -394,15 +332,11 @@ function LeaderboardComponent() {
         selectedAgents={agents ?? []}
         setSelectedAgents={selectAgents}
         memoizedLeaderboard={memoizedLeaderboard}
-        jumpGateMostRecentConstructionProgress={
-          jumpGateMostRecentConstructionProgress
-        }
+        jumpGateMostRecentConstructionProgress={jumpGateMostRecentConstructionProgress}
         table={table}
       >
         {agents?.length ?? 0 > 0 ? (
-          <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-y-6">
-            {chartConfigs.map(renderBarChart)}
-          </div>
+          <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-y-6">{chartConfigs.map(renderBarChart)}</div>
         ) : (
           <div>Please select some agents</div>
         )}

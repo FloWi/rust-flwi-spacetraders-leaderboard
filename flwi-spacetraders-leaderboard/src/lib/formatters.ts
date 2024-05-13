@@ -1,4 +1,4 @@
-import { Duration } from "luxon";
+import {Duration} from "luxon";
 
 export const prettyDuration = (durationMs: number) => {
   let d = Duration.fromMillis(durationMs);

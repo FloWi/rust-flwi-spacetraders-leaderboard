@@ -3640,5 +3640,4 @@ export interface ApiAllTimeRankEntry {
   rank: number;
 }
 
-export let mockDataAllTime: ApiAllTimeRankEntry[] =
-  JSON.parse(mockDataAllTimeRanks);
+export let mockDataAllTime: ApiAllTimeRankEntry[] = JSON.parse(mockDataAllTimeRanks);

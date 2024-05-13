@@ -4,11 +4,7 @@ export const SwaggerIcon = {
   icon: (props: IconProps) => (
     <svg viewBox="0 0 24 24" {...props}>
       <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
-      <g
-        id="SVGRepo_tracerCarrier"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      ></g>
+      <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
       <g id="SVGRepo_iconCarrier">
         <title>Swagger icon</title>
 

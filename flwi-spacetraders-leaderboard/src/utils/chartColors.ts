@@ -1,6 +1,5 @@
 export let chartColors = [
-
-// d3 category 20 scheme
+  // d3 category 20 scheme
   "#1f77b4",
   "#ffbb78",
   "#2ca02c",
@@ -35,4 +34,4 @@ export let chartColors = [
   "#e7298a",
   "#66a61e",
   "#a6761d",
-]
+];

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import {createFileRoute} from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -11,16 +11,13 @@ function Index() {
 
       <p>The backend crawls the SpaceTraders server every 5 minutes.</p>
       <p>
-        To get the collection of agents under surveillance I'm checking the
-        official leaderboard and track every agent that appeared at least once
-        and keep tracking them even if they disappear again. I decided to do it
-        like that to keep the number of agents to track low (because of the
-        rate-limit) without the need to maintain a list manually.
+        To get the collection of agents under surveillance I'm checking the official leaderboard and track every agent
+        that appeared at least once and keep tracking them even if they disappear again. I decided to do it like that to
+        keep the number of agents to track low (because of the rate-limit) without the need to maintain a list manually.
       </p>
       <p>
-        It also tracks the construction of the jump gates. I'm taking their
-        headquarters, search for the jump-gate waypoint in their system and then
-        call the construction endpoint for it.
+        It also tracks the construction of the jump gates. I'm taking their headquarters, search for the jump-gate
+        waypoint in their system and then call the construction endpoint for it.
       </p>
     </div>
   );

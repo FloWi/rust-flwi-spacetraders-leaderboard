@@ -1,22 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
-import {
-  historyQueryOptions,
-  leaderboardQueryOptions,
-  resetDatesQueryOptions,
-} from "../../utils/queryOptions.ts";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {createFileRoute} from "@tanstack/react-router";
+import {historyQueryOptions, leaderboardQueryOptions, resetDatesQueryOptions} from "../../utils/queryOptions.ts";
+import {useSuspenseQuery} from "@tanstack/react-query";
 import Plot from "react-plotly.js";
-import React, { useMemo } from "react";
+import React, {useMemo} from "react";
 import {
   ApiConstructionMaterialHistoryEntry,
   ApiResetDateMeta,
   GetHistoryDataForResetResponseContent,
 } from "../../../generated";
-import { Data } from "plotly.js";
-import {
-  calcSortedAndColoredLeaderboard,
-  UiLeaderboardEntry,
-} from "../../lib/leaderboard-helper.ts";
+import {Data} from "plotly.js";
+import {calcSortedAndColoredLeaderboard, UiLeaderboardEntry} from "../../lib/leaderboard-helper.ts";
 import * as _ from "lodash";
 
 type AgentSelectionSearch = {
@@ -27,7 +20,7 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
   component: HistoryComponent,
   pendingComponent: () => <div>Loading...</div>,
 
-  staticData: { customData: "I'm the history route" },
+  staticData: {customData: "I'm the history route"},
 
   validateSearch: (search: Record<string, unknown>): AgentSelectionSearch => {
     // validate and parse the search params into a typed state
@@ -36,13 +29,9 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
     };
   },
 
-  loaderDeps: ({ search: { agents } }) => ({ agents }),
+  loaderDeps: ({search: {agents}}) => ({agents}),
 
-  loader: async ({
-    params: { resetDate },
-    context: { queryClient },
-    deps: { agents },
-  }) => {
+  loader: async ({params: {resetDate}, context: {queryClient}, deps: {agents}}) => {
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
     queryClient.prefetchQuery(historyQueryOptions(resetDate, agents ?? []));
@@ -54,21 +43,17 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
 });
 
 function HistoryComponent() {
-  const { resetDate } = Route.useParams();
-  const { agents } = Route.useSearch();
+  const {resetDate} = Route.useParams();
+  const {agents} = Route.useSearch();
 
-  const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
-  const { data: historyData } = useSuspenseQuery(
-    historyQueryOptions(resetDate, agents ?? []),
-  );
+  const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
+  const {data: historyData} = useSuspenseQuery(historyQueryOptions(resetDate, agents ?? []));
 
-  const { data: leaderboardData } = useSuspenseQuery(
-    leaderboardQueryOptions(resetDate),
-  );
+  const {data: leaderboardData} = useSuspenseQuery(leaderboardQueryOptions(resetDate));
   // const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
   const leaderboardEntries = leaderboardData.leaderboardEntries;
 
-  let current = { leaderboard: leaderboardEntries };
+  let current = {leaderboard: leaderboardEntries};
 
   let memoizedLeaderboard = React.useMemo(() => {
     //select top 10 by default
@@ -78,9 +63,7 @@ function HistoryComponent() {
     // sortedEntries.slice(0, 10).forEach((e) => {
     //   selectedAgents[e.agentSymbol] = true;
     // });
-    agents?.forEach(
-      (agentSymbol) => (selectedAgentsRecord[agentSymbol] = true),
-    );
+    agents?.forEach((agentSymbol) => (selectedAgentsRecord[agentSymbol] = true));
 
     //setRowSelection(selectedAgents);
     return calcSortedAndColoredLeaderboard(current.leaderboard);
@@ -113,9 +96,7 @@ function HistoryComponent() {
       {/*  }}*/}
       {/*/>*/}
       <div className="flex flex-col gap-4">
-        <h2 className="text-2xl font-bold pt-4">
-          Hello /reset/{resetDate}/history!
-        </h2>
+        <h2 className="text-2xl font-bold pt-4">Hello /reset/{resetDate}/history!</h2>
         {charts}
       </div>
     </>
@@ -133,30 +114,25 @@ function createMaterialChartTraces(
   selectedAgents: string[],
   firstTs: Date,
 ): Data[] {
-  let relevantHistoryEntries = constructionMaterialHistory.filter(
-    (h) => h.tradeSymbol === tradeGoodSymbol,
-  );
+  let relevantHistoryEntries = constructionMaterialHistory.filter((h) => h.tradeSymbol === tradeGoodSymbol);
 
-  let relevantSortedAndColoredLeaderboard = sortedAndColoredLeaderboard.filter(
-    (lb) => selectedAgents.includes(lb.agentSymbol),
+  let relevantSortedAndColoredLeaderboard = sortedAndColoredLeaderboard.filter((lb) =>
+    selectedAgents.includes(lb.agentSymbol),
   );
 
   return relevantHistoryEntries.map((h) => {
     let color =
-      relevantSortedAndColoredLeaderboard.find(
-        (lb) => lb.jumpGateWaypointSymbol === h.jumpGateWaypointSymbol,
-      )?.displayColor ?? "black";
+      relevantSortedAndColoredLeaderboard.find((lb) => lb.jumpGateWaypointSymbol === h.jumpGateWaypointSymbol)
+        ?.displayColor ?? "black";
 
     let agentsInThisSystem = sortedAndColoredLeaderboard
       .map((lb, idx) => {
-        return { ...lb, rank: idx + 1 };
+        return {...lb, rank: idx + 1};
       })
       .filter((lb) => lb.jumpGateWaypointSymbol === h.jumpGateWaypointSymbol)
       .map((lb) => lb);
 
-    let agentsDescription = agentsInThisSystem
-      .map((a) => `${a.rank}. ${a.agentSymbol}`)
-      .join(", ");
+    let agentsDescription = agentsInThisSystem.map((a) => `${a.rank}. ${a.agentSymbol}`).join(", ");
 
     return {
       type: "scatter",
@@ -178,18 +154,13 @@ function createMaterialChartTraces(
 
 function renderTimeSeriesCharts(
   isLog: boolean,
-  {
-    agentHistory,
-    constructionMaterialHistory,
-  }: GetHistoryDataForResetResponseContent,
+  {agentHistory, constructionMaterialHistory}: GetHistoryDataForResetResponseContent,
   sortedAndColoredLeaderboard: UiLeaderboardEntry[],
   selectedAgents: string[],
   selectedReset: ApiResetDateMeta | undefined,
 ) {
   let maybeFirstTs = selectedReset?.firstTs;
-  const firstTs = maybeFirstTs
-    ? new Date(Date.parse(maybeFirstTs))
-    : new Date(0);
+  const firstTs = maybeFirstTs ? new Date(Date.parse(maybeFirstTs)) : new Date(0);
   const agentCreditsTraces: Data[] = agentHistory.map((foo) => {
     return {
       type: "scatter",
@@ -199,10 +170,7 @@ function renderTimeSeriesCharts(
       hovertemplate: `<b>${foo.agentSymbol}</b><br><b>Credits: </b>%{y:,d}<br><b>Date: </b>%{x}<extra></extra>`, // the empty extra-thingy disables the rendering of the trace-name in the hover info.
       hoverinfo: "x+y",
       marker: {
-        color:
-          sortedAndColoredLeaderboard.find(
-            (l) => l.agentSymbol === foo.agentSymbol,
-          )?.displayColor ?? "black",
+        color: sortedAndColoredLeaderboard.find((l) => l.agentSymbol === foo.agentSymbol)?.displayColor ?? "black",
       },
     };
   });
@@ -215,41 +183,33 @@ function renderTimeSeriesCharts(
       y: foo.shipCountTimeline,
       hovertemplate: `<b>${foo.agentSymbol}</b><br><b>Ships: </b>%{y:,d}<br><b>Date: </b>%{x}<extra></extra>`, // the empty extra-thingy disables the rendering of the trace-name in the hover info.
       marker: {
-        color:
-          sortedAndColoredLeaderboard.find(
-            (l) => l.agentSymbol === foo.agentSymbol,
-          )?.displayColor ?? "black",
+        color: sortedAndColoredLeaderboard.find((l) => l.agentSymbol === foo.agentSymbol)?.displayColor ?? "black",
       },
     };
   });
 
-  const constructionMaterialTradeSymbols = _.uniqBy(
-    constructionMaterialHistory,
-    (cm) => cm.tradeSymbol,
-  );
+  const constructionMaterialTradeSymbols = _.uniqBy(constructionMaterialHistory, (cm) => cm.tradeSymbol);
 
   const materialTraces: {
     tradeSymbol: string;
     required: number;
     materialChartTraces: Data[];
-  }[] = _.sortBy(constructionMaterialTradeSymbols, (cm) => cm.tradeSymbol).map(
-    ({ tradeSymbol, required }) => {
-      return {
+  }[] = _.sortBy(constructionMaterialTradeSymbols, (cm) => cm.tradeSymbol).map(({tradeSymbol, required}) => {
+    return {
+      tradeSymbol,
+      required,
+      materialChartTraces: createMaterialChartTraces(
+        sortedAndColoredLeaderboard,
         tradeSymbol,
-        required,
-        materialChartTraces: createMaterialChartTraces(
-          sortedAndColoredLeaderboard,
-          tradeSymbol,
-          constructionMaterialHistory,
-          selectedAgents,
-          firstTs,
-        ),
-      };
-    },
-  );
+        constructionMaterialHistory,
+        selectedAgents,
+        firstTs,
+      ),
+    };
+  });
 
   const materialChartConfigs: LineChartConfig[] = materialTraces.map(
-    ({ tradeSymbol, required, materialChartTraces }) => {
+    ({tradeSymbol, required, materialChartTraces}) => {
       return {
         title: tradeSymbol,
         mutedColorTitle: `${required} required`,
@@ -273,11 +233,7 @@ function renderTimeSeriesCharts(
     ...materialChartConfigs,
   ];
 
-  return (
-    <div className="w-full grid grid-cols-1  md:grid-cols-2">
-      {chartConfigs.map(renderLineChart)}
-    </div>
-  );
+  return <div className="w-full grid grid-cols-1  md:grid-cols-2">{chartConfigs.map(renderLineChart)}</div>;
 }
 
 type LineChartConfig = {
@@ -287,26 +243,13 @@ type LineChartConfig = {
   data: Data[];
 };
 
-function renderLineChart({
-  isLog,
-  mutedColorTitle,
-  title,
-  data,
-}: LineChartConfig) {
+function renderLineChart({isLog, mutedColorTitle, title, data}: LineChartConfig) {
   return (
     <div>
       <div className="flex flex-row">
         <h3 className="text-sm font-bold">{title}</h3>
-        {mutedColorTitle ? (
-          <p className="text-sm text-muted-foreground">&nbsp; | &nbsp;</p>
-        ) : (
-          <></>
-        )}
-        {mutedColorTitle ? (
-          <p className="text-sm text-muted-foreground">{mutedColorTitle}</p>
-        ) : (
-          <></>
-        )}
+        {mutedColorTitle ? <p className="text-sm text-muted-foreground">&nbsp; | &nbsp;</p> : <></>}
+        {mutedColorTitle ? <p className="text-sm text-muted-foreground">{mutedColorTitle}</p> : <></>}
       </div>
       <Plot
         className="w-full"
@@ -320,9 +263,9 @@ function renderLineChart({
             t: 50,
             //pad: 4,
           },
-          modebar: { orientation: "h" },
+          modebar: {orientation: "h"},
           showlegend: false,
-          legend: { orientation: "h" },
+          legend: {orientation: "h"},
 
           height: 500,
           font: {
@@ -350,7 +293,7 @@ function renderLineChart({
             tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
           },
         }}
-        config={{ displayModeBar: false, responsive: true }}
+        config={{displayModeBar: false, responsive: true}}
       />
     </div>
   );
