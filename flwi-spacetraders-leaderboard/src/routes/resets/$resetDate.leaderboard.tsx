@@ -172,17 +172,21 @@ function renderBarChart({
                           yValues,
                           colors,
                         }: BarChartConfig) {
-  let mutedTitle = mutedColorTitle ? ` | ${mutedColorTitle}` : "";
   return (
     <div>
-      <h3>
-        <span className="text-xl font-bold">{title}</span>
-        {/*<span className="text-sm">{isLog ? " (log axis)" : ""}</span>*/}
-        <span className="text-sm text-muted-foreground">
-          &nbsp; {mutedTitle}
-        </span>
-      </h3>
-
+      <div className="flex flex-row gap-0.5 items-center ">
+        <h3 className="text-xl font-bold">{title}</h3>
+        {mutedColorTitle ? (
+          <p className="text-sm text-muted-foreground">&nbsp; | &nbsp;</p>
+        ) : (
+          <></>
+        )}
+        {mutedColorTitle ? (
+          <p className="text-sm text-muted-foreground">{mutedColorTitle}</p>
+        ) : (
+          <></>
+        )}
+      </div>
 
       <Plot
         className="w-full"

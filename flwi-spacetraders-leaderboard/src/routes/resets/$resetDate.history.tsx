@@ -1,18 +1,18 @@
-import {createFileRoute} from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   historyQueryOptions,
   leaderboardQueryOptions,
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
-import {useSuspenseQuery} from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import Plot from "react-plotly.js";
-import React, {useMemo} from "react";
+import React, { useMemo } from "react";
 import {
   ApiConstructionMaterialHistoryEntry,
   ApiResetDateMeta,
   GetHistoryDataForResetResponseContent,
 } from "../../../generated";
-import {Data} from "plotly.js";
+import { Data } from "plotly.js";
 import {
   calcSortedAndColoredLeaderboard,
   UiLeaderboardEntry,
@@ -26,7 +26,8 @@ type AgentSelectionSearch = {
 export const Route = createFileRoute("/resets/$resetDate/history")({
   component: HistoryComponent,
   pendingComponent: () => <div>Loading...</div>,
-  staticData: {customData: "I'm the history route"},
+
+  staticData: { customData: "I'm the history route" },
 
   validateSearch: (search: Record<string, unknown>): AgentSelectionSearch => {
     // validate and parse the search params into a typed state
@@ -35,13 +36,13 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
     };
   },
 
-  loaderDeps: ({search: {agents}}) => ({agents}),
+  loaderDeps: ({ search: { agents } }) => ({ agents }),
 
   loader: async ({
-                   params: {resetDate},
-                   context: {queryClient},
-                   deps: {agents},
-                 }) => {
+    params: { resetDate },
+    context: { queryClient },
+    deps: { agents },
+  }) => {
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
     queryClient.prefetchQuery(historyQueryOptions(resetDate, agents ?? []));
@@ -53,21 +54,21 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
 });
 
 function HistoryComponent() {
-  const {resetDate} = Route.useParams();
-  const {agents} = Route.useSearch();
+  const { resetDate } = Route.useParams();
+  const { agents } = Route.useSearch();
 
-  const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
-  const {data: historyData} = useSuspenseQuery(
+  const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
+  const { data: historyData } = useSuspenseQuery(
     historyQueryOptions(resetDate, agents ?? []),
   );
 
-  const {data: leaderboardData} = useSuspenseQuery(
+  const { data: leaderboardData } = useSuspenseQuery(
     leaderboardQueryOptions(resetDate),
   );
   // const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
   const leaderboardEntries = leaderboardData.leaderboardEntries;
 
-  let current = {leaderboard: leaderboardEntries};
+  let current = { leaderboard: leaderboardEntries };
 
   let memoizedLeaderboard = React.useMemo(() => {
     //select top 10 by default
@@ -148,7 +149,7 @@ function createMaterialChartTraces(
 
     let agentsInThisSystem = sortedAndColoredLeaderboard
       .map((lb, idx) => {
-        return {...lb, rank: idx + 1};
+        return { ...lb, rank: idx + 1 };
       })
       .filter((lb) => lb.jumpGateWaypointSymbol === h.jumpGateWaypointSymbol)
       .map((lb) => lb);
@@ -232,7 +233,7 @@ function renderTimeSeriesCharts(
     required: number;
     materialChartTraces: Data[];
   }[] = _.sortBy(constructionMaterialTradeSymbols, (cm) => cm.tradeSymbol).map(
-    ({tradeSymbol, required}) => {
+    ({ tradeSymbol, required }) => {
       return {
         tradeSymbol,
         required,
@@ -247,165 +248,110 @@ function renderTimeSeriesCharts(
     },
   );
 
-  const materialCharts = materialTraces.map(
-    ({tradeSymbol, required, materialChartTraces}) => {
-      return (
-        <div>
-          <div className="flex flex-row">
-            <h3 className="text-sm font-bold">{tradeSymbol}</h3>
-            <p className="text-sm text-muted-foreground">
-              &nbsp; | {required} required
-            </p>
-          </div>
-          <Plot
-            className="w-full"
-            data={materialChartTraces}
-            layout={{
-              // remove margin reserved for title area
-              margin: {
-                l: 50,
-                r: 50,
-                b: 50,
-                t: 50,
-                //pad: 4,
-              },
-              modebar: {orientation: "h"},
-              showlegend: true,
-              legend: {orientation: "h"},
-
-              height: 500,
-              font: {
-                size: 10,
-                color: "lightgray",
-              },
-              paper_bgcolor: "rgba(0,0,0,0)",
-              plot_bgcolor: "rgba(0,0,0,0)",
-
-              xaxis: {
-                showline: true,
-                linecolor: "lightgray",
-                tickformat: "%H:%M \n%-b %-d", // using a newline instead of <br> for the 2nd row (month and day). That way plotly diffs the current tick-value with the previous one and only renders when the value changed
-                tickangle: 0,
-              },
-
-              yaxis: {
-                type: "linear",
-                tick0: 0,
-                zeroline: true,
-                showline: false,
-                linecolor: "lightgray",
-                gridcolor: "lightgray",
-                hoverformat: ",d",
-                tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
-              },
-            }}
-            config={{displayModeBar: false, responsive: true}}
-          />
-        </div>
-      );
+  const materialChartConfigs: LineChartConfig[] = materialTraces.map(
+    ({ tradeSymbol, required, materialChartTraces }) => {
+      return {
+        title: tradeSymbol,
+        mutedColorTitle: `${required} required`,
+        isLog: isLog,
+        data: materialChartTraces,
+      };
     },
   );
 
+  let chartConfigs: LineChartConfig[] = [
+    {
+      title: "Credits",
+      isLog: isLog,
+      data: agentCreditsTraces,
+    },
+    {
+      title: "Ship Count",
+      isLog: isLog,
+      data: agentShipCountTraces,
+    },
+    ...materialChartConfigs,
+  ];
+
   return (
     <div className="w-full grid grid-cols-1  md:grid-cols-2">
-      <div>
-        <h3 className="text-sm font-bold">
-          Credits {isLog ? "(log axis)" : ""}
-        </h3>
-        <Plot
-          className="w-full"
-          data={agentCreditsTraces}
-          layout={{
-            // remove margin reserved for title area
-            margin: {
-              l: 50,
-              r: 50,
-              b: 50,
-              t: 50,
-              //pad: 4,
-            },
-            modebar: {orientation: "h"},
-            showlegend: true,
-            legend: {orientation: "h"},
-            height: 500,
-            font: {
-              size: 10,
-              color: "lightgray",
-            },
-            paper_bgcolor: "rgba(0,0,0,0)",
-            plot_bgcolor: "rgba(0,0,0,0)",
-            // hoverlabel: {
-            //   bgcolor: "rgba(0,0,0,0)",
-            // },
+      {chartConfigs.map(renderLineChart)}
+    </div>
+  );
+}
 
-            xaxis: {
-              showline: true,
-              linecolor: "lightgray",
-              tickformat: "%H:%M \n%-b %-d", // using a newline instead of <br> for the 2nd row (month and day). That way plotly diffs the current tick-value with the previous one and only renders when the value changed
-              //tickangle: 0,
-            },
+type LineChartConfig = {
+  title: string;
+  mutedColorTitle?: string;
+  isLog: boolean;
+  data: Data[];
+};
 
-            yaxis: {
-              type: isLog ? "log" : "linear",
-              tick0: 0,
-              zeroline: true,
-              showline: false,
-              linecolor: "lightgray",
-              gridcolor: "lightgray",
-              //hoverformat: ",d",
-              tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
-            },
-          }}
-          config={{displayModeBar: false, responsive: true}}
-        />
+function renderLineChart({
+  isLog,
+  mutedColorTitle,
+  title,
+  data,
+}: LineChartConfig) {
+  return (
+    <div>
+      <div className="flex flex-row">
+        <h3 className="text-sm font-bold">{title}</h3>
+        {mutedColorTitle ? (
+          <p className="text-sm text-muted-foreground">&nbsp; | &nbsp;</p>
+        ) : (
+          <></>
+        )}
+        {mutedColorTitle ? (
+          <p className="text-sm text-muted-foreground">{mutedColorTitle}</p>
+        ) : (
+          <></>
+        )}
       </div>
-      <div>
-        <h3 className="text-sm font-bold">Ship Count</h3>
+      <Plot
+        className="w-full"
+        data={data}
+        layout={{
+          // remove margin reserved for title area
+          margin: {
+            l: 50,
+            r: 50,
+            b: 50,
+            t: 50,
+            //pad: 4,
+          },
+          modebar: { orientation: "h" },
+          showlegend: false,
+          legend: { orientation: "h" },
 
-        <Plot
-          className="w-full"
-          data={agentShipCountTraces}
-          layout={{
-            // remove margin reserved for title area
-            margin: {
-              l: 50,
-              r: 50,
-              b: 50,
-              t: 50,
-              //pad: 4,
-            },
-            modebar: {orientation: "h"},
-            showlegend: true,
-            legend: {orientation: "h"},
-            height: 500,
-            font: {
-              size: 10,
-              color: "lightgray",
-            },
-            paper_bgcolor: "rgba(0,0,0,0)",
-            plot_bgcolor: "rgba(0,0,0,0)",
+          height: 500,
+          font: {
+            size: 10,
+            color: "lightgray",
+          },
+          paper_bgcolor: "rgba(0,0,0,0)",
+          plot_bgcolor: "rgba(0,0,0,0)",
 
-            xaxis: {
-              showline: true,
-              linecolor: "lightgray",
-              tickformat: "%H:%M \n%-b %-d", // using a newline instead of <br> for the 2nd row (month and day). That way plotly diffs the current tick-value with the previous one and only renders when the value changed
-            },
+          xaxis: {
+            showline: true,
+            linecolor: "lightgray",
+            tickformat: "%H:%M \n%-b %-d", // using a newline instead of <br> for the 2nd row (month and day). That way plotly diffs the current tick-value with the previous one and only renders when the value changed
+            tickangle: 0,
+          },
 
-            yaxis: {
-              type: "linear",
-              tick0: 0,
-              zeroline: true,
-              showline: false,
-              linecolor: "lightgray",
-              gridcolor: "lightgray",
-              hoverformat: ",d",
-              tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
-            },
-          }}
-          config={{displayModeBar: false, responsive: true}}
-        />
-      </div>
-      {materialCharts}
+          yaxis: {
+            type: isLog ? "log" : "linear",
+            tick0: 0,
+            zeroline: true,
+            showline: false,
+            linecolor: "lightgray",
+            gridcolor: "lightgray",
+            hoverformat: ",d",
+            tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
+          },
+        }}
+        config={{ displayModeBar: false, responsive: true }}
+      />
     </div>
   );
 }
