@@ -14,6 +14,13 @@ export const jumpGateAssignmentsQueryOptions = (resetDate: string) =>
     staleTime: 5 * 60 * 1000,
   });
 
+export const jumpGateMostRecentProgressQueryOptions = (resetDate: string) =>
+  queryOptions({
+    queryKey: ["jumpGateMostRecentProgressData", resetDate],
+    queryFn: () => CrateService.getJumpGateMostRecentProgress({ resetDate }),
+    staleTime: 5 * 60 * 1000,
+  });
+
 export const leaderboardQueryOptions = (resetDate: string) =>
   queryOptions({
     queryKey: ["leaderboardData", resetDate],

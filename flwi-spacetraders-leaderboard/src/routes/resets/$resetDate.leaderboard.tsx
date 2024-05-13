@@ -1,5 +1,8 @@
 import {createFileRoute, useNavigate} from "@tanstack/react-router";
-import {GetLeaderboardForResetResponseContent} from "../../../generated";
+import {
+  ApiConstructionMaterialMostRecentProgressEntry,
+  GetLeaderboardForResetResponseContent,
+} from "../../../generated";
 
 import {
   createColumnHelper,
@@ -30,6 +33,8 @@ import {Button} from "../../@/components/ui/button.tsx";
 import {ScrollArea} from "../../@/components/ui/scroll-area.tsx";
 import {HamburgerMenuIcon} from "@radix-ui/react-icons";
 import {
+  jumpGateAssignmentsQueryOptions,
+  jumpGateMostRecentProgressQueryOptions,
   leaderboardQueryOptions,
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
@@ -38,6 +43,7 @@ import {
   calcSortedAndColoredLeaderboard,
   UiLeaderboardEntry,
 } from "../../lib/leaderboard-helper.ts";
+import * as _ from "lodash";
 
 type AgentSelectionSearch = {
   agents?: string[];
@@ -133,6 +139,10 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
     queryClient.prefetchQuery(leaderboardQueryOptions(resetDate));
+    queryClient.prefetchQuery(jumpGateAssignmentsQueryOptions(resetDate));
+    queryClient.prefetchQuery(
+      jumpGateMostRecentProgressQueryOptions(resetDate),
+    );
 
     await queryClient.prefetchQuery(resetDatesQueryOptions);
   },
@@ -145,124 +155,84 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
   },
 });
 
-function renderLeaderboardCharts(
-  isLog: boolean,
-  chartData: {
-    yValuesShips: number[];
-    xValues: string[];
-    yValuesCredits: number[];
-    chartEntries: UiLeaderboardEntry[];
-    colors: string[];
-  },
-) {
+type BarChartConfig = {
+  title: string;
+  mutedColorTitle?: string;
+  isLog: boolean;
+  xValues: string[];
+  yValues: number[];
+  colors: string[];
+};
+
+function renderBarChart({
+                          title,
+                          mutedColorTitle,
+                          isLog,
+                          xValues,
+                          yValues,
+                          colors,
+                        }: BarChartConfig) {
+  let mutedTitle = mutedColorTitle ? ` | ${mutedColorTitle}` : "";
   return (
-    <div className="w-full grid grid-cols-1  md:grid-cols-2">
-      <div>
-        <h3 className="text-sm font-bold">
-          Credits {isLog ? "(log axis)" : ""}
-        </h3>
+    <div>
+      <h3>
+        <span className="text-xl font-bold">{title}</span>
+        {/*<span className="text-sm">{isLog ? " (log axis)" : ""}</span>*/}
+        <span className="text-sm text-muted-foreground">
+          &nbsp; {mutedTitle}
+        </span>
+      </h3>
 
-        <Plot
-          className="w-full"
-          data={[
-            {
-              type: "bar",
-              x: chartData.xValues,
-              y: chartData.yValuesCredits,
-              name: "Credits",
-              marker: {color: chartData.colors},
-            },
-          ]}
-          layout={{
-            // remove margin reserved for title area
-            margin: {
-              l: 50,
-              r: 50,
-              b: 50,
-              t: 50,
-              //pad: 4,
-            },
-            modebar: {orientation: "h"},
-            showlegend: false,
-            height: 500,
-            font: {
-              size: 10,
-              color: "lightgray",
-            },
-            paper_bgcolor: "rgba(0,0,0,0)",
-            plot_bgcolor: "rgba(0,0,0,0)",
 
-            xaxis: {
-              showline: true,
-              linecolor: "lightgray",
-            },
+      <Plot
+        className="w-full"
+        data={[
+          {
+            type: "bar",
+            x: xValues,
+            y: yValues,
+            name: title,
+            marker: {color: colors},
+          },
+        ]}
+        layout={{
+          // remove margin reserved for title area
+          margin: {
+            l: 50,
+            r: 50,
+            b: 50,
+            t: 20,
+            //pad: 4,
+          },
+          modebar: {orientation: "h"},
+          showlegend: false,
+          height: 500,
+          font: {
+            size: 10,
+            color: "lightgray",
+          },
+          paper_bgcolor: "rgba(0,0,0,0)",
+          plot_bgcolor: "rgba(0,0,0,0)",
 
-            yaxis: {
-              type: isLog ? "log" : "linear",
-              tick0: 0,
-              zeroline: true,
-              showline: false,
-              linecolor: "lightgray",
-              gridcolor: "lightgray",
-              hoverformat: ",d",
-              tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
-            },
-          }}
-          config={{displayModeBar: false, responsive: true}}
-        />
-      </div>
-      <div>
-        <h3 className="text-xl font-bold">Ships</h3>
-        <Plot
-          className="w-full"
-          data={[
-            {
-              type: "bar",
-              x: chartData.xValues,
-              y: chartData.yValuesShips,
-              xaxis: "x",
-              yaxis: "y2",
-              name: "Ships",
-              marker: {color: chartData.colors},
-            },
-          ]}
-          layout={{
-            // remove margin reserved for title area
-            margin: {
-              l: 50,
-              r: 50,
-              b: 50,
-              t: 50,
-              //pad: 4,
-            },
-            showlegend: false,
-            height: 500,
-            font: {
-              size: 10,
-              color: "lightgray",
-            },
-            paper_bgcolor: "rgba(0,0,0,0)",
-            plot_bgcolor: "rgba(0,0,0,0)",
+          xaxis: {
+            showline: true,
+            linecolor: "lightgray",
+          },
 
-            xaxis: {
-              showline: true,
-              linecolor: "lightgray",
-            },
-
-            yaxis: {
-              type: "linear",
-              tick0: 0,
-              zeroline: true,
-              showline: true,
-              linecolor: "lightgray",
-              zerolinecolor: "lightgray",
-              gridcolor: "lightgray",
-              tickformat: ",d",
-            }, //integer
-          }}
-          config={{displayModeBar: false, responsive: true}}
-        />
-      </div>
+          yaxis: {
+            type: isLog ? "log" : "linear",
+            tick0: 0,
+            // dtick: 1,
+            zeroline: true,
+            showline: false,
+            linecolor: "lightgray",
+            gridcolor: "lightgray",
+            hoverformat: ",d",
+            tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
+          },
+        }}
+        config={{displayModeBar: false, responsive: true}}
+      />
     </div>
   );
 }
@@ -276,9 +246,19 @@ function LeaderboardComponent() {
   const {data: leaderboardData} = useSuspenseQuery(
     leaderboardQueryOptions(resetDate),
   );
+
+  const {data: jumpGateAssignmentData} = useSuspenseQuery(
+    jumpGateAssignmentsQueryOptions(resetDate),
+  );
+
+  const {data: jumpGateMostRecentConstructionProgress} = useSuspenseQuery(
+    jumpGateMostRecentProgressQueryOptions(resetDate),
+  );
   // const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
   const leaderboardEntries = leaderboardData.leaderboardEntries;
   const {agents} = Route.useSearch(); //leaderboardEntries.map((e) => e.agentSymbol);
+
+  const [isLog, setIsLog] = React.useState(true);
 
   // let states = useFetchState((state) => state.fetchStates);
   // let agents = useFetchState((state) => state.selectedAgents);
@@ -305,22 +285,83 @@ function LeaderboardComponent() {
     return calcSortedAndColoredLeaderboard(current.leaderboard);
   }, [current.leaderboard]);
 
-  let chartData = React.useMemo(() => {
+  let {relevantEntries} = React.useMemo(() => {
     let selectedAgents = Object.keys(rowSelection);
 
-    let chartEntries = memoizedLeaderboard.sortedAndColoredLeaderboard.filter(
-      (e) => selectedAgents.includes(e.agentSymbol),
-    );
+    let relevantEntries =
+      memoizedLeaderboard.sortedAndColoredLeaderboard.filter((e) =>
+        selectedAgents.includes(e.agentSymbol),
+      );
 
-    let colors = chartEntries.map(({displayColor}) => displayColor);
-    let xValues = chartEntries.map((e) => e.agentSymbol);
-    let yValuesCredits = chartEntries.map((e) => e.credits);
-    let yValuesShips = chartEntries.map((e) => e.shipCount);
-
-    return {chartEntries, colors, xValues, yValuesCredits, yValuesShips};
+    return {selectedAgents, relevantEntries};
   }, [rowSelection, current.leaderboard]);
 
-  const [isLog, setIsLog] = React.useState(true);
+  let agentChartConfigs: BarChartConfig[] = React.useMemo(() => {
+    let colors = relevantEntries.map(({displayColor}) => displayColor);
+    let xValues = relevantEntries.map((e) => e.agentSymbol);
+    let yValuesCredits = relevantEntries.map((e) => e.credits);
+    let yValuesShips = relevantEntries.map((e) => e.shipCount);
+
+    return [
+      {
+        title: "Credits",
+        xValues: xValues,
+        yValues: yValuesCredits,
+        isLog,
+        colors: colors,
+      },
+      {
+        title: "Ships",
+        xValues: xValues,
+        yValues: yValuesShips,
+        isLog,
+        colors: colors,
+      },
+    ];
+  }, [rowSelection, current.leaderboard, isLog]);
+
+  let materialProgressChartData: BarChartConfig[] = React.useMemo(() => {
+    let relevantJumpGates = _.uniq(
+      relevantEntries.map((r) => r.jumpGateWaypointSymbol),
+    );
+    const constructionMaterialTradeSymbols = _.uniqBy(
+      jumpGateMostRecentConstructionProgress.progressEntries,
+      (cm) => cm.tradeSymbol,
+    );
+
+    let relevantConstructionProgressEntries =
+      jumpGateMostRecentConstructionProgress.progressEntries.filter(
+        ({jumpGateWaypointSymbol}) => {
+          return relevantJumpGates.includes(jumpGateWaypointSymbol);
+        },
+      );
+
+    return _.sortBy(
+      constructionMaterialTradeSymbols,
+      (cm) => cm.tradeSymbol,
+    ).map(({tradeSymbol, required}) => {
+      let materialEntries = relevantConstructionProgressEntries.filter(
+        (cpe) => cpe.tradeSymbol === tradeSymbol,
+      );
+
+      let fulfilledValues = relevantEntries.map((r) => {
+        return (
+          materialEntries.find(
+            (cme) => cme.jumpGateWaypointSymbol === r.jumpGateWaypointSymbol,
+          )?.fulfilled ?? 0
+        );
+      });
+
+      return {
+        title: tradeSymbol,
+        mutedColorTitle: `${required} required`,
+        xValues: relevantEntries.map((r) => r.agentSymbol),
+        yValues: fulfilledValues,
+        isLog,
+        colors: relevantEntries.map((r) => r.displayColor),
+      };
+    });
+  }, [rowSelection, current.leaderboard, isLog]);
 
   const table = useReactTable({
     data: memoizedLeaderboard.sortedAndColoredLeaderboard,
@@ -362,12 +403,31 @@ function LeaderboardComponent() {
     setRowSelection((_) => newSelection);
   };
 
+  const selectBuilders = () => {
+    let jumpGatesUnderConstruction =
+      jumpGateMostRecentConstructionProgress.progressEntries
+        .filter((cpe) => cpe.fulfilled > 0 && cpe.required > 1)
+        .map((cpe) => cpe.jumpGateWaypointSymbol);
+    let buildingAgents = memoizedLeaderboard.sortedAndColoredLeaderboard
+      .filter((e) =>
+        jumpGatesUnderConstruction.includes(e.jumpGateWaypointSymbol),
+      )
+      .map((e) => e.agentSymbol);
+
+    const newSelection: RowSelectionState = buildingAgents.reduce(
+      (o, key) => ({...o, [key]: true}),
+      {},
+    );
+    setRowSelection((_) => newSelection);
+  };
+
   const clearSelection = () => {
     setRowSelection((_) => {
       return {};
     });
   };
 
+  const chartConfigs = [...agentChartConfigs, ...materialProgressChartData];
   return (
     <>
       {/*<ResetHeaderBar*/}
@@ -418,16 +478,21 @@ function LeaderboardComponent() {
             </ScrollArea>
             <SheetFooter>
               <Button variant="outline" size="sm" onClick={selectTop10}>
-                Select Top 10
+                Top 10
+              </Button>
+              <Button variant="outline" size="sm" onClick={selectBuilders}>
+                Builders
               </Button>
               <Button variant="outline" size="sm" onClick={clearSelection}>
-                Clear Selection
+                Clear
               </Button>
             </SheetFooter>
           </SheetContent>
 
           {agents?.length ?? 0 > 0 ? (
-            renderLeaderboardCharts(isLog, chartData)
+            <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-y-6">
+              {chartConfigs.map(renderBarChart)}
+            </div>
           ) : (
             <div>Please select some agents</div>
           )}
