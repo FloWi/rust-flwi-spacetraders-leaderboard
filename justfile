@@ -7,6 +7,5 @@ migrate:
   cd notebooks && jupyter execute polars_normalize_leaderboard.ipynb
 
 generate-openapi-spec-and-client:
-  cargo run -- generate-openapi
-  cp openapi.json ./flwi-spacetraders-leaderboard/openapi-spec
+  cargo run -- generate-openapi --output-path ./flwi-spacetraders-leaderboard/openapi-spec/openapi.json
   cd flwi-spacetraders-leaderboard && yarn codegen

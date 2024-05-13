@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
                 let docs = server::leaderboard::ApiDoc::openapi()
                     .to_pretty_json()
                     .unwrap();
-                fs::write("openapi.json", docs).unwrap();
+                fs::write(output_path, docs).unwrap();
                 Ok(())
             }
             Commands::RunServer {
