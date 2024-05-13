@@ -152,7 +152,7 @@ order by credits desc, ship_count desc
     .await
 }
 
-pub(crate) async fn load_jump_gate_agent_assignment_for_reset(
+pub(crate) async fn select_jump_gate_agent_assignment_for_reset(
     pool: &Pool<Sqlite>,
     reset_date: NaiveDate,
 ) -> Result<Vec<DbJumpGateAssignmentEntry>, Error> {
@@ -360,6 +360,54 @@ group by jump_gate_waypoint_symbol
         resolution_minutes,
         or_gte_value_to_include_latest,
         jump_gate_waypoint_json_string
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub(crate) async fn select_most_recent_construction_progress_for_reset(
+    pool: &Pool<Sqlite>,
+    reset_date: NaiveDate,
+) -> Result<Vec<DbConstructionMaterialMostRecentStatus>, Error> {
+    // TODO: resolution (include latest ts even if it's not included in modulo)
+
+    sqlx::query_as!(
+        DbConstructionMaterialMostRecentStatus,
+        r#"
+with last_entry_of_reset as (select *
+                             from (select r.reset_id
+                                        , r.first_ts
+                                        , r.reset
+                                        , row_number() over (partition by jr.reset_id order by jr.query_time desc) as rn
+                                        , jr.query_time                                                            as ts_latest_entry_of_reset
+                                        , jr.id                                                                    as job_run_id_latest_entry
+                                   from reset_date r
+                                            join main.job_run jr
+                                                 on r.reset_id = jr.reset_id
+                                   where reset = ?
+                                   ) sub
+                             where rn = 1)
+select l.reset_id as "reset_id: _"
+     , l.reset as "reset: _"
+     , l.first_ts as "ts_start_of_reset: _"
+     , l.ts_latest_entry_of_reset as "ts_latest_entry_of_reset: _"
+     , cr.trade_symbol
+     , cml.fulfilled
+     , cr.required
+     , cs.jump_gate_waypoint_symbol
+     , cl.is_complete as is_jump_gate_complete
+from construction_material_log cml
+         join main.construction_log cl
+              on cml.construction_log_id = cl.id
+         join main.construction_site cs
+              on cl.construction_site_id = cs.id
+         join main.construction_requirement cr
+              on cml.construction_requirement_id = cr.id
+         join last_entry_of_reset l
+              on l.job_run_id_latest_entry = cl.job_id
+where required > 1
+        "#,
+        reset_date,
     )
     .fetch_all(pool)
     .await
@@ -613,6 +661,20 @@ pub(crate) struct DbConstructionMaterialHistoryEntry {
     pub(crate) required: Option<i64>,
     pub(crate) event_time_minutes_csv: Option<String>,
     pub(crate) fulfilled_csv: Option<String>,
+}
+
+// starting to dislike sqlx, since it always thinks values are optional
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub(crate) struct DbConstructionMaterialMostRecentStatus {
+    pub(crate) reset_id: Option<i64>,
+    pub(crate) reset: Option<NaiveDate>,
+    pub(crate) ts_start_of_reset: Option<NaiveDateTime>,
+    pub(crate) ts_latest_entry_of_reset: Option<NaiveDateTime>,
+    pub(crate) trade_symbol: String,
+    pub(crate) fulfilled: i64,
+    pub(crate) required: i64,
+    pub(crate) jump_gate_waypoint_symbol: String,
+    pub(crate) is_jump_gate_complete: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
