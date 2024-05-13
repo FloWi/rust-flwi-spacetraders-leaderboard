@@ -35,7 +35,7 @@ import {
   prettyDuration,
 } from "../../lib/formatters.ts";
 import {
-  jumpGateQueryOptions,
+  jumpGateAssignmentsQueryOptions,
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
 import {CircleCheckBigIcon} from "lucide-react";
@@ -203,7 +203,7 @@ export const Route = createFileRoute("/resets/$resetDate/jump-gate")({
                  }) => {
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
-    queryClient.prefetchQuery(jumpGateQueryOptions(resetDate));
+    queryClient.prefetchQuery(jumpGateAssignmentsQueryOptions(resetDate));
 
     return await queryClient.prefetchQuery(resetDatesQueryOptions);
   },
@@ -237,6 +237,7 @@ function renderJumpGateSummary(jumpGateSummary: {
       </CardContent>
     </Card>
   );
+
 }
 
 function JumpGateComponent(): JSX.Element {
@@ -249,7 +250,7 @@ function JumpGateComponent(): JSX.Element {
     React.useState<SortingState>([]);
 
   const {data: jumpGateData} = useSuspenseQuery(
-    jumpGateQueryOptions(resetDate),
+    jumpGateAssignmentsQueryOptions(resetDate),
   );
   //const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
 

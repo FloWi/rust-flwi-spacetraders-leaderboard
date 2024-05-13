@@ -7,7 +7,7 @@ export const resetDatesQueryOptions = queryOptions({
   staleTime: 5 * 60 * 1000,
 });
 
-export const jumpGateQueryOptions = (resetDate: string) =>
+export const jumpGateAssignmentsQueryOptions = (resetDate: string) =>
   queryOptions({
     queryKey: ["jumpGateData", resetDate],
     queryFn: () => CrateService.getJumpGateAgentsAssignment({ resetDate }),
