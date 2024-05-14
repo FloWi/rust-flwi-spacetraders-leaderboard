@@ -1,16 +1,25 @@
-import {createFileRoute} from "@tanstack/react-router";
-import {historyQueryOptions, leaderboardQueryOptions, resetDatesQueryOptions} from "../../utils/queryOptions.ts";
-import {useSuspenseQuery} from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  historyQueryOptions,
+  jumpGateMostRecentProgressQueryOptions,
+  leaderboardQueryOptions,
+  resetDatesQueryOptions,
+} from "../../utils/queryOptions.ts";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import Plot from "react-plotly.js";
-import React, {useMemo} from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   ApiConstructionMaterialHistoryEntry,
   ApiResetDateMeta,
   GetHistoryDataForResetResponseContent,
+  GetLeaderboardForResetResponseContent,
 } from "../../../generated";
-import {Data} from "plotly.js";
-import {calcSortedAndColoredLeaderboard, UiLeaderboardEntry} from "../../lib/leaderboard-helper.ts";
+import { Data } from "plotly.js";
+import { calcSortedAndColoredLeaderboard, UiLeaderboardEntry } from "../../lib/leaderboard-helper.ts";
 import * as _ from "lodash";
+import { AgentSelectionSheetPage } from "../../components/agent-selection-sheet-page.tsx";
+import { createLeaderboardTable } from "../../components/agent-selection-table.tsx";
+import { RowSelectionState, SortingState } from "@tanstack/react-table";
 
 type AgentSelectionSearch = {
   agents?: string[];
@@ -20,7 +29,7 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
   component: HistoryComponent,
   pendingComponent: () => <div>Loading...</div>,
 
-  staticData: {customData: "I'm the history route"},
+  staticData: { customData: "I'm the history route" },
 
   validateSearch: (search: Record<string, unknown>): AgentSelectionSearch => {
     // validate and parse the search params into a typed state
@@ -29,13 +38,43 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
     };
   },
 
-  loaderDeps: ({search: {agents}}) => ({agents}),
+  loaderDeps: ({ search: { agents } }) => ({ agents }),
 
-  loader: async ({params: {resetDate}, context: {queryClient}, deps: {agents}}) => {
+  beforeLoad: async (arg) => {
+    console.log("before load:");
+    let selectedAgents = arg.search.agents ?? [];
+
+    let options = historyQueryOptions(arg.params.resetDate, selectedAgents);
+
+    let queryClient = arg.context.queryClient;
+    const queryCache = queryClient.getQueryCache();
+    const query = queryCache.find<GetHistoryDataForResetResponseContent>({
+      queryKey: options.queryKey,
+    });
+
+    let entries = query?.state.data?.agentHistory ?? [];
+    let agentsInCache = entries.map((e) => e.agentSymbol);
+
+    let needsInvalidation = selectedAgents.some((a) => !agentsInCache.includes(a));
+    console.log("selected agents", selectedAgents);
+    console.log("agents in cache", agentsInCache);
+    console.log("arg", arg);
+    console.log("needsInvalidation", needsInvalidation);
+
+    if (needsInvalidation) {
+      console.log("invalidating query");
+
+      await queryClient.invalidateQueries({ queryKey: options.queryKey });
+    }
+
+    // console.log("current state of query", query);
+  },
+
+  loader: async ({ params: { resetDate }, context: { queryClient }, deps: { agents } }) => {
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
     queryClient.prefetchQuery(historyQueryOptions(resetDate, agents ?? []));
-
+    queryClient.prefetchQuery(jumpGateMostRecentProgressQueryOptions(resetDate));
     queryClient.prefetchQuery(leaderboardQueryOptions(resetDate));
 
     await queryClient.prefetchQuery(resetDatesQueryOptions);
@@ -43,29 +82,30 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
 });
 
 function HistoryComponent() {
-  const {resetDate} = Route.useParams();
-  const {agents} = Route.useSearch();
+  const { resetDate } = Route.useParams();
+  const { agents } = Route.useSearch();
 
-  const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
-  const {data: historyData} = useSuspenseQuery(historyQueryOptions(resetDate, agents ?? []));
+  const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
+  const { data: historyData } = useSuspenseQuery(historyQueryOptions(resetDate, agents ?? []));
+  const { data: jumpGateMostRecentConstructionProgress } = useSuspenseQuery(
+    jumpGateMostRecentProgressQueryOptions(resetDate),
+  );
+  const [isLog, setIsLog] = React.useState(true);
 
-  const {data: leaderboardData} = useSuspenseQuery(leaderboardQueryOptions(resetDate));
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({}); //manage your own row selection state
+
+  const { data: leaderboardData } = useSuspenseQuery(leaderboardQueryOptions(resetDate));
   // const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
   const leaderboardEntries = leaderboardData.leaderboardEntries;
 
-  let current = {leaderboard: leaderboardEntries};
+  let current = { leaderboard: leaderboardEntries };
 
   let memoizedLeaderboard = React.useMemo(() => {
-    //select top 10 by default
-    let selectedAgentsRecord: Record<string, boolean> = {};
+    let selectedAgents: Record<string, boolean> = {};
+    agents?.forEach((agentSymbol) => (selectedAgents[agentSymbol] = true));
 
-    // // haven't found a way to convert an array into a record
-    // sortedEntries.slice(0, 10).forEach((e) => {
-    //   selectedAgents[e.agentSymbol] = true;
-    // });
-    agents?.forEach((agentSymbol) => (selectedAgentsRecord[agentSymbol] = true));
-
-    //setRowSelection(selectedAgents);
+    setRowSelection(selectedAgents);
     return calcSortedAndColoredLeaderboard(current.leaderboard);
   }, [current.leaderboard]);
 
@@ -73,16 +113,47 @@ function HistoryComponent() {
     return resetDates.find((r) => r.resetDate === resetDate);
   }, [resetDate, resetDates]);
 
-  let charts = renderTimeSeriesCharts(
-    true,
-    historyData,
-    memoizedLeaderboard.sortedAndColoredLeaderboard,
-    agents ?? [],
-    selectedReset,
-  );
+  let charts = useMemo(() => {
+    console.log(`creating charts for selected agents: ${agents}}`);
+    return renderTimeSeriesCharts(
+      true,
+      historyData,
+      memoizedLeaderboard.sortedAndColoredLeaderboard,
+      agents ?? [],
+      selectedReset,
+    );
+  }, [resetDate, agents, historyData]);
+
+  const navigate = useNavigate({ from: Route.fullPath });
+
+  useEffect(() => {
+    let newAgentSelection = Object.keys(rowSelection);
+
+    //fire-and-forget promise call seems to be ok? YOLO
+    navigate({
+      search: () => ({
+        agents: newAgentSelection,
+      }),
+    });
+  }, [resetDate, rowSelection]);
+
+  const selectAgents = (newSelectedAgents: string[]) => {
+    const newSelection: RowSelectionState = newSelectedAgents.reduce((o, key) => ({ ...o, [key]: true }), {});
+    setRowSelection((_) => newSelection);
+  };
+
+  const table = createLeaderboardTable(memoizedLeaderboard, setRowSelection, sorting, rowSelection, setSorting);
 
   return (
-    <>
+    <AgentSelectionSheetPage
+      isLog={isLog}
+      setIsLog={setIsLog}
+      selectedAgents={agents ?? []}
+      setSelectedAgents={selectAgents}
+      memoizedLeaderboard={memoizedLeaderboard}
+      jumpGateMostRecentConstructionProgress={jumpGateMostRecentConstructionProgress}
+      table={table}
+    >
       {/*<ResetHeaderBar*/}
       {/*  resetDates={resetDates}*/}
       {/*  resetDate={resetDate}*/}
@@ -99,7 +170,7 @@ function HistoryComponent() {
         <h2 className="text-2xl font-bold pt-4">Hello /reset/{resetDate}/history!</h2>
         {charts}
       </div>
-    </>
+    </AgentSelectionSheetPage>
   );
 }
 
@@ -127,7 +198,7 @@ function createMaterialChartTraces(
 
     let agentsInThisSystem = sortedAndColoredLeaderboard
       .map((lb, idx) => {
-        return {...lb, rank: idx + 1};
+        return { ...lb, rank: idx + 1 };
       })
       .filter((lb) => lb.jumpGateWaypointSymbol === h.jumpGateWaypointSymbol)
       .map((lb) => lb);
@@ -154,7 +225,7 @@ function createMaterialChartTraces(
 
 function renderTimeSeriesCharts(
   isLog: boolean,
-  {agentHistory, constructionMaterialHistory}: GetHistoryDataForResetResponseContent,
+  { agentHistory, constructionMaterialHistory }: GetHistoryDataForResetResponseContent,
   sortedAndColoredLeaderboard: UiLeaderboardEntry[],
   selectedAgents: string[],
   selectedReset: ApiResetDateMeta | undefined,
@@ -194,7 +265,7 @@ function renderTimeSeriesCharts(
     tradeSymbol: string;
     required: number;
     materialChartTraces: Data[];
-  }[] = _.sortBy(constructionMaterialTradeSymbols, (cm) => cm.tradeSymbol).map(({tradeSymbol, required}) => {
+  }[] = _.sortBy(constructionMaterialTradeSymbols, (cm) => cm.tradeSymbol).map(({ tradeSymbol, required }) => {
     return {
       tradeSymbol,
       required,
@@ -209,7 +280,7 @@ function renderTimeSeriesCharts(
   });
 
   const materialChartConfigs: LineChartConfig[] = materialTraces.map(
-    ({tradeSymbol, required, materialChartTraces}) => {
+    ({ tradeSymbol, required, materialChartTraces }) => {
       return {
         title: tradeSymbol,
         mutedColorTitle: `${required} required`,
@@ -243,9 +314,9 @@ type LineChartConfig = {
   data: Data[];
 };
 
-function renderLineChart({isLog, mutedColorTitle, title, data}: LineChartConfig) {
+function renderLineChart({ isLog, mutedColorTitle, title, data }: LineChartConfig) {
   return (
-    <div>
+    <div key={title}>
       <div className="flex flex-row">
         <h3 className="text-sm font-bold">{title}</h3>
         {mutedColorTitle ? <p className="text-sm text-muted-foreground">&nbsp; | &nbsp;</p> : <></>}
@@ -263,9 +334,9 @@ function renderLineChart({isLog, mutedColorTitle, title, data}: LineChartConfig)
             t: 50,
             //pad: 4,
           },
-          modebar: {orientation: "h"},
+          modebar: { orientation: "h" },
           showlegend: false,
-          legend: {orientation: "h"},
+          legend: { orientation: "h" },
 
           height: 500,
           font: {
@@ -293,7 +364,7 @@ function renderLineChart({isLog, mutedColorTitle, title, data}: LineChartConfig)
             tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
           },
         }}
-        config={{displayModeBar: false, responsive: true}}
+        config={{ displayModeBar: false, responsive: true }}
       />
     </div>
   );

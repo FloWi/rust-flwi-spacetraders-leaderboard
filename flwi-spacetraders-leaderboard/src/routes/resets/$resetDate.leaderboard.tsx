@@ -1,72 +1,23 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { GetLeaderboardForResetResponseContent } from "../../../generated";
 
-import {
-  createColumnHelper,
-  getCoreRowModel,
-  getSortedRowModel,
-  RowSelectionState,
-  SortingState,
-  useReactTable,
-} from "@tanstack/react-table";
+import { RowSelectionState, SortingState } from "@tanstack/react-table";
 import React, { useEffect } from "react";
 import Plot from "react-plotly.js";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
-  jumpGateAssignmentsQueryOptions,
   jumpGateMostRecentProgressQueryOptions,
   leaderboardQueryOptions,
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
-import { compactNumberFmt } from "../../lib/formatters.ts";
-import { calcSortedAndColoredLeaderboard, UiLeaderboardEntry } from "../../lib/leaderboard-helper.ts";
+import { calcSortedAndColoredLeaderboard } from "../../lib/leaderboard-helper.ts";
 import * as _ from "lodash";
 import { AgentSelectionSheetPage } from "../../components/agent-selection-sheet-page.tsx";
+import { createLeaderboardTable } from "../../components/agent-selection-table.tsx";
 
 type AgentSelectionSearch = {
   agents?: string[];
 };
-
-const columnHelper = createColumnHelper<UiLeaderboardEntry>();
-
-const columns = [
-  columnHelper.accessor("displayColor", {
-    cell: (info) => {
-      /*
-                      span(
-                  cls := "border border-2 w-4 h-4 rounded inline-block",
-                  borderColor(if (agentSelection.contains(agent)) "transparent" else col),
-                  backgroundColor(if (agentSelection.contains(agent)) col else "transparent"),
-                  //                    eventListener,
-                )
-
-       */
-
-      let isSelected = info.row.getIsSelected();
-      let hexColor = info.getValue();
-      let style = {
-        borderColor: isSelected ? "transparent" : hexColor,
-        backgroundColor: isSelected ? hexColor : "transparent",
-      };
-
-      return <span className="border-2 w-4 h-4 rounded inline-block" style={style} />;
-    },
-    header: "",
-    size: 8,
-    footer: (info) => info.column.id,
-  }),
-  columnHelper.accessor("agentSymbol", {
-    cell: (info) => info.getValue(),
-    footer: (info) => info.column.id,
-  }),
-  columnHelper.accessor("credits", {
-    cell: (info) => compactNumberFmt.format(info.getValue()),
-    footer: (info) => info.column.id,
-    meta: {
-      align: "right",
-    },
-  }),
-];
 
 export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
   component: LeaderboardComponent,
@@ -113,7 +64,6 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
     queryClient.prefetchQuery(leaderboardQueryOptions(resetDate));
-    queryClient.prefetchQuery(jumpGateAssignmentsQueryOptions(resetDate));
     queryClient.prefetchQuery(jumpGateMostRecentProgressQueryOptions(resetDate));
 
     await queryClient.prefetchQuery(resetDatesQueryOptions);
@@ -205,9 +155,6 @@ function LeaderboardComponent() {
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({}); //manage your own row selection state
 
   const { data: leaderboardData } = useSuspenseQuery(leaderboardQueryOptions(resetDate));
-
-  const { data: jumpGateAssignmentData } = useSuspenseQuery(jumpGateAssignmentsQueryOptions(resetDate));
-
   const { data: jumpGateMostRecentConstructionProgress } = useSuspenseQuery(
     jumpGateMostRecentProgressQueryOptions(resetDate),
   );
@@ -291,18 +238,7 @@ function LeaderboardComponent() {
       };
     });
   }, [rowSelection, current.leaderboard, isLog]);
-
-  const table = useReactTable({
-    data: memoizedLeaderboard.sortedAndColoredLeaderboard,
-    columns,
-    getRowId: (row) => row.agentSymbol,
-    onRowSelectionChange: setRowSelection, //hoist up the row selection state to your own scope
-    state: { sorting, rowSelection },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    debugTable: true,
-  });
+  const table = createLeaderboardTable(memoizedLeaderboard, setRowSelection, sorting, rowSelection, setSorting);
 
   const navigate = useNavigate({ from: Route.fullPath });
 

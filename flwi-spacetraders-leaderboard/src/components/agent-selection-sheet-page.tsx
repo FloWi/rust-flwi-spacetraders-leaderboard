@@ -60,8 +60,21 @@ export function AgentSelectionSheetPage({
     setSelectedAgents([]);
   };
 
+  let preSelectionButtons = (
+    <div className="flex flex-row gap-2 w-full items-stretch">
+      <Button variant="outline" size="sm" onClick={selectTop10}>
+        Top 10
+      </Button>
+      <Button variant="outline" size="sm" onClick={selectBuilders}>
+        Builders
+      </Button>
+      <Button variant="outline" size="sm" onClick={clearSelection}>
+        Clear
+      </Button>
+    </div>
+  );
   return (
-    <div className="flex flex-col gap-4 w-full">
+    <div className="flex flex-col gap-4 w-full h-screen">
       <Sheet>
         <div className="flex flex-row gap-2 mt-4">
           <SheetTrigger asChild className={`block lg:hidden `}>
@@ -84,17 +97,7 @@ export function AgentSelectionSheetPage({
           <ScrollArea>
             <div className="flex flex-col gap-2 mt-2">{prettyTable(table)}</div>
           </ScrollArea>
-          <SheetFooter>
-            <Button variant="outline" size="sm" onClick={selectTop10}>
-              Top 10
-            </Button>
-            <Button variant="outline" size="sm" onClick={selectBuilders}>
-              Builders
-            </Button>
-            <Button variant="outline" size="sm" onClick={clearSelection}>
-              Clear
-            </Button>
-          </SheetFooter>
+          <SheetFooter>{preSelectionButtons}</SheetFooter>
         </SheetContent>
         <div className="flex flex-row w-full gap-4">
           <div className="hidden lg:flex flex-col gap-2 mt-2">
@@ -102,8 +105,12 @@ export function AgentSelectionSheetPage({
               {selectedAgents.length} of {memoizedLeaderboard.sortedAndColoredLeaderboard.length} agents selected
             </div>
 
-            <ScrollArea className="lg:h-5/6">
-              <div className="flex flex-col gap-2 mt-2">{prettyTable(table)}</div>
+            <ScrollArea className="lg:h-1/2">
+              <div className="flex flex-col gap-2 mt-2">
+                {preSelectionButtons}
+                {prettyTable(table)}
+                {preSelectionButtons}
+              </div>
             </ScrollArea>
           </div>
           <div className="w-full">{children}</div>
