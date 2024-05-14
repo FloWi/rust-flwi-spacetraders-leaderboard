@@ -75,8 +75,10 @@ export function AgentSelectionSheetPage({
         <SheetContent side="left" className="w-11/12 h-5/6 lg:w-fit flex flex-col gap-4">
           <SheetHeader className="space-y-1">
             <SheetTitle className="text-sm font-medium leading-none">Agent Selection</SheetTitle>
-            <SheetDescription className="text-sm text-muted-foreground">
-              {selectedAgents.length} of {memoizedLeaderboard.sortedAndColoredLeaderboard.length} selected
+            <SheetDescription>
+              <div className="text-sm text-muted-foreground">
+                {selectedAgents.length} of {memoizedLeaderboard.sortedAndColoredLeaderboard.length} selected
+              </div>
             </SheetDescription>
           </SheetHeader>
           <ScrollArea>
@@ -94,8 +96,16 @@ export function AgentSelectionSheetPage({
             </Button>
           </SheetFooter>
         </SheetContent>
-        <div className="flex flex-row w-full">
-          <div className="hidden lg:flex flex-col gap-2 mt-2">{prettyTable(table)}</div>
+        <div className="flex flex-row w-full gap-4">
+          <div className="hidden lg:flex flex-col gap-2 mt-2">
+            <div className="text-sm text-muted-foreground">
+              {selectedAgents.length} of {memoizedLeaderboard.sortedAndColoredLeaderboard.length} agents selected
+            </div>
+
+            <ScrollArea className="lg:h-5/6">
+              <div className="flex flex-col gap-2 mt-2">{prettyTable(table)}</div>
+            </ScrollArea>
+          </div>
           <div className="w-full">{children}</div>
         </div>
       </Sheet>
