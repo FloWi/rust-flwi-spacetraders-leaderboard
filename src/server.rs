@@ -208,6 +208,7 @@ pub mod leaderboard {
         reset_date: ApiResetDate,
         agent_history: Vec<ApiAgentHistoryEntry>,
         construction_material_history: Vec<ApiConstructionMaterialHistoryEntry>,
+        requested_agents: Vec<ApiAgentSymbol>,
     }
 
     #[derive(Serialize, Deserialize, ToSchema, Debug)]
@@ -457,7 +458,17 @@ pub mod leaderboard {
 
         event!(
             Level::DEBUG,
-            "Done collecting construction data for {num_agents} and {num_jump_gates} jump gates",
+            "Done collecting history agent data for {num_agents}",
+        );
+        event!(
+            Level::DEBUG,
+            "Agent Symbols are {}",
+            agent_symbols.join(", ")
+        );
+        dbg!(agent_history_progress);
+        event!(
+            Level::DEBUG,
+            "Done collecting history construction data for {num_jump_gates} jump gates",
         );
         event!(
             Level::DEBUG,
@@ -465,14 +476,17 @@ pub mod leaderboard {
             jump_gate_symbols.join(", ")
         );
 
+        dbg!(construction_material_progress);
+
         let response = GetHistoryDataForResetResponseContent {
+            requested_agents: agent_symbols
+                .iter()
+                .map(|s| ApiAgentSymbol(s.clone()))
+                .collect(),
             reset_date: ApiResetDate(reset_date.format("%Y-%m-%d").to_string()),
             agent_history: api_agent_history_progress,
             construction_material_history: api_construction_progress,
         };
-
-        dbg!(jump_gate_symbols);
-        dbg!(construction_material_progress);
 
         Json(response)
     }

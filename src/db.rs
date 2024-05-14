@@ -425,6 +425,13 @@ pub(crate) async fn select_agent_history(
     let or_gte_value_to_include_latest = to_event_time_minutes_lte - resolution_minutes;
     let agent_symbols_json_string = serde_json::to_string(&agent_symbols).unwrap();
 
+    dbg!(reset_date);
+    dbg!(from_event_time_minutes_gte);
+    dbg!(to_event_time_minutes_lte);
+    dbg!(resolution_minutes);
+    dbg!(or_gte_value_to_include_latest);
+    dbg!(agent_symbols_json_string.clone());
+
     // sqlx doesn't understand a group-concat with int-values apparently
     // using an alias with a type handles that
     sqlx::query_as!(

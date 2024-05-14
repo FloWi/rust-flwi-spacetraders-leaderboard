@@ -5,14 +5,14 @@ import {
   leaderboardQueryOptions,
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import Plot from "react-plotly.js";
 import React, { useEffect, useMemo } from "react";
 import {
+  ApiAgentHistoryEntry,
   ApiConstructionMaterialHistoryEntry,
   ApiResetDateMeta,
   GetHistoryDataForResetResponseContent,
-  GetLeaderboardForResetResponseContent,
 } from "../../../generated";
 import { Data } from "plotly.js";
 import { calcSortedAndColoredLeaderboard, UiLeaderboardEntry } from "../../lib/leaderboard-helper.ts";
@@ -52,13 +52,13 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
       queryKey: options.queryKey,
     });
 
-    let entries = query?.state.data?.agentHistory ?? [];
-    let agentsInCache = entries.map((e) => e.agentSymbol);
+    let agentsInCache = query?.state.data?.requestedAgents ?? [];
 
     let needsInvalidation = selectedAgents.some((a) => !agentsInCache.includes(a));
     console.log("selected agents", selectedAgents);
     console.log("agents in cache", agentsInCache);
-    console.log("arg", arg);
+    console.log("query to invalidate", query);
+
     console.log("needsInvalidation", needsInvalidation);
 
     if (needsInvalidation) {
@@ -85,11 +85,9 @@ function HistoryComponent() {
   const { resetDate } = Route.useParams();
   const { agents } = Route.useSearch();
 
-  const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
-  const { data: historyData } = useSuspenseQuery(historyQueryOptions(resetDate, agents ?? []));
-  const { data: jumpGateMostRecentConstructionProgress } = useSuspenseQuery(
-    jumpGateMostRecentProgressQueryOptions(resetDate),
-  );
+  const { data: resetDates } = useQuery(resetDatesQueryOptions);
+  const { data: historyDataFromCache } = useQuery(historyQueryOptions(resetDate, agents ?? []));
+  const { data: jumpGateMostRecentConstructionProgress } = useQuery(jumpGateMostRecentProgressQueryOptions(resetDate));
   const [isLog, setIsLog] = React.useState(true);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -110,19 +108,27 @@ function HistoryComponent() {
   }, [current.leaderboard]);
 
   let selectedReset = useMemo(() => {
-    return resetDates.find((r) => r.resetDate === resetDate);
+    return resetDates?.find((r) => r.resetDate === resetDate);
   }, [resetDate, resetDates]);
 
   let charts = useMemo(() => {
-    console.log(`creating charts for selected agents: ${agents}}`);
+    let agentHistory = historyDataFromCache?.agentHistory.filter((h) => agents?.includes(h.agentSymbol)) ?? [];
+    let constructionMaterialHistory = historyDataFromCache?.constructionMaterialHistory ?? []; //TODO: filter construction entries based on agents
+
+    console.log(`creating charts for selected agents`, agents);
+    console.log(
+      `dataset contains these agents`,
+      agentHistory.map((h) => h.agentSymbol),
+    );
     return renderTimeSeriesCharts(
       true,
-      historyData,
+      agentHistory,
+      constructionMaterialHistory,
       memoizedLeaderboard.sortedAndColoredLeaderboard,
       agents ?? [],
       selectedReset,
     );
-  }, [resetDate, agents, historyData]);
+  }, [resetDate, agents]);
 
   const navigate = useNavigate({ from: Route.fullPath });
 
@@ -151,7 +157,7 @@ function HistoryComponent() {
       selectedAgents={agents ?? []}
       setSelectedAgents={selectAgents}
       memoizedLeaderboard={memoizedLeaderboard}
-      jumpGateMostRecentConstructionProgress={jumpGateMostRecentConstructionProgress}
+      jumpGateMostRecentConstructionProgress={jumpGateMostRecentConstructionProgress?.progressEntries ?? []}
       table={table}
     >
       {/*<ResetHeaderBar*/}
@@ -225,7 +231,8 @@ function createMaterialChartTraces(
 
 function renderTimeSeriesCharts(
   isLog: boolean,
-  { agentHistory, constructionMaterialHistory }: GetHistoryDataForResetResponseContent,
+  agentHistory: Array<ApiAgentHistoryEntry>,
+  constructionMaterialHistory: Array<ApiConstructionMaterialHistoryEntry>,
   sortedAndColoredLeaderboard: UiLeaderboardEntry[],
   selectedAgents: string[],
   selectedReset: ApiResetDateMeta | undefined,
