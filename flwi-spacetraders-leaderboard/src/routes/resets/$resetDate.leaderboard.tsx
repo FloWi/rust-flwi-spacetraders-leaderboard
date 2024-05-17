@@ -263,12 +263,13 @@ function LeaderboardComponent() {
   return (
     <>
       <AgentSelectionSheetPage
+        title={`Leaderboard for Reset ${resetDate}`}
         isLog={isLog}
         setIsLog={setIsLog}
         selectedAgents={agents ?? []}
         setSelectedAgents={selectAgents}
         memoizedLeaderboard={memoizedLeaderboard}
-        jumpGateMostRecentConstructionProgress={jumpGateMostRecentConstructionProgress}
+        jumpGateMostRecentConstructionProgress={jumpGateMostRecentConstructionProgress.progressEntries}
         table={table}
       >
         {agents?.length ?? 0 > 0 ? (

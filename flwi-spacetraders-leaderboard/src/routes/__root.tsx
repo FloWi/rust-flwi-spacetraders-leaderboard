@@ -1,10 +1,19 @@
-import {createRootRouteWithContext, LinkProps, Outlet, useRouterState} from "@tanstack/react-router";
-import {TanStackRouterDevtools} from "@tanstack/router-devtools";
-import {QueryClient} from "@tanstack/react-query";
-import {SwaggerIcon} from "../components/swagger-icon.tsx";
-import {GitHubLogoIcon} from "@radix-ui/react-icons";
-import {resetDatesQueryOptions} from "../utils/queryOptions.ts";
-import {createSamePageOtherResetNavigationMenuItem} from "../utils/resetNavigationHelper.tsx";
+import {
+  createRootRouteWithContext,
+  LinkProps,
+  Outlet,
+  RegisteredRouter,
+  RouteMatch,
+  RouterState,
+  useMatchRoute,
+  useRouterState,
+} from "@tanstack/react-router";
+import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+import { QueryClient } from "@tanstack/react-query";
+import { SwaggerIcon } from "../components/swagger-icon.tsx";
+import { GitHubLogoIcon } from "@radix-ui/react-icons";
+import { resetDatesQueryOptions } from "../utils/queryOptions.ts";
+import { createSamePageOtherResetNavigationMenuItem } from "../utils/resetNavigationHelper.tsx";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -12,8 +21,9 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "../@/components/ui/navigation-menu.tsx";
-import {MyLink} from "../components/myLink.tsx";
+import { MyLink } from "../components/myLink.tsx";
 import * as _ from "lodash";
+import { Separator } from "../@/components/ui/separator.tsx";
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
@@ -22,11 +32,28 @@ declare module "@tanstack/react-router" {
   }
 }
 
+function getTitleOfCurrentResetPage(routerState: RouterState<RegisteredRouter["routeTree"]>) {
+  const deepestMatch: RouteMatch<RegisteredRouter["routeTree"]> | undefined = routerState.matches.at(-1);
+
+  // console.log("routerState", routerState);
+
+  switch (deepestMatch?.routeId) {
+    case "/resets/$resetDate/leaderboard":
+      return "Leaderboard";
+    case "/resets/$resetDate/history":
+      return "History";
+    case "/resets/$resetDate/jump-gate":
+      return "JumpGate";
+    default:
+      return undefined;
+  }
+}
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   loader: async ({
-                   //deps: { agents },
-                   context: {queryClient},
-                 }) => {
+    //deps: { agents },
+    context: { queryClient },
+  }) => {
     return queryClient.ensureQueryData(resetDatesQueryOptions);
   },
 
@@ -34,10 +61,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     const currentState = useRouterState();
     const resetDates = Route.useLoaderData();
 
+    const titleOfCurrentResetPage: string | undefined = getTitleOfCurrentResetPage(currentState);
+
     const otherResetsNavMenuItem = createSamePageOtherResetNavigationMenuItem(
       resetDates.map((r) => r.resetDate),
       currentState,
     );
+
+    const isInnerResetRoute = !!titleOfCurrentResetPage;
 
     let maybeLatestResetDate = _.sortBy(resetDates, (rd) => rd.resetDate)
       .toSorted()
@@ -46,8 +77,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     let currentResetLeaderboardLink = maybeLatestResetDate ? (
       <MyLink
         to="/resets/$resetDate/leaderboard"
-        params={{resetDate: maybeLatestResetDate?.resetDate}}
-        className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+        params={{ resetDate: maybeLatestResetDate?.resetDate }}
+        className="flex h-7 items-center justify-center rounded-full px-2 text-center text-sm transition-colors hover:text-primary text-muted-foreground
               [&.active]:bg-muted
               [&.active]:font-medium
               [&.active]:text-primary
@@ -57,15 +88,65 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       </MyLink>
     ) : null;
 
+    let innerResetNavMenuItem = (
+      <NavigationMenuItem>
+        <NavigationMenuTrigger>{titleOfCurrentResetPage}</NavigationMenuTrigger>
+        <NavigationMenuContent>
+          <ul className="flex flex-col gap-4 p-6 md:w-[400px] lg:w-[500px] ">
+            <li className="">
+              <MyLink
+                to="/resets/$resetDate/leaderboard"
+                params={{
+                  resetDate: maybeLatestResetDate?.resetDate,
+                }}
+                search={true}
+                className="flex h-7 items-center justify-center rounded-full px-2 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+              [&.active]:bg-muted
+              [&.active]:font-medium
+              [&.active]:text-primary"
+              >
+                Leaderboard
+              </MyLink>
+            </li>
+            <li className="">
+              <MyLink
+                to="/resets/$resetDate/jump-gate"
+                search={true}
+                className="flex h-7 items-center justify-center rounded-full px-2 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+              [&.active]:bg-muted
+              [&.active]:font-medium
+              [&.active]:text-primary
+"
+              >
+                Jump-Gate
+              </MyLink>
+            </li>
+            <li className="">
+              <MyLink
+                to="/resets/$resetDate/history"
+                search={true}
+                className="flex h-7 items-center justify-center rounded-full px-2 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+              [&.active]:bg-muted
+              [&.active]:font-medium
+              [&.active]:text-primary
+"
+              >
+                History
+              </MyLink>
+            </li>
+          </ul>
+        </NavigationMenuContent>
+      </NavigationMenuItem>
+    );
     return (
       <>
         <div>
-          <div className="min-w-full table p-4">
-            <div className="flex flex-row items-center">
+          <div className="min-w-full table top-0 fixed z-10 h-12 bg-background shadow-md">
+            <div className="flex flex-row px-1 items-center">
               <NavigationMenu>
                 <NavigationMenuList>
                   <NavigationMenuItem>
-                    <NavigationMenuTrigger>Pages</NavigationMenuTrigger>
+                    <NavigationMenuTrigger>Nav</NavigationMenuTrigger>
                     <NavigationMenuContent>
                       <ul className="flex flex-col gap-4 p-6 md:w-[400px] lg:w-[500px] ">
                         <li className="">
@@ -74,7 +155,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                             params={{
                               resetDate: maybeLatestResetDate?.resetDate,
                             }}
-                            className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+                            className="flex h-7 items-center justify-center rounded-full px-2 text-center text-sm transition-colors hover:text-primary text-muted-foreground
               [&.active]:bg-muted
               [&.active]:font-medium
               [&.active]:text-primary"
@@ -85,7 +166,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                         <li className="">
                           <MyLink
                             to="/resets"
-                            className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+                            className="flex h-7 items-center justify-center rounded-full px-2 text-center text-sm transition-colors hover:text-primary text-muted-foreground
               [&.active]:bg-muted
               [&.active]:font-medium
               [&.active]:text-primary
@@ -101,7 +182,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                             params={{
                               resetDate: maybeLatestResetDate?.resetDate,
                             }}
-                            className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+                            className="flex h-7 items-center justify-center rounded-full px-2 text-center text-sm transition-colors hover:text-primary text-muted-foreground
               [&.active]:bg-muted
               [&.active]:font-medium
               [&.active]:text-primary
@@ -110,85 +191,42 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                             All Time Comparison
                           </MyLink>
                         </li>
+                        <li>
+                          <Separator />
+                          <div className="flex flex-row gap-4 mt-4">
+                            <a href="/docs/swagger-ui" title="Swagger API docs" target="_blank">
+                              <SwaggerIcon.icon className="mr-2 h-6 w-6" title="Swagger API docs" />
+                            </a>
+                            <a
+                              href="https://github.com/FloWi/rust-flwi-spacetraders-leaderboard"
+                              title="Github Repository"
+                              target="_blank"
+                            >
+                              <GitHubLogoIcon className="mr-2 h-6 w-6" />
+                            </a>
+                          </div>
+                        </li>
                       </ul>
                     </NavigationMenuContent>
                   </NavigationMenuItem>
                   {otherResetsNavMenuItem}
-                  <NavigationMenuItem>
-                    <NavigationMenuTrigger>This reset</NavigationMenuTrigger>
-                    <NavigationMenuContent>
-                      <ul className="flex flex-col gap-4 p-6 md:w-[400px] lg:w-[500px] ">
-                        <li className="">
-                          <MyLink
-                            to="/resets/$resetDate/leaderboard"
-                            params={{
-                              resetDate: maybeLatestResetDate?.resetDate,
-                            }}
-                            search={true}
-                            className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
-              [&.active]:bg-muted
-              [&.active]:font-medium
-              [&.active]:text-primary"
-                          >
-                            Leaderboard
-                          </MyLink>
-                        </li>
-                        <li className="">
-                          <MyLink
-                            to="/resets/$resetDate/jump-gate"
-                            search={true}
-                            className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
-              [&.active]:bg-muted
-              [&.active]:font-medium
-              [&.active]:text-primary
-"
-                          >
-                            Jump-Gate
-                          </MyLink>
-                        </li>
-                        <li className="">
-                          <MyLink
-                            to="/resets/$resetDate/history"
-                            search={true}
-                            className="flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
-              [&.active]:bg-muted
-              [&.active]:font-medium
-              [&.active]:text-primary
-"
-                          >
-                            History
-                          </MyLink>
-                        </li>
-                      </ul>
-                    </NavigationMenuContent>
-                  </NavigationMenuItem>
+                  {isInnerResetRoute ? innerResetNavMenuItem : <></>}
                 </NavigationMenuList>
               </NavigationMenu>
-
-              <a className="ml-auto" href="/docs/swagger-ui" title="Swagger API docs" target="_blank">
-                <SwaggerIcon.icon className="mr-2 h-6 w-6" title="Swagger API docs"/>
-              </a>
-              <a
-                href="https://github.com/FloWi/rust-flwi-spacetraders-leaderboard"
-                title="Github Repository"
-                target="_blank"
-              >
-                <GitHubLogoIcon className="mr-2 h-6 w-6"/>
-              </a>
             </div>
+            <Separator />
           </div>
-          <hr/>
-          <div className="p-4">
-            <Outlet/>
+          <div className="p-4 pt-12">
+            <Outlet />
           </div>
         </div>
-        <TanStackRouterDevtools/>
+        <TanStackRouterDevtools />
       </>
     );
   },
 });
 
 // active
-// flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary bg-muted font-medium text-primary
+// flex h-7 items-center justify-center rounded-full px-2 text-center text-sm transition-colors hover:text-primary bg-muted font-medium text-primary
 //inactive
-// flex h-7 items-center justify-center rounded-full px-4 text-center text-sm transition-colors hover:text-primary text-muted-foreground
+// flex h-7 items-center justify-center rounded-full px-2 text-center text-sm transition-colors hover:text-primary text-muted-foreground

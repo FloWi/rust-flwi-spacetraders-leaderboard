@@ -21,8 +21,6 @@ import * as _ from "lodash";
 import {AgentSelectionSheetPage} from "../../components/agent-selection-sheet-page.tsx";
 import {createLeaderboardTable} from "../../components/agent-selection-table.tsx";
 import {RowSelectionState, SortingState} from "@tanstack/react-table";
-import {uniq} from "lodash";
-import {options} from "axios";
 
 type AgentSelectionSearch = {
   agents?: string[];
@@ -188,6 +186,7 @@ function HistoryComponent() {
 
   return (
     <AgentSelectionSheetPage
+      title={`History for Reset ${resetDate}`}
       isLog={isLog}
       setIsLog={setIsLog}
       selectedAgents={agents ?? []}
@@ -197,8 +196,7 @@ function HistoryComponent() {
       table={table}
     >
       <div className="flex flex-col gap-4">
-        <h2 className="text-2xl font-bold pt-4">History for Reset {resetDate}</h2>
-        <p>{`Displaying charts for ${agentsWithData.length} agent(s). ${noDataMessage ?? ""}`}</p>
+        <p className="text-sm text-muted-foreground">{`Displaying charts for ${agentsWithData.length} agent(s). ${noDataMessage ?? ""}`}</p>
 
         {charts}
       </div>
@@ -350,8 +348,8 @@ type LineChartConfig = {
 function renderLineChart({isLog, mutedColorTitle, title, data}: LineChartConfig) {
   return (
     <div key={title}>
-      <div className="flex flex-row">
-        <h3 className="text-sm font-bold">{title}</h3>
+      <div className="flex flex-row items-center">
+        <h3 className="text-lg font-bold">{title}</h3>
         {mutedColorTitle ? <p className="text-sm text-muted-foreground">&nbsp; | &nbsp;</p> : <></>}
         {mutedColorTitle ? <p className="text-sm text-muted-foreground">{mutedColorTitle}</p> : <></>}
       </div>
