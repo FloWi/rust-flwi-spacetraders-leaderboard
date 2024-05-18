@@ -76,23 +76,32 @@
     }
 }
 
-.desktop-page {
-    margin: 0;
-    height: 100vh;
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: auto auto 1fr;
-    grid-template-areas: "header header" "subheader subheader" "left content";;
-    /* why fr and not vw/vh/% ? -> you can add some gaps */
-    gap: 3px;
-}
 
+.desktop-page,
 .mobile-page {
     margin: 0;
     height: 100vh;
     display: grid;
+}
+
+
+.desktop-page {
+    grid-template-columns: auto 1fr;
     grid-template-rows: auto auto 1fr;
-    grid-template-areas: "header" "subheader" "content";
+    grid-template-areas:
+            "header    header"
+            "subheader subheader"
+            "left      content";
+    /* why fr and not vw/vh/% ? -> you can add some gaps */
+    column-gap: 2rem;
+}
+
+.mobile-page {
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+            "header"
+            "subheader"
+            "content";
     /* why fr and not vw/vh/% ? -> you can add some gaps */
     gap: 3px;
 }
