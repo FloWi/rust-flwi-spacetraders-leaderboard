@@ -1,4 +1,4 @@
-import {createFileRoute, useNavigate} from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   historyBaseQueryKey,
   jumpGateMostRecentProgressQueryOptions,
@@ -6,21 +6,21 @@ import {
   preciseHistoryQueryOptions,
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
-import {Query, QueryCache, useQuery, useSuspenseQuery} from "@tanstack/react-query";
+import { Query, QueryCache, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import Plot from "react-plotly.js";
-import React, {useEffect, useMemo} from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   ApiAgentHistoryEntry,
   ApiConstructionMaterialHistoryEntry,
   ApiResetDateMeta,
   GetHistoryDataForResetResponseContent,
 } from "../../../generated";
-import {Data} from "plotly.js";
-import {calcSortedAndColoredLeaderboard, UiLeaderboardEntry} from "../../lib/leaderboard-helper.ts";
+import { Data } from "plotly.js";
+import { calcSortedAndColoredLeaderboard, UiLeaderboardEntry } from "../../lib/leaderboard-helper.ts";
 import * as _ from "lodash";
-import {AgentSelectionSheetPage} from "../../components/agent-selection-sheet-page.tsx";
-import {createLeaderboardTable} from "../../components/agent-selection-table.tsx";
-import {RowSelectionState, SortingState} from "@tanstack/react-table";
+import { AgentSelectionSheetPage } from "../../components/agent-selection-sheet-page.tsx";
+import { createLeaderboardTable } from "../../components/agent-selection-table.tsx";
+import { RowSelectionState, SortingState } from "@tanstack/react-table";
 
 type AgentSelectionSearch = {
   agents?: string[];
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
   component: HistoryComponent,
   pendingComponent: () => <div>Loading...</div>,
 
-  staticData: {customData: "I'm the history route"},
+  staticData: { customData: "I'm the history route" },
 
   validateSearch: (search: Record<string, unknown>): AgentSelectionSearch => {
     // validate and parse the search params into a typed state
@@ -39,7 +39,7 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
     };
   },
 
-  loaderDeps: ({search: {agents}}) => ({agents}),
+  loaderDeps: ({ search: { agents } }) => ({ agents }),
 
   beforeLoad: async (arg) => {
     console.log("before load:");
@@ -58,7 +58,7 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
 
       console.log(`found exact match for agents ${agentsInCache}- no need to refresh/fetch anything`);
     } else {
-      let existingQueries: Array<Query> = queryCache.findAll({queryKey: historyBaseQueryKey(arg.params.resetDate)});
+      let existingQueries: Array<Query> = queryCache.findAll({ queryKey: historyBaseQueryKey(arg.params.resetDate) });
 
       let queryEvaluationResults = bestMatchingQuery(queryCache, existingQueries, selectedAgents);
       console.log("queryEvaluationResults", queryEvaluationResults);
@@ -72,11 +72,11 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
         let entry: GetHistoryDataForResetResponseContent | undefined = matchingQuery?.state?.data;
         let modifiedEntry = entry
           ? {
-            ...entry,
-            requestedAgents: selectedAgents,
-            agentHistory: entry.agentHistory.filter((h) => selectedAgents.includes(h.agentSymbol)),
-            //TODO: filter construction entries
-          }
+              ...entry,
+              requestedAgents: selectedAgents,
+              agentHistory: entry.agentHistory.filter((h) => selectedAgents.includes(h.agentSymbol)),
+              //TODO: filter construction entries
+            }
           : undefined;
         queryClient.setQueryData(preciseOptions.queryKey, modifiedEntry, {
           updatedAt: matchingQuery?.state.dataUpdatedAt,
@@ -87,7 +87,7 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
     }
   },
 
-  loader: async ({params: {resetDate}, context: {queryClient}, deps: {agents}}) => {
+  loader: async ({ params: { resetDate }, context: { queryClient }, deps: { agents } }) => {
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
 
@@ -100,31 +100,31 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
 
 function bestMatchingQuery(queryCache: QueryCache, existingQueries: Array<Query>, selectedAgents: string[]) {
   return existingQueries.map((q) => {
-    let typedQuery = queryCache.find<GetHistoryDataForResetResponseContent>({queryKey: q.queryKey});
+    let typedQuery = queryCache.find<GetHistoryDataForResetResponseContent>({ queryKey: q.queryKey });
     let agents = _.sortedUniq(typedQuery?.state.data?.requestedAgents ?? []);
     let intersection = _.intersection(selectedAgents, agents);
     let isMatch = _.isEqual(selectedAgents, intersection);
-    return {typedQuery, agents, intersection, isMatch};
+    return { typedQuery, agents, intersection, isMatch };
   });
 }
 
 function HistoryComponent() {
-  const {resetDate} = Route.useParams();
-  const {agents} = Route.useSearch();
+  const { resetDate } = Route.useParams();
+  const { agents } = Route.useSearch();
 
-  const {data: resetDates} = useQuery(resetDatesQueryOptions);
-  const {data: historyDataFromCache} = useQuery(preciseHistoryQueryOptions(resetDate, agents ?? []));
-  const {data: jumpGateMostRecentConstructionProgress} = useQuery(jumpGateMostRecentProgressQueryOptions(resetDate));
+  const { data: resetDates } = useQuery(resetDatesQueryOptions);
+  const { data: historyDataFromCache } = useQuery(preciseHistoryQueryOptions(resetDate, agents ?? []));
+  const { data: jumpGateMostRecentConstructionProgress } = useQuery(jumpGateMostRecentProgressQueryOptions(resetDate));
   const [isLog, setIsLog] = React.useState(true);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({}); //manage your own row selection state
 
-  const {data: leaderboardData} = useSuspenseQuery(leaderboardQueryOptions(resetDate));
+  const { data: leaderboardData } = useSuspenseQuery(leaderboardQueryOptions(resetDate));
   // const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
   const leaderboardEntries = leaderboardData.leaderboardEntries;
 
-  let current = {leaderboard: leaderboardEntries};
+  let current = { leaderboard: leaderboardEntries };
 
   let memoizedLeaderboard = React.useMemo(() => {
     let selectedAgents: Record<string, boolean> = {};
@@ -157,7 +157,7 @@ function HistoryComponent() {
     );
   }, [resetDate, historyDataFromCache, isLog]);
 
-  const navigate = useNavigate({from: Route.fullPath});
+  const navigate = useNavigate({ from: Route.fullPath });
 
   useEffect(() => {
     let newAgentSelection = Object.keys(rowSelection);
@@ -171,7 +171,7 @@ function HistoryComponent() {
   }, [resetDate, rowSelection]);
 
   const selectAgents = (newSelectedAgents: string[]) => {
-    const newSelection: RowSelectionState = newSelectedAgents.reduce((o, key) => ({...o, [key]: true}), {});
+    const newSelection: RowSelectionState = newSelectedAgents.reduce((o, key) => ({ ...o, [key]: true }), {});
     setRowSelection((_) => newSelection);
   };
 
@@ -186,7 +186,7 @@ function HistoryComponent() {
 
   return (
     <AgentSelectionSheetPage
-      title={`History for Reset ${resetDate}`}
+      title="History"
       isLog={isLog}
       setIsLog={setIsLog}
       selectedAgents={agents ?? []}
@@ -228,7 +228,7 @@ function createMaterialChartTraces(
 
     let agentsInThisSystem = sortedAndColoredLeaderboard
       .map((lb, idx) => {
-        return {...lb, rank: idx + 1};
+        return { ...lb, rank: idx + 1 };
       })
       .filter((lb) => lb.jumpGateWaypointSymbol === h.jumpGateWaypointSymbol)
       .map((lb) => lb);
@@ -296,7 +296,7 @@ function renderTimeSeriesCharts(
     tradeSymbol: string;
     required: number;
     materialChartTraces: Data[];
-  }[] = _.sortBy(constructionMaterialTradeSymbols, (cm) => cm.tradeSymbol).map(({tradeSymbol, required}) => {
+  }[] = _.sortBy(constructionMaterialTradeSymbols, (cm) => cm.tradeSymbol).map(({ tradeSymbol, required }) => {
     return {
       tradeSymbol,
       required,
@@ -311,7 +311,7 @@ function renderTimeSeriesCharts(
   });
 
   const materialChartConfigs: LineChartConfig[] = materialTraces.map(
-    ({tradeSymbol, required, materialChartTraces}) => {
+    ({ tradeSymbol, required, materialChartTraces }) => {
       return {
         title: tradeSymbol,
         mutedColorTitle: `${required} required`,
@@ -345,7 +345,7 @@ type LineChartConfig = {
   data: Data[];
 };
 
-function renderLineChart({isLog, mutedColorTitle, title, data}: LineChartConfig) {
+function renderLineChart({ isLog, mutedColorTitle, title, data }: LineChartConfig) {
   return (
     <div key={title}>
       <div className="flex flex-row items-center">
@@ -365,9 +365,9 @@ function renderLineChart({isLog, mutedColorTitle, title, data}: LineChartConfig)
             t: 50,
             //pad: 4,
           },
-          modebar: {orientation: "h"},
+          modebar: { orientation: "h" },
           showlegend: false,
-          legend: {orientation: "h"},
+          legend: { orientation: "h" },
 
           height: 500,
           font: {
@@ -395,7 +395,7 @@ function renderLineChart({isLog, mutedColorTitle, title, data}: LineChartConfig)
             tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
           },
         }}
-        config={{displayModeBar: false, responsive: true}}
+        config={{ displayModeBar: false, responsive: true }}
       />
     </div>
   );
