@@ -1,7 +1,7 @@
-import { UiLeaderboardEntry } from "../lib/leaderboard-helper.ts";
-import { ApiConstructionMaterialMostRecentProgressEntry } from "../../generated";
-import { Table } from "@tanstack/react-table";
-import React, { ReactNode } from "react";
+import {UiLeaderboardEntry} from "../lib/leaderboard-helper.ts";
+import {ApiConstructionMaterialMostRecentProgressEntry} from "../../generated";
+import {Table} from "@tanstack/react-table";
+import {JSX, ReactNode} from "react";
 import {
   Sheet,
   SheetContent,
@@ -11,12 +11,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../@/components/ui/sheet.tsx";
-import { HamburgerMenuIcon } from "@radix-ui/react-icons";
-import { Switch } from "../@/components/ui/switch.tsx";
-import { Label } from "../@/components/ui/label.tsx";
-import { ScrollArea } from "../@/components/ui/scroll-area.tsx";
-import { prettyTable } from "./prettyTable.tsx";
-import { Button } from "../@/components/ui/button.tsx";
+import {HamburgerMenuIcon} from "@radix-ui/react-icons";
+import {Switch} from "../@/components/ui/switch.tsx";
+import {Label} from "../@/components/ui/label.tsx";
+import {ScrollArea} from "../@/components/ui/scroll-area.tsx";
+import {prettyTable} from "./prettyTable.tsx";
+import {Button} from "../@/components/ui/button.tsx";
+import {useMediaQuery} from "react-responsive";
 
 type SheetPageProps = {
   title: string;
@@ -34,16 +35,16 @@ type SheetPageProps = {
 };
 
 export function AgentSelectionSheetPage({
-  title,
-  isLog,
-  memoizedLeaderboard,
-  jumpGateMostRecentConstructionProgress,
-  selectedAgents,
-  setIsLog,
-  setSelectedAgents,
-  table,
-  children,
-}: SheetPageProps) {
+                                          title,
+                                          isLog,
+                                          memoizedLeaderboard,
+                                          jumpGateMostRecentConstructionProgress,
+                                          selectedAgents,
+                                          setIsLog,
+                                          setSelectedAgents,
+                                          table,
+                                          children,
+                                        }: SheetPageProps) {
   let top10Agents = memoizedLeaderboard.sortedAndColoredLeaderboard.slice(0, 10).map((e) => e.agentSymbol);
 
   let jumpGatesUnderConstruction = jumpGateMostRecentConstructionProgress
@@ -81,57 +82,65 @@ export function AgentSelectionSheetPage({
   // Mobile view shows the hamburger-menu and the lg-view shows the side panel all the time
   // TODO: DRY up this view to make it clear what is being shown when
 
-  return (
-    <div className="flex flex-col gap-4 lg:w-full">
+  let sheetContent = (
+    <SheetContent side="left" className="w-11/12 h-5/6 lg:w-fit flex flex-col gap-4">
+      <SheetHeader className="space-y-1">
+        <SheetTitle className="text-sm font-medium leading-none">Agent Selection</SheetTitle>
+        <SheetDescription>
+          <div className="text-sm text-muted-foreground">
+            {selectedAgents.length} of {memoizedLeaderboard.sortedAndColoredLeaderboard.length} selected
+          </div>
+        </SheetDescription>
+      </SheetHeader>
+      <ScrollArea>
+        <div className="flex flex-col gap-4 mt-2 p-2">
+          <div className="flex items-center space-x-2 text-sm">
+            <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog}/>
+            <Label htmlFor="log-y-axis">Log y-axis</Label>
+          </div>
+          {preselectionButtons}
+          {prettyTable(table)}
+        </div>
+      </ScrollArea>
+      <SheetFooter>{preselectionButtons}</SheetFooter>
+    </SheetContent>
+  );
+
+  const isDesktopOrLaptop = useMediaQuery({
+    query: "(min-width: 1024px)",
+  });
+
+  //const isTabletOrMobile = useMediaQuery({ query: "(max-width: 1024px)" });
+
+  function mobileLayout(): JSX.Element {
+    return (
       <Sheet>
-        <div className="flex flex-row gap-2 mt-4">
+        <div className="sub-header flex flex-row gap-2 mt-4">
           <h2 className="text-2xl font-bold">{title}</h2>
           <SheetTrigger asChild className={`block lg:hidden mr-2`}>
-            <HamburgerMenuIcon />
+            <HamburgerMenuIcon/>
           </SheetTrigger>
+          {sheetContent}
         </div>
-        <SheetContent side="left" className="w-11/12 h-5/6 lg:w-fit flex flex-col gap-4">
-          <SheetHeader className="space-y-1">
-            <SheetTitle className="text-sm font-medium leading-none">Agent Selection</SheetTitle>
-            <SheetDescription>
-              <div className="text-sm text-muted-foreground">
-                {selectedAgents.length} of {memoizedLeaderboard.sortedAndColoredLeaderboard.length} selected
-              </div>
-            </SheetDescription>
-          </SheetHeader>
-          <ScrollArea>
-            <div className="flex flex-col gap-4 mt-2 p-2">
-              <div className="flex items-center space-x-2 text-sm">
-                <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog} />
-                <Label htmlFor="log-y-axis">Log y-axis</Label>
-              </div>
-              {preselectionButtons}
-              {prettyTable(table)}
-            </div>
-          </ScrollArea>
-          <SheetFooter>{preselectionButtons}</SheetFooter>
-        </SheetContent>
-        <div className="flex flex-row gap-4">
-          <div className="hidden lg:flex flex-col gap-2 mt-2">
-            <div className="text-sm font-medium leading-none">Agent Selection</div>
-            <div className="text-sm text-muted-foreground">
-              {selectedAgents.length} of {memoizedLeaderboard.sortedAndColoredLeaderboard.length} agents selected
-            </div>
-            <ScrollArea className="lg:h-5/6">
-              <div className="flex flex-col gap-2 mt-2 h-fit">
-                <div className="flex items-center space-x-2 text-sm">
-                  <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog} />
-                  <Label htmlFor="log-y-axis">Log y-axis</Label>
-                </div>
-                {preselectionButtons}
-                {prettyTable(table)}
-                {preselectionButtons}
-              </div>
-            </ScrollArea>
-          </div>
-          <div className="h-fit overflow-y-auto">{children}</div>
+        <div className="content flex flex-row gap-4">
+          <div className="h-fit w-full">{children}</div>
         </div>
       </Sheet>
-    </div>
-  );
+    );
+  }
+
+  function desktopLayout(): JSX.Element {
+    return (
+      <>
+        <div className="sub-header">Hello, sub-header</div>
+        <div className="left">
+          {preselectionButtons}
+          {prettyTable(table)}
+        </div>
+        <div className="content">{children}</div>
+      </>
+    );
+  }
+
+  return isDesktopOrLaptop ? desktopLayout() : mobileLayout();
 }
