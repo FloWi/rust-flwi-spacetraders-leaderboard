@@ -1,16 +1,16 @@
-import {createFileRoute, Link, Outlet} from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 
-import {OpenAPI} from "../../../generated";
-import {resetDatesQueryOptions} from "../../utils/queryOptions.ts";
+import { OpenAPI } from "../../../generated";
+import { resetDatesQueryOptions } from "../../utils/queryOptions.ts";
 
 OpenAPI.BASE = "http://localhost:8080";
 
 export const Route = createFileRoute("/resets/")({
   component: ResetRouteComponent,
   loader: async ({
-                   //deps: { agents },
-                   context: {queryClient},
-                 }) => {
+    //deps: { agents },
+    context: { queryClient },
+  }) => {
     return queryClient.ensureQueryData(resetDatesQueryOptions);
   },
 });
@@ -20,9 +20,11 @@ function ResetRouteComponent() {
 
   return (
     <>
-      <div className="flex flex-row gap-6">
+      <div className="sub-header">
+        <h2>Resets</h2>
+      </div>
+      <div className="content flex flex-row gap-6">
         <div>
-          <h2>Resets</h2>
           <nav>
             <ul>
               {resetDates
@@ -32,7 +34,7 @@ function ResetRouteComponent() {
                   <li key={idx}>
                     <Link
                       to="/resets/$resetDate/leaderboard"
-                      params={{resetDate: date.resetDate}}
+                      params={{ resetDate: date.resetDate }}
                       // search={{agents: ["WHYANDO", "SG-1-DEVX56"]}}
                       className="[&.active]:font-bold"
                     >
@@ -44,7 +46,7 @@ function ResetRouteComponent() {
           </nav>
         </div>
 
-        <Outlet/>
+        <Outlet />
       </div>
     </>
   );
