@@ -37,7 +37,7 @@ pub(crate) async fn load_or_create_reset_date(
         Some(rd) => Ok(rd),
         None => {
             let reset_date = insert_reset_date(pool, reset_date, now).await?;
-            Ok(load_reset_date(pool, reset_date).await?.unwrap())
+            Ok(reset_date)
         }
     }
 }
@@ -46,18 +46,26 @@ async fn insert_reset_date(
     pool: &Pool<Sqlite>,
     reset_date: NaiveDate,
     now: NaiveDateTime,
-) -> Result<NaiveDate, Error> {
-    sqlx::query_scalar!(
+) -> Result<ResetDate, Error> {
+    let reset_id = sqlx::query_scalar!(
         "
 insert into reset_date (reset, first_ts)
 VALUES (?, ?)
-returning reset
+returning reset_id
         ",
         reset_date,
         now,
     )
     .fetch_one(pool)
-    .await
+    .await?;
+
+    Ok(ResetDate {
+        reset_id,
+        reset: reset_date,
+        first_ts: now,
+        latest_ts: now,
+        is_ongoing: true,
+    })
 }
 
 async fn load_latest_reset_date(pool: &Pool<Sqlite>) -> Result<Option<ResetDate>, Error> {
@@ -67,10 +75,10 @@ async fn load_latest_reset_date(pool: &Pool<Sqlite>) -> Result<Option<ResetDate>
 select r.reset_id as "reset_id!"
      , r.reset as "reset!"
      , r.first_ts as "first_ts!"
-     , max(jr.query_time) as "latest_ts! :_"
+     , coalesce(max(jr.query_time), r.first_ts) as "latest_ts! :_"
      , (select count(*) from reset_date next where next.reset > r.reset ) = 0 as "is_ongoing! :_"
   from reset_date r
-  join main.job_run jr
+  left join main.job_run jr
        on r.reset_id = jr.reset_id
 group by r.reset_id, r.first_ts, r.reset
 order by r.reset desc
