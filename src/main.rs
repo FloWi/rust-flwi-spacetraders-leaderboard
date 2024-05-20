@@ -1,5 +1,5 @@
+use std::fs;
 use std::time::Duration;
-use std::{env, fs};
 
 use anyhow::Result;
 use clap::Parser;
