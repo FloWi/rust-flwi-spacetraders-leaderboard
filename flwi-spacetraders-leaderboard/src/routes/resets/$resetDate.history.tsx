@@ -183,7 +183,7 @@ function HistoryComponent() {
   const agentsWithMissingData = _.difference(agents, agentsWithData);
   const noDataMessage =
     agentsWithMissingData.length > 0
-      ? `No data for ${agentsWithMissingData.length} agent(s) in this duration: ${agentsWithMissingData.join(", ")}`
+      ? `No data for ${agentsWithMissingData.length} agent(s) in this period: ${agentsWithMissingData.join(", ")}`
       : undefined;
 
   return (
