@@ -1,4 +1,4 @@
-import {createFileRoute} from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -7,12 +7,12 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import React, {JSX, useMemo} from "react";
-import {prettyTable} from "../../components/prettyTable.tsx";
-import {ApiJumpGateAssignmentEntry} from "../../../generated";
-import {useSuspenseQuery} from "@tanstack/react-query";
-import {Separator} from "../../@/components/ui/separator.tsx";
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "../../@/components/ui/card.tsx";
+import React, { JSX, useMemo } from "react";
+import { prettyTable } from "../../components/prettyTable.tsx";
+import { ApiJumpGateAssignmentEntry } from "../../../generated";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { Separator } from "../../@/components/ui/separator.tsx";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../@/components/ui/card.tsx";
 import {
   aggregateJumpGateStats,
   aggregateMaterialsSummary,
@@ -23,20 +23,19 @@ import {
   rawData,
 } from "../../lib/constructionHelper.ts";
 
-import {durationMillis} from "../../lib/utils.ts";
-import {intNumberFmt, percentNumberFmt, prettyDuration} from "../../lib/formatters.ts";
+import { durationMillis } from "../../lib/utils.ts";
+import { intNumberFmt, percentNumberFmt, prettyDuration } from "../../lib/formatters.ts";
 import {
   jumpGateAssignmentsQueryOptions,
   jumpGateMostRecentProgressQueryOptions,
   leaderboardQueryOptions,
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
-import {CircleCheckBigIcon} from "lucide-react";
-import {renderKvPair} from "../../lib/key-value-card-helper.tsx";
-import {AgentSelectionSheetPage} from "../../components/agent-selection-sheet-page.tsx";
-import {calcSortedAndColoredLeaderboard} from "../../lib/leaderboard-helper.ts";
-import {createLeaderboardTable} from "../../components/agent-selection-table.tsx";
-import {ScrollArea} from "../../@/components/ui/scroll-area.tsx";
+import { CircleCheckBigIcon } from "lucide-react";
+import { renderKvPair } from "../../lib/key-value-card-helper.tsx";
+import { AgentSelectionSheetPage } from "../../components/agent-selection-sheet-page.tsx";
+import { calcSortedAndColoredLeaderboard } from "../../lib/leaderboard-helper.ts";
+import { createLeaderboardTable } from "../../components/agent-selection-table.tsx";
 
 const columnHelperConstructionOverview = createColumnHelper<ConstructionProgressEntry>();
 const columnHelperJumpGateAssignment = createColumnHelper<ApiJumpGateAssignmentEntry>();
@@ -49,7 +48,7 @@ const columns = [
   }),
   columnHelperConstructionOverview.accessor("isJumpGateComplete", {
     header: "Is Gate Complete",
-    cell: (info) => (info.getValue() ? <CircleCheckBigIcon/> : <></>),
+    cell: (info) => (info.getValue() ? <CircleCheckBigIcon /> : <></>),
     footer: (info) => info.column.id,
   }),
   columnHelperConstructionOverview.accessor("tradeSymbol", {
@@ -183,8 +182,8 @@ type AgentSelectionSearch = {
 export const Route = createFileRoute("/resets/$resetDate/jump-gate")({
   component: JumpGateComponent,
   pendingComponent: () => <div>Loading...</div>,
-  staticData: {customData: "I'm the jump gate route"},
-  loaderDeps: ({search: {agents}}) => ({agents}),
+  staticData: { customData: "I'm the jump gate route" },
+  loaderDeps: ({ search: { agents } }) => ({ agents }),
   validateSearch: (search: Record<string, unknown>): AgentSelectionSearch => {
     // validate and parse the search params into a typed state
     return {
@@ -193,10 +192,10 @@ export const Route = createFileRoute("/resets/$resetDate/jump-gate")({
   },
 
   loader: async ({
-                   //deps: { agents },
-                   params: {resetDate},
-                   context: {queryClient},
-                 }) => {
+    //deps: { agents },
+    params: { resetDate },
+    context: { queryClient },
+  }) => {
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
     queryClient.prefetchQuery(jumpGateAssignmentsQueryOptions(resetDate));
@@ -230,8 +229,8 @@ function renderJumpGateSummary(jumpGateSummary: {
 }
 
 function JumpGateComponent(): JSX.Element {
-  const {resetDate} = Route.useParams();
-  const {agents} = Route.useSearch();
+  const { resetDate } = Route.useParams();
+  const { agents } = Route.useSearch();
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({}); //manage your own row selection state
@@ -240,18 +239,18 @@ function JumpGateComponent(): JSX.Element {
 
   const [sortingAssignment, setSortingAssignment] = React.useState<SortingState>([]);
 
-  const {data: leaderboardData} = useSuspenseQuery(leaderboardQueryOptions(resetDate));
+  const { data: leaderboardData } = useSuspenseQuery(leaderboardQueryOptions(resetDate));
 
   const leaderboardEntries = leaderboardData.leaderboardEntries;
 
-  const {data: jumpGateMostRecentConstructionProgress} = useSuspenseQuery(
+  const { data: jumpGateMostRecentConstructionProgress } = useSuspenseQuery(
     jumpGateMostRecentProgressQueryOptions(resetDate),
   );
 
-  const {data: jumpGateData} = useSuspenseQuery(jumpGateAssignmentsQueryOptions(resetDate));
+  const { data: jumpGateData } = useSuspenseQuery(jumpGateAssignmentsQueryOptions(resetDate));
   //const {data: resetDates} = useSuspenseQuery(resetDatesQueryOptions);
 
-  let current = {leaderboard: leaderboardEntries};
+  let current = { leaderboard: leaderboardEntries };
 
   let memoizedLeaderboard = React.useMemo(() => {
     let selectedAgents: Record<string, boolean> = {};
@@ -290,7 +289,7 @@ function JumpGateComponent(): JSX.Element {
     getRowId: (row) => `${row.jumpGateWaypointSymbol}`,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    state: {sorting: sortingAssignment},
+    state: { sorting: sortingAssignment },
     onSortingChange: setSortingAssignment,
     debugTable: true,
   });
@@ -302,7 +301,7 @@ function JumpGateComponent(): JSX.Element {
     getRowId: (row) => `${row.jumpGateWaypointSymbol}-${row.tradeSymbol}`,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    state: {sorting: sortingConstruction},
+    state: { sorting: sortingConstruction },
     onSortingChange: setSortingConstruction,
     debugTable: true,
   });
@@ -325,9 +324,9 @@ function JumpGateComponent(): JSX.Element {
         table={leaderboardTable}
       >
         <div className="flex flex-col gap-x-2 gap-y-4 lg:p-6">
-          <Separator orientation="horizontal"/>
+          <Separator orientation="horizontal" />
           {renderJumpGateSummary(jumpGateSummary)}
-          <Separator orientation="horizontal"/>
+          <Separator orientation="horizontal" />
           <div className="flex flex-col md:flex-row gap-4">
             {constructionMaterialSummary.map(renderConstructionMaterialSummary)}
           </div>
@@ -342,13 +341,13 @@ function JumpGateComponent(): JSX.Element {
 }
 
 const renderConstructionMaterialSummary = ({
-                                             tradeSymbol,
-                                             numStartedDeliveries,
-                                             numCompletedDeliveries,
-                                             fastestFirstDeliveryMs,
-                                             fastestLastDeliveryMs,
-                                             fastestConstructionMs,
-                                           }: MaterialSummary) => {
+  tradeSymbol,
+  numStartedDeliveries,
+  numCompletedDeliveries,
+  fastestFirstDeliveryMs,
+  fastestLastDeliveryMs,
+  fastestConstructionMs,
+}: MaterialSummary) => {
   return (
     <Card key={`material-summary-${tradeSymbol}`} className="w-[350px]">
       <CardHeader>
