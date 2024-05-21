@@ -1,6 +1,6 @@
-import {createFileRoute} from "@tanstack/react-router";
-import React, {useMemo} from "react";
-import {ApiAllTimeRankEntry, mockDataAllTime} from "../../lib/all-time-testdata.ts";
+import { createFileRoute } from "@tanstack/react-router";
+import React, { JSX, useMemo } from "react";
+import { ApiAllTimeRankEntry, mockDataAllTime } from "../../lib/all-time-testdata.ts";
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -8,18 +8,16 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import {intNumberFmt} from "../../lib/formatters.ts";
-import {ToggleGroup, ToggleGroupItem} from "../../@/components/ui/toggle-group.tsx";
-import {prettyTable} from "../../components/prettyTable.tsx";
+import { intNumberFmt } from "../../lib/formatters.ts";
+import { ToggleGroup, ToggleGroupItem } from "../../@/components/ui/toggle-group.tsx";
+import { prettyTable } from "../../components/prettyTable.tsx";
 import Plot from "react-plotly.js";
-import {PlotType} from "plotly.js";
-import {Switch} from "../../@/components/ui/switch.tsx";
-import {Label} from "../../@/components/ui/label.tsx";
-import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger} from "../../@/components/ui/sheet.tsx";
-import {HamburgerMenuIcon} from "@radix-ui/react-icons";
-import {ScrollArea} from "../../@/components/ui/scroll-area.tsx";
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "../../@/components/ui/card.tsx";
-import {renderKvPair} from "../../lib/key-value-card-helper.tsx";
+import { Legend, PlotType } from "plotly.js";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../../@/components/ui/sheet.tsx";
+import { HamburgerMenuIcon } from "@radix-ui/react-icons";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../@/components/ui/card.tsx";
+import { renderKvPair } from "../../lib/key-value-card-helper.tsx";
+import { useMediaQuery } from "react-responsive";
 
 export const Route = createFileRoute("/all-time/")({
   component: AllTimeComponent,
@@ -31,6 +29,11 @@ const columnHelperAllTimeData = createColumnHelper<ApiAllTimeRankEntry>();
 const allTimeColumns = [
   columnHelperAllTimeData.accessor("reset", {
     header: "Reset Date",
+    cell: (info) => info.getValue(),
+    footer: (info) => info.column.id,
+  }),
+  columnHelperAllTimeData.accessor("rank", {
+    header: "Rank",
     cell: (info) => info.getValue(),
     footer: (info) => info.column.id,
   }),
@@ -46,11 +49,6 @@ const allTimeColumns = [
     meta: {
       align: "right",
     },
-  }),
-  columnHelperAllTimeData.accessor("rank", {
-    header: "Rank",
-    cell: (info) => info.getValue(),
-    footer: (info) => info.column.id,
   }),
 ];
 
@@ -93,11 +91,11 @@ const resetFilters: ResetFilter[] = [
 ];
 
 function AllTimeComponent() {
-  let {allTimeData, resetDates} = useMemo(() => {
+  let { allTimeData, resetDates } = useMemo(() => {
     let resetDates = Array.from(new Set(mockDataAllTime.map((d) => d.reset)))
       .toSorted()
       .toReversed();
-    return {allTimeData: mockDataAllTime, resetDates};
+    return { allTimeData: mockDataAllTime, resetDates };
   }, []);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -122,7 +120,7 @@ function AllTimeComponent() {
     //getRowId: (row) => `${row}-${row.tradeSymbol}`,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    state: {sorting},
+    state: { sorting },
     onSortingChange: setSorting,
     debugTable: true,
   });
@@ -150,21 +148,43 @@ function AllTimeComponent() {
     return data;
   }, [relevantData]);
 
+  let mobileLegend: Partial<Legend> = {
+    orientation: "h",
+    y: 10,
+    valign: "top",
+  };
+
+  let desktopLegend: Partial<Legend> = {
+    orientation: "v",
+  };
+
+  const isDesktopOrLaptop = useMediaQuery({
+    query: "(min-width: 1024px)",
+  });
+
   let allTimeRanksChart = (
     <Plot
       className="w-full"
       data={chartData}
       layout={{
-        title: "Ranks over time",
+        //title: "Ranks over time",
         paper_bgcolor: "rgba(0,0,0,0)",
         plot_bgcolor: "rgba(0,0,0,0)",
+        // remove margin reserved for title area
+        margin: {
+          l: 50,
+          r: 50,
+          b: 100,
+          t: 50,
+          //pad: 4,
+        },
 
-        height: 800,
+        height: 600,
         font: {
           size: 10,
           color: "lightgray",
         },
-
+        legend: isDesktopOrLaptop ? desktopLegend : mobileLegend,
         xaxis: {
           showline: true,
           linecolor: "lightgray",
@@ -182,7 +202,7 @@ function AllTimeComponent() {
           tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
         },
       }}
-      config={{displayModeBar: false, responsive: true}}
+      config={{ displayModeBar: false, responsive: true }}
     />
   );
   let top_n_AgentSelectionComponent = (
@@ -227,64 +247,95 @@ function AllTimeComponent() {
       ))}
     </ToggleGroup>
   );
+
+  let durationSelection = (
+    <div className="flex flex-col gap-2 mt-2 place-items-start">
+      <Card className="w-[350px]">
+        <CardHeader>
+          <CardTitle>Agent Selection</CardTitle>
+          <CardDescription>Chart uses max 10 entries</CardDescription>
+        </CardHeader>
+        <CardContent>{top_n_AgentSelectionComponent}</CardContent>
+      </Card>
+      <Card className="w-[350px]">
+        <CardHeader>
+          <CardTitle>Reset Selection</CardTitle>
+        </CardHeader>
+        <CardContent>{last_n_ResetsSelectionComponent}</CardContent>
+      </Card>
+    </div>
+  );
   let sheetContentComponent = (
     <SheetContent side="left" className="w-11/12 md:w-fit flex flex-col gap-4">
       <SheetHeader className="space-y-1">
         <SheetTitle className="text-sm font-medium leading-none">Top-N and Reset Selection</SheetTitle>
       </SheetHeader>
-      <ScrollArea>
-        <div className="flex flex-col gap-2 mt-2 place-items-start">
-          <Card className="w-[350px]">
-            <CardHeader>
-              <CardTitle>Agent Selection</CardTitle>
-              <CardDescription>Chart uses max 10 entries</CardDescription>
-            </CardHeader>
-            <CardContent>{top_n_AgentSelectionComponent}</CardContent>
-          </Card>
-          <Card className="w-[350px]">
-            <CardHeader>
-              <CardTitle>Reset Selection</CardTitle>
-            </CardHeader>
-            <CardContent>{last_n_ResetsSelectionComponent}</CardContent>
-          </Card>
-        </div>
-      </ScrollArea>
+      {durationSelection}
     </SheetContent>
   );
-  return (
-    <>
-      <div className="flex flex-col gap-4 md:flex-row">
-        <Sheet>
-          <SheetTrigger asChild>
-            <HamburgerMenuIcon/>
+
+  function mobileLayout(): JSX.Element {
+    return (
+      <Sheet>
+        <div className="sub-header flex flex-row gap-2 mt-4 items-center">
+          <h2 className="text-2xl font-bold">All Time comparison</h2>
+          <SheetTrigger asChild className={`block lg:hidden mr-2`}>
+            <HamburgerMenuIcon className="ml-auto" />
           </SheetTrigger>
           {sheetContentComponent}
-          <div className="flex flex-col gap-2">
-            <Card className="w-full">
-              <CardHeader>
-                <CardTitle>Selection</CardTitle>
-                <CardDescription></CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 w-fit gap-6">
-                  {renderKvPair("Agents", currentRankFilter.name)}
-                  {renderKvPair("Resets", currentResetFilter.name)}
-                </div>
-              </CardContent>
-            </Card>
-            {prettyTable(table)}
-          </div>
-          <div className="flex flex-col gap-4 md:flex-row w-full">
-            <div className="flex flex-col gap-2 w-full">
-              <div className="flex items-center space-x-2 text-sm">
-                <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog}/>
-                <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
+        </div>
+        <div className="content p-2 flex flex-row gap-4">
+          <div className="h-fit w-full">
+            <div className="content">
+              <div className="flex flex-col gap-2">
+                <Card className="w-full">
+                  <CardHeader>
+                    <CardTitle>Selection</CardTitle>
+                    <CardDescription></CardDescription>
+                  </CardHeader>
+                  {periodCardDisplay}
+                </Card>
+                {prettyTable(table)}
               </div>
-              <div className="w-4/5">{allTimeRanksChart}</div>
+              <div className="flex flex-col gap-4 md:flex-row w-full">
+                <div className="flex flex-col gap-2 w-full">{allTimeRanksChart}</div>
+              </div>
             </div>
           </div>
-        </Sheet>
+        </div>
+      </Sheet>
+    );
+  }
+
+  function desktopLayout(): JSX.Element {
+    return (
+      <>
+        <div className="sub-header mt-4 items-center">
+          <h2 className="text-2xl font-bold">All Time comparison</h2>
+        </div>
+        <div className="left flex flex-col gap-4">
+          {durationSelection}
+          <div className="flex flex-col gap-2">{prettyTable(table)}</div>
+        </div>
+        <div className="content p-2 flex flex-col gap-4">
+          <Card className="flex flex-col gap-4 p-4 w-full">
+            <h2 className="text-xl font-bold">Performance over different resets</h2>
+
+            {allTimeRanksChart}
+          </Card>
+        </div>
+      </>
+    );
+  }
+
+  let periodCardDisplay = (
+    <CardContent>
+      <div className="grid grid-cols-2 w-fit gap-6">
+        {renderKvPair("Agents", currentRankFilter.name)}
+        {renderKvPair("Resets", currentResetFilter.name)}
       </div>
-    </>
+    </CardContent>
   );
+
+  return isDesktopOrLaptop ? desktopLayout() : mobileLayout();
 }
