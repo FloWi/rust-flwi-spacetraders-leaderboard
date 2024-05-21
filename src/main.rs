@@ -5,8 +5,9 @@ use anyhow::Result;
 use clap::Parser;
 use futures::join;
 use sqlx::sqlite::SqlitePoolOptions;
-use sqlx::{Pool, Sqlite};
+use sqlx::{ConnectOptions, Pool, Sqlite};
 use tokio_cron_scheduler::{Job, JobScheduler};
+use tracing::log::LevelFilter;
 use tracing::{event, Level};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 use utoipa::OpenApi;
@@ -52,6 +53,17 @@ async fn main() -> Result<()> {
                     .with(EnvFilter::from_default_env())
                     .init();
 
+                // I have a long-running query calculating the progress of the jump-gate construction.
+                // I'm setting the warning threshold for slow queries to 60s to prevent log-spam.
+                let database_connection_options: sqlx::sqlite::SqliteConnectOptions = database_url
+                    .parse::<sqlx::sqlite::SqliteConnectOptions>()?
+                    .log_slow_statements(LevelFilter::Warn, Duration::from_secs(60));
+
+                let background_task_pool = SqlitePoolOptions::new()
+                    .max_connections(5)
+                    .connect_with(database_connection_options)
+                    .await?;
+
                 let pool = SqlitePoolOptions::new()
                     .max_connections(5)
                     .connect(database_url.as_str())
@@ -60,7 +72,7 @@ async fn main() -> Result<()> {
                 let bind_address = format!("{}:{}", host, port);
 
                 let _ = join!(
-                    background_collect(pool.clone()),
+                    background_collect(background_task_pool.clone()),
                     http_server(pool.clone(), bind_address, asset_dir)
                 );
 

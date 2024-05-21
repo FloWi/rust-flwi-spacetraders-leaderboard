@@ -92,6 +92,10 @@ pub async fn perform_tick(client: &StClient, pool: Pool<Sqlite>) -> anyhow::Resu
         "Done collecting current infos for {num_agents} agents and {num_construction_sites} construction sites",
     );
 
+    event!(Level::DEBUG, "Refreshing 'materialized view'",);
+    let _ = refresh_fake_materialized_view(&pool).await?;
+    event!(Level::DEBUG, "Done refreshing 'materialized view'",);
+
     Ok(())
 }
 
