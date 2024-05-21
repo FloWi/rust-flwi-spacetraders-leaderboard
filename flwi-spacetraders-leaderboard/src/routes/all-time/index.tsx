@@ -1,6 +1,6 @@
-import {createFileRoute} from "@tanstack/react-router";
-import React, {JSX, useMemo} from "react";
-import {ApiAllTimeRankEntry, mockDataAllTime} from "../../lib/all-time-testdata.ts";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import React, { JSX, useMemo } from "react";
+import { ApiAllTimeRankEntry, mockDataAllTime } from "../../lib/all-time-testdata.ts";
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -8,28 +8,115 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import {intNumberFmt, prettyDuration} from "../../lib/formatters.ts";
-import {ToggleGroup, ToggleGroupItem} from "../../@/components/ui/toggle-group.tsx";
-import {prettyTable} from "../../components/prettyTable.tsx";
+import { intNumberFmt, prettyDuration } from "../../lib/formatters.ts";
+import { ToggleGroup, ToggleGroupItem } from "../../@/components/ui/toggle-group.tsx";
+import { prettyTable } from "../../components/prettyTable.tsx";
 import Plot from "react-plotly.js";
-import {Legend, PlotType} from "plotly.js";
-import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger} from "../../@/components/ui/sheet.tsx";
-import {HamburgerMenuIcon} from "@radix-ui/react-icons";
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "../../@/components/ui/card.tsx";
-import {renderKvPair} from "../../lib/key-value-card-helper.tsx";
-import {useMediaQuery} from "react-responsive";
-import {Switch} from "../../@/components/ui/switch.tsx";
-import {Label} from "../../@/components/ui/label.tsx";
-import {useQuery} from "@tanstack/react-query";
-import {resetDatesQueryOptions} from "../../utils/queryOptions.ts";
-import {ApiResetDateMeta} from "../../../generated";
+import { Legend, PlotType } from "plotly.js";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../../@/components/ui/sheet.tsx";
+import { HamburgerMenuIcon } from "@radix-ui/react-icons";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../@/components/ui/card.tsx";
+import { renderKvPair } from "../../lib/key-value-card-helper.tsx";
+import { useMediaQuery } from "react-responsive";
+import { Switch } from "../../@/components/ui/switch.tsx";
+import { Label } from "../../@/components/ui/label.tsx";
+import { useQuery } from "@tanstack/react-query";
+import { resetDatesQueryOptions } from "../../utils/queryOptions.ts";
+import { ApiResetDateMeta } from "../../../generated";
+
+type RankFilter = { name: string; maxRank?: number };
+type ResetFilter = { name: string; numberResets?: number };
+type RankFilterId = "top1" | "top3" | "top5" | "top10" | "all";
+
+let rankFilters: Map<RankFilterId, RankFilter> = new Map([
+  [
+    "top1",
+    {
+      name: "Top 1",
+      maxRank: 1,
+    },
+  ],
+  [
+    "top3",
+    {
+      name: "Top 3",
+      maxRank: 3,
+    },
+  ],
+  [
+    "top5",
+    {
+      name: "Top 5",
+      maxRank: 5,
+    },
+  ],
+  [
+    "top10",
+    {
+      name: "Top 10",
+      maxRank: 10,
+    },
+  ],
+  [
+    "all",
+    {
+      name: "All",
+    },
+  ],
+]);
+
+type ResetFilterId = "last3" | "last5" | "last10" | "all";
+
+const resetFilters: Map<ResetFilterId, ResetFilter> = new Map([
+  [
+    "last3",
+    {
+      name: "Last 3",
+      numberResets: 3,
+    },
+  ],
+  [
+    "last5",
+    {
+      name: "Last 5",
+      numberResets: 5,
+    },
+  ],
+  [
+    "last10",
+    {
+      name: "Last 10",
+      numberResets: 10,
+    },
+  ],
+  [
+    "all",
+    {
+      name: "All",
+    },
+  ],
+]);
+
+type AllTimeSelectionSearch = {
+  rankFilter: RankFilterId;
+  resetFilter: ResetFilterId;
+};
 
 export const Route = createFileRoute("/all-time/")({
   component: AllTimeComponent,
-  loader: async ({context: {queryClient}}) => {
+  loader: async ({ context: { queryClient } }) => {
     await queryClient.prefetchQuery(resetDatesQueryOptions);
   },
   pendingComponent: () => <div>Loading...</div>,
+  validateSearch: (search: Record<string, unknown>): AllTimeSelectionSearch => {
+    let resetFilterStr = search?.resetFilter as string;
+    let rankFilterStr = search?.rankFilter as string;
+
+    return {
+      resetFilter: resetFilters.has(resetFilterStr as ResetFilterId) ? (resetFilterStr as ResetFilterId) : "last5",
+      rankFilter: rankFilters.has(rankFilterStr as RankFilterId) ? (rankFilterStr as RankFilterId) : "top5",
+    };
+  },
 });
 
 interface AllTimeRankEntry extends ApiAllTimeRankEntry {
@@ -72,61 +159,25 @@ const allTimeColumns = [
   }),
 ];
 
-type RankFilter = { name: string; maxRank?: number };
-type ResetFilter = { name: string; numberResets?: number };
-const rankFilters: RankFilter[] = [
-  {
-    name: "Top 1",
-    maxRank: 1,
-  },
-  {
-    name: "Top 3",
-    maxRank: 3,
-  },
-  {
-    name: "Top 5",
-    maxRank: 5,
-  },
-  {
-    name: "Top 10",
-    maxRank: 10,
-  },
-  {
-    name: "All",
-  },
-];
-
-const resetFilters: ResetFilter[] = [
-  {
-    name: "Last 3",
-    numberResets: 3,
-  },
-  {
-    name: "Last 5",
-    numberResets: 5,
-  },
-  {
-    name: "Last 10",
-    numberResets: 10,
-  },
-  {
-    name: "All",
-  },
-];
-
 function AllTimeComponent() {
-  let {data: allResetDates} = useQuery(resetDatesQueryOptions);
+  let { data: allResetDates } = useQuery(resetDatesQueryOptions);
 
-  let {allTimeData, resetDates} = useMemo(() => {
+  let { rankFilter, resetFilter } = Route.useSearch();
+
+  const navigate = useNavigate({ from: Route.fullPath });
+
+  let { currentRankFilter, currentResetFilter } = React.useMemo(() => {
+    return { currentRankFilter: rankFilters.get(rankFilter)!, currentResetFilter: resetFilters.get(resetFilter)! };
+  }, [rankFilter, resetFilter]);
+
+  let { allTimeData, resetDates } = useMemo(() => {
     let resetDates = Array.from(new Set(mockDataAllTime.map((d) => d.reset)))
       .toSorted()
       .toReversed();
-    return {allTimeData: mockDataAllTime, resetDates};
+    return { allTimeData: mockDataAllTime, resetDates };
   }, []);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [currentRankFilter, setRankFilter] = React.useState<RankFilter>(rankFilters[1]);
-  const [currentResetFilter, setResetFilter] = React.useState<ResetFilter>(resetFilters[0]);
   const [isLog, setIsLog] = React.useState(true);
 
   let relevantData: AllTimeRankEntry[] = useMemo(() => {
@@ -141,7 +192,7 @@ function AllTimeComponent() {
       })
       .flatMap((d) => {
         let resetMeta = allResetDates?.find((rd) => rd.resetDate === d.reset);
-        return resetMeta ? [{...d, resetDate: resetMeta, reset: resetMeta.resetDate}] : [];
+        return resetMeta ? [{ ...d, resetDate: resetMeta, reset: resetMeta.resetDate }] : [];
       });
   }, [currentRankFilter, currentResetFilter]);
 
@@ -155,7 +206,7 @@ function AllTimeComponent() {
     //getRowId: (row) => `${row}-${row.tradeSymbol}`,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    state: {sorting},
+    state: { sorting },
     onSortingChange: setSorting,
     debugTable: true,
   });
@@ -237,26 +288,26 @@ function AllTimeComponent() {
           tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
         },
       }}
-      config={{displayModeBar: false, responsive: true}}
+      config={{ displayModeBar: false, responsive: true }}
     />
   );
   let top_n_AgentSelectionComponent = (
     <ToggleGroup
       className="items-start justify-start"
       type={`single`}
-      value={currentRankFilter.name}
-      onValueChange={(value) => {
-        if (value) {
-          let selectedFilter = rankFilters.find((f) => f.name === value);
-          if (selectedFilter) {
-            setRankFilter(selectedFilter);
-          }
-        }
+      value={rankFilter}
+      onValueChange={(value: RankFilterId) => {
+        navigate({
+          search: (current) => ({
+            ...current,
+            rankFilter: value,
+          }),
+        });
       }}
     >
-      {rankFilters.map((f) => (
-        <ToggleGroupItem key={f.name} value={f.name}>
-          {f.name}
+      {Array.from(rankFilters.entries()).map(([filterId, filter]) => (
+        <ToggleGroupItem key={filter.name} value={filterId}>
+          {filter.name}
         </ToggleGroupItem>
       ))}
     </ToggleGroup>
@@ -265,19 +316,19 @@ function AllTimeComponent() {
     <ToggleGroup
       className="items-start justify-start"
       type={`single`}
-      value={currentResetFilter.name}
-      onValueChange={(value) => {
-        if (value) {
-          let selectedFilter = resetFilters.find((f) => f.name === value);
-          if (selectedFilter) {
-            setResetFilter(selectedFilter);
-          }
-        }
+      value={resetFilter}
+      onValueChange={(value: ResetFilterId) => {
+        navigate({
+          search: (current) => ({
+            ...current,
+            resetFilter: value,
+          }),
+        });
       }}
     >
-      {resetFilters.map((f) => (
-        <ToggleGroupItem key={f.name} value={f.name}>
-          {f.name}
+      {Array.from(resetFilters.entries()).map(([filterId, filter]) => (
+        <ToggleGroupItem key={filterId} value={filterId}>
+          {filter.name}
         </ToggleGroupItem>
       ))}
     </ToggleGroup>
@@ -305,7 +356,7 @@ function AllTimeComponent() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-2 text-sm">
-            <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog}/>
+            <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog} />
             <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
           </div>
         </CardContent>
@@ -319,7 +370,7 @@ function AllTimeComponent() {
         <div className="sub-header flex flex-row gap-2 mt-4 items-center">
           <h2 className="text-2xl font-bold">All Time comparison</h2>
           <SheetTrigger asChild className={`block lg:hidden mr-2`}>
-            <HamburgerMenuIcon className="ml-auto"/>
+            <HamburgerMenuIcon className="ml-auto" />
           </SheetTrigger>
           {
             <SheetContent side="left" className="w-11/12 md:w-fit flex flex-col gap-4">
@@ -328,7 +379,7 @@ function AllTimeComponent() {
               </SheetHeader>
               {durationSelection}
               <div className="flex items-center space-x-2 text-sm">
-                <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog}/>
+                <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog} />
                 <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
               </div>
             </SheetContent>
