@@ -18,6 +18,8 @@ import { HamburgerMenuIcon } from "@radix-ui/react-icons";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../@/components/ui/card.tsx";
 import { renderKvPair } from "../../lib/key-value-card-helper.tsx";
 import { useMediaQuery } from "react-responsive";
+import { Switch } from "../../@/components/ui/switch.tsx";
+import { Label } from "../../@/components/ui/label.tsx";
 
 export const Route = createFileRoute("/all-time/")({
   component: AllTimeComponent,
@@ -84,6 +86,10 @@ const resetFilters: ResetFilter[] = [
   {
     name: "Last 5",
     numberResets: 5,
+  },
+  {
+    name: "Last 10",
+    numberResets: 10,
   },
   {
     name: "All",
@@ -263,15 +269,18 @@ function AllTimeComponent() {
         </CardHeader>
         <CardContent>{last_n_ResetsSelectionComponent}</CardContent>
       </Card>
+      <Card className="w-[350px]">
+        <CardHeader>
+          <CardTitle>Chart Config</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-2 text-sm">
+            <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog} />
+            <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
+          </div>
+        </CardContent>
+      </Card>
     </div>
-  );
-  let sheetContentComponent = (
-    <SheetContent side="left" className="w-11/12 md:w-fit flex flex-col gap-4">
-      <SheetHeader className="space-y-1">
-        <SheetTitle className="text-sm font-medium leading-none">Top-N and Reset Selection</SheetTitle>
-      </SheetHeader>
-      {durationSelection}
-    </SheetContent>
   );
 
   function mobileLayout(): JSX.Element {
@@ -282,7 +291,18 @@ function AllTimeComponent() {
           <SheetTrigger asChild className={`block lg:hidden mr-2`}>
             <HamburgerMenuIcon className="ml-auto" />
           </SheetTrigger>
-          {sheetContentComponent}
+          {
+            <SheetContent side="left" className="w-11/12 md:w-fit flex flex-col gap-4">
+              <SheetHeader className="space-y-1">
+                <SheetTitle className="text-sm font-medium leading-none">Top-N and Reset Selection</SheetTitle>
+              </SheetHeader>
+              {durationSelection}
+              <div className="flex items-center space-x-2 text-sm">
+                <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog} />
+                <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
+              </div>
+            </SheetContent>
+          }
         </div>
         <div className="content p-2 flex flex-row gap-4">
           <div className="h-fit w-full">
@@ -319,7 +339,14 @@ function AllTimeComponent() {
         </div>
         <div className="content p-2 flex flex-col gap-4">
           <Card className="flex flex-col gap-4 p-4 w-full">
-            <h2 className="text-xl font-bold">Performance over different resets</h2>
+            <h2 className="text-xl font-bold">
+              Performance of {currentRankFilter.name} agents over {currentResetFilter.name} resets
+            </h2>
+            {currentRankFilter.maxRank ? (
+              <></>
+            ) : (
+              <p className="text-sm text-muted-foreground">Displaying only Top 10 Agents to keep chart readable.</p>
+            )}
 
             {allTimeRanksChart}
           </Card>
