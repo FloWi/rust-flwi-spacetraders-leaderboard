@@ -1,12 +1,12 @@
-import {Link, LinkProps, RegisteredRouter, RouteMatch, RouterState} from "@tanstack/react-router";
+import { Link, LinkProps, RegisteredRouter, RouteMatch, RouterState } from "@tanstack/react-router";
 import * as _ from "lodash";
 import {
   NavigationMenuContent,
   NavigationMenuItem,
   NavigationMenuTrigger,
 } from "../@/components/ui/navigation-menu.tsx";
-import {MyLink} from "../components/myLink.tsx";
-import {Separator} from "../@/components/ui/separator.tsx";
+import { MyLink } from "../components/myLink.tsx";
+import { Separator } from "../@/components/ui/separator.tsx";
 
 type ResetLink = {
   resetDate: string;
@@ -34,7 +34,7 @@ function extractPathAndSearchParams(
     if (search.agents) {
       selectedAgents = search.agents;
     }
-    return resetDate ? {currentResetDate: resetDate, selectedAgents: selectedAgents} : undefined;
+    return resetDate ? { currentResetDate: resetDate, selectedAgents: selectedAgents } : undefined;
   } catch (e) {
     console.error("error during extractPathAndSearchParams", e);
     return undefined;
@@ -46,12 +46,12 @@ function createLinksToOtherResets(
   routerState: RouterState<RegisteredRouter["routeTree"]>,
 ):
   | {
-  allResets: ResetLink[];
-  currentlySelectedResetDate: string;
-  nextReset?: ResetLink;
-  previousReset?: ResetLink;
-  latestReset?: ResetLink;
-}
+      allResets: ResetLink[];
+      currentlySelectedResetDate: string;
+      nextReset?: ResetLink;
+      previousReset?: ResetLink;
+      latestReset?: ResetLink;
+    }
   | undefined {
   const deepestMatch: RouteMatch<RegisteredRouter["routeTree"]> | undefined = routerState.matches.at(-1);
 
@@ -67,8 +67,8 @@ function createLinksToOtherResets(
         props: (
           <Link
             to="/resets/$resetDate/leaderboard"
-            params={{resetDate: r}}
-            search={{agents: current?.selectedAgents}}
+            params={{ resetDate: r }}
+            search={{ agents: current?.selectedAgents }}
             className="[&.active]:font-bold"
           >
             Reset {r}
@@ -83,8 +83,8 @@ function createLinksToOtherResets(
         props: (
           <Link
             to="/resets/$resetDate/history"
-            params={{resetDate: r}}
-            search={{agents: current?.selectedAgents}}
+            params={{ resetDate: r }}
+            search={{ agents: current?.selectedAgents }}
             className="[&.active]:font-bold"
           >
             {r}
@@ -97,17 +97,17 @@ function createLinksToOtherResets(
       return {
         resetDate: r,
         props: (
-          <Link to="/resets/$resetDate/jump-gate" params={{resetDate: r}} className="[&.active]:font-bold">
-            Hello jump-gate overview for Reset {r}
+          <Link to="/resets/$resetDate/jump-gate" params={{ resetDate: r }} className="[&.active]:font-bold">
+            {r}
           </Link>
         ).props,
       };
     });
   }
 
-  let sortedEntries = _.sortBy(resetLinks, ({resetDate}) => resetDate);
+  let sortedEntries = _.sortBy(resetLinks, ({ resetDate }) => resetDate);
   if (current?.currentResetDate) {
-    let currentResetIdx = sortedEntries.findIndex(({resetDate}) => resetDate == current?.currentResetDate);
+    let currentResetIdx = sortedEntries.findIndex(({ resetDate }) => resetDate == current?.currentResetDate);
     if (currentResetIdx >= 0) {
       let previousIndex = currentResetIdx >= 1 ? currentResetIdx - 1 : undefined;
       let nextIndex = currentResetIdx < sortedEntries.length - 1 ? currentResetIdx + 1 : undefined;
@@ -133,7 +133,7 @@ export function createSamePageOtherResetNavigationMenuItem(
   let res = createLinksToOtherResets(resetDates, currentState);
 
   if (res) {
-    let {allResets, currentlySelectedResetDate, nextReset, previousReset, latestReset} = res;
+    let { allResets, currentlySelectedResetDate, nextReset, previousReset, latestReset } = res;
 
     let directNavigationLinks = intersperse(
       [
@@ -153,7 +153,7 @@ export function createSamePageOtherResetNavigationMenuItem(
           </MyLink>
         ) : null,
       ],
-      (idx) => <Separator orientation="vertical" key={`separator_${idx}`}/>,
+      (idx) => <Separator orientation="vertical" key={`separator_${idx}`} />,
     );
     return (
       <>
@@ -168,7 +168,7 @@ export function createSamePageOtherResetNavigationMenuItem(
           <NavigationMenuContent>
             <ul className="flex flex-col w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
               <li className="flex flex-row gap-4">{directNavigationLinks}</li>
-              {allResets.toReversed().map(({resetDate, props}) => {
+              {allResets.toReversed().map(({ resetDate, props }) => {
                 return (
                   <li key={`other-reset-${resetDate}`}>
                     <MyLink {...props} />
