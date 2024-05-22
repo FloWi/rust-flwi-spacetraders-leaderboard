@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import React, { JSX, useMemo } from "react";
-import { ApiAllTimeRankEntry, mockDataAllTime } from "../../lib/all-time-testdata.ts";
+import {createFileRoute, useNavigate} from "@tanstack/react-router";
+import React, {JSX, useMemo} from "react";
+import {ApiAllTimeRankEntry, mockDataAllTime} from "../../lib/all-time-testdata.ts";
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -8,21 +8,21 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { intNumberFmt, prettyDuration } from "../../lib/formatters.ts";
-import { ToggleGroup, ToggleGroupItem } from "../../@/components/ui/toggle-group.tsx";
-import { prettyTable } from "../../components/prettyTable.tsx";
+import {intNumberFmt, prettyDuration} from "../../lib/formatters.ts";
+import {ToggleGroup, ToggleGroupItem} from "../../@/components/ui/toggle-group.tsx";
+import {prettyTable} from "../../components/prettyTable.tsx";
 import Plot from "react-plotly.js";
-import { Legend, PlotType } from "plotly.js";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../../@/components/ui/sheet.tsx";
-import { HamburgerMenuIcon } from "@radix-ui/react-icons";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../@/components/ui/card.tsx";
-import { renderKvPair } from "../../lib/key-value-card-helper.tsx";
-import { useMediaQuery } from "react-responsive";
-import { Switch } from "../../@/components/ui/switch.tsx";
-import { Label } from "../../@/components/ui/label.tsx";
-import { useQuery } from "@tanstack/react-query";
-import { resetDatesQueryOptions } from "../../utils/queryOptions.ts";
-import { ApiResetDateMeta } from "../../../generated";
+import {Legend, PlotType} from "plotly.js";
+import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger} from "../../@/components/ui/sheet.tsx";
+import {HamburgerMenuIcon} from "@radix-ui/react-icons";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "../../@/components/ui/card.tsx";
+import {renderKvPair} from "../../lib/key-value-card-helper.tsx";
+import {useMediaQuery} from "react-responsive";
+import {Switch} from "../../@/components/ui/switch.tsx";
+import {Label} from "../../@/components/ui/label.tsx";
+import {useQuery} from "@tanstack/react-query";
+import {resetDatesQueryOptions} from "../../utils/queryOptions.ts";
+import {ApiResetDateMeta} from "../../../generated";
 
 type RankFilter = { name: string; maxRank?: number };
 type ResetFilter = { name: string; numberResets?: number };
@@ -104,7 +104,7 @@ type AllTimeSelectionSearch = {
 
 export const Route = createFileRoute("/all-time/")({
   component: AllTimeComponent,
-  loader: async ({ context: { queryClient } }) => {
+  loader: async ({context: {queryClient}}) => {
     await queryClient.prefetchQuery(resetDatesQueryOptions);
   },
   pendingComponent: () => <div>Loading...</div>,
@@ -160,21 +160,21 @@ const allTimeColumns = [
 ];
 
 function AllTimeComponent() {
-  let { data: allResetDates } = useQuery(resetDatesQueryOptions);
+  let {data: allResetDates} = useQuery(resetDatesQueryOptions);
 
-  let { rankFilter, resetFilter } = Route.useSearch();
+  let {rankFilter, resetFilter} = Route.useSearch();
 
-  const navigate = useNavigate({ from: Route.fullPath });
+  const navigate = useNavigate({from: Route.fullPath});
 
-  let { currentRankFilter, currentResetFilter } = React.useMemo(() => {
-    return { currentRankFilter: rankFilters.get(rankFilter)!, currentResetFilter: resetFilters.get(resetFilter)! };
+  let {currentRankFilter, currentResetFilter} = React.useMemo(() => {
+    return {currentRankFilter: rankFilters.get(rankFilter)!, currentResetFilter: resetFilters.get(resetFilter)!};
   }, [rankFilter, resetFilter]);
 
-  let { allTimeData, resetDates } = useMemo(() => {
+  let {allTimeData, resetDates} = useMemo(() => {
     let resetDates = Array.from(new Set(mockDataAllTime.map((d) => d.reset)))
       .toSorted()
       .toReversed();
-    return { allTimeData: mockDataAllTime, resetDates };
+    return {allTimeData: mockDataAllTime, resetDates};
   }, []);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -192,7 +192,7 @@ function AllTimeComponent() {
       })
       .flatMap((d) => {
         let resetMeta = allResetDates?.find((rd) => rd.resetDate === d.reset);
-        return resetMeta ? [{ ...d, resetDate: resetMeta, reset: resetMeta.resetDate }] : [];
+        return resetMeta ? [{...d, resetDate: resetMeta, reset: resetMeta.resetDate}] : [];
       });
   }, [currentRankFilter, currentResetFilter]);
 
@@ -206,7 +206,7 @@ function AllTimeComponent() {
     //getRowId: (row) => `${row}-${row.tradeSymbol}`,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    state: { sorting },
+    state: {sorting},
     onSortingChange: setSorting,
     debugTable: true,
   });
@@ -268,12 +268,12 @@ function AllTimeComponent() {
         height: 600,
         font: {
           size: 10,
-          color: "lightgray",
+          color: "darkgray",
         },
         legend: isDesktopOrLaptop ? desktopLegend : mobileLegend,
         xaxis: {
           showline: true,
-          linecolor: "lightgray",
+          linecolor: "darkgray",
           tickangle: -45,
           type: "category",
         },
@@ -282,13 +282,13 @@ function AllTimeComponent() {
           tick0: 0,
           zeroline: true,
           showline: false,
-          linecolor: "lightgray",
-          gridcolor: "lightgray",
+          linecolor: "darkgray",
+          gridcolor: "darkgray",
           hoverformat: ",d",
           tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
         },
       }}
-      config={{ displayModeBar: false, responsive: true }}
+      config={{displayModeBar: false, responsive: true}}
     />
   );
   let top_n_AgentSelectionComponent = (
@@ -356,7 +356,7 @@ function AllTimeComponent() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-2 text-sm">
-            <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog} />
+            <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog}/>
             <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
           </div>
         </CardContent>
@@ -370,7 +370,7 @@ function AllTimeComponent() {
         <div className="sub-header flex flex-row gap-2 mt-4 items-center">
           <h2 className="text-2xl font-bold">All Time comparison</h2>
           <SheetTrigger asChild className={`block lg:hidden mr-2`}>
-            <HamburgerMenuIcon className="ml-auto" />
+            <HamburgerMenuIcon className="ml-auto"/>
           </SheetTrigger>
           {
             <SheetContent side="left" className="w-11/12 md:w-fit flex flex-col gap-4">
@@ -379,7 +379,7 @@ function AllTimeComponent() {
               </SheetHeader>
               {durationSelection}
               <div className="flex items-center space-x-2 text-sm">
-                <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog} />
+                <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog}/>
                 <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
               </div>
             </SheetContent>
@@ -419,17 +419,16 @@ function AllTimeComponent() {
           <div className="flex flex-col gap-2">{prettyTable(table)}</div>
         </div>
         <div className="content flex flex-col gap-4">
-          <Card className="flex flex-col gap-4 p-4 w-full">
+          <Card className="flex flex-col gap-4 p-4 w-full h-full">
             <h2 className="text-xl font-bold">
               Performance of {currentRankFilter.name} agents over {currentResetFilter.name} resets
             </h2>
+            {allTimeRanksChart}
             {currentRankFilter.maxRank ? (
               <></>
             ) : (
               <p className="text-sm text-muted-foreground">Displaying only Top 10 Agents to keep chart readable.</p>
             )}
-
-            {allTimeRanksChart}
           </Card>
         </div>
       </>
