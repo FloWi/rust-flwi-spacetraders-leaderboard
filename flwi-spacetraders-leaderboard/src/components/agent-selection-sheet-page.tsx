@@ -1,7 +1,7 @@
-import { UiLeaderboardEntry } from "../lib/leaderboard-helper.ts";
-import { ApiConstructionMaterialMostRecentProgressEntry } from "../../generated";
-import { Table } from "@tanstack/react-table";
-import { JSX, ReactNode } from "react";
+import {UiLeaderboardEntry} from "../lib/leaderboard-helper.ts";
+import {ApiConstructionMaterialMostRecentProgressEntry} from "../../generated";
+import {Table} from "@tanstack/react-table";
+import {JSX, ReactNode} from "react";
 import {
   Sheet,
   SheetContent,
@@ -11,13 +11,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../@/components/ui/sheet.tsx";
-import { HamburgerMenuIcon } from "@radix-ui/react-icons";
-import { Switch } from "../@/components/ui/switch.tsx";
-import { Label } from "../@/components/ui/label.tsx";
-import { ScrollArea } from "../@/components/ui/scroll-area.tsx";
-import { prettyTable } from "./prettyTable.tsx";
-import { Button } from "../@/components/ui/button.tsx";
-import { useMediaQuery } from "react-responsive";
+import {HamburgerMenuIcon} from "@radix-ui/react-icons";
+import {Switch} from "../@/components/ui/switch.tsx";
+import {Label} from "../@/components/ui/label.tsx";
+import {ScrollArea} from "../@/components/ui/scroll-area.tsx";
+import {prettyTable} from "./prettyTable.tsx";
+import {Button} from "../@/components/ui/button.tsx";
+import {useMediaQuery} from "react-responsive";
 
 type SheetPageProps = {
   title: string;
@@ -35,16 +35,16 @@ type SheetPageProps = {
 };
 
 export function AgentSelectionSheetPage({
-  title,
-  isLog,
-  memoizedLeaderboard,
-  jumpGateMostRecentConstructionProgress,
-  selectedAgents,
-  setIsLog,
-  setSelectedAgents,
-  table,
-  children,
-}: SheetPageProps) {
+                                          title,
+                                          isLog,
+                                          memoizedLeaderboard,
+                                          jumpGateMostRecentConstructionProgress,
+                                          selectedAgents,
+                                          setIsLog,
+                                          setSelectedAgents,
+                                          table,
+                                          children,
+                                        }: SheetPageProps) {
   let top10Agents = memoizedLeaderboard.sortedAndColoredLeaderboard.slice(0, 10).map((e) => e.agentSymbol);
 
   let jumpGatesUnderConstruction = jumpGateMostRecentConstructionProgress
@@ -94,11 +94,11 @@ export function AgentSelectionSheetPage({
       </SheetHeader>
       <ScrollArea>
         <div className="flex flex-col gap-4 mt-2 p-2">
+          {preselectionButtons}
           <div className="flex items-center space-x-2 text-sm">
-            <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog} />
+            <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog}/>
             <Label htmlFor="log-y-axis">Log y-axis</Label>
           </div>
-          {preselectionButtons}
           {prettyTable(table)}
         </div>
       </ScrollArea>
@@ -118,7 +118,7 @@ export function AgentSelectionSheetPage({
         <div className="sub-header flex flex-row gap-2 mt-4 items-center">
           <h2 className="text-2xl font-bold">{title}</h2>
           <SheetTrigger asChild className={`block lg:hidden mr-2`}>
-            <HamburgerMenuIcon className="ml-auto" />
+            <HamburgerMenuIcon className="ml-auto"/>
           </SheetTrigger>
           {sheetContent}
         </div>
@@ -132,11 +132,18 @@ export function AgentSelectionSheetPage({
   function desktopLayout(): JSX.Element {
     return (
       <>
-        <div className="sub-header flex flex-row gap-2 mt-4">
+        <div className="sub-header flex flex-row gap-2">
           <h2 className="text-2xl font-bold">{title}</h2>
         </div>
-        <div className="left">
-          {preselectionButtons}
+        <div className="left flex flex-col gap-4">
+          <div className="flex flex-row gap-1">
+            {preselectionButtons}
+            <div className="mr-auto flex items-center space-x-2 text-sm">
+              <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog}/>
+              <Label htmlFor="log-y-axis">Log Axis</Label>
+            </div>
+          </div>
+
           {prettyTable(table)}
         </div>
         <div className="content p-4">{children}</div>

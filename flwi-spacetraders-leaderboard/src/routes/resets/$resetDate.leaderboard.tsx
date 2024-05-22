@@ -88,7 +88,7 @@ type BarChartConfig = {
 
 function renderBarChart({ title, mutedColorTitle, isLog, xValues, yValues, colors }: BarChartConfig) {
   return (
-    <div>
+    <div key={title}>
       <div className="flex flex-row gap-0.5 items-center ">
         <h3 className="text-xl font-bold">{title}</h3>
         {mutedColorTitle ? <p className="text-sm text-muted-foreground">&nbsp; | &nbsp;</p> : <></>}
@@ -120,14 +120,14 @@ function renderBarChart({ title, mutedColorTitle, isLog, xValues, yValues, color
           height: 500,
           font: {
             size: 10,
-            color: "lightgray",
+            color: "darkgray",
           },
           paper_bgcolor: "rgba(0,0,0,0)",
           plot_bgcolor: "rgba(0,0,0,0)",
 
           xaxis: {
             showline: true,
-            linecolor: "lightgray",
+            linecolor: "darkgray",
           },
 
           yaxis: {
@@ -136,8 +136,8 @@ function renderBarChart({ title, mutedColorTitle, isLog, xValues, yValues, color
             // dtick: 1,
             zeroline: true,
             showline: false,
-            linecolor: "lightgray",
-            gridcolor: "lightgray",
+            linecolor: "darkgray",
+            gridcolor: "darkgray",
             hoverformat: ",d",
             tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
           },
