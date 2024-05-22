@@ -335,22 +335,22 @@ function AllTimeComponent() {
   );
 
   let durationSelection = (
-    <div className="flex flex-col gap-2 mt-2 place-items-start">
-      <Card className="w-[350px]">
+    <div className="flex flex-col gap-2 place-items-start">
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>Agent Selection</CardTitle>
           <CardDescription>Chart uses max 10 entries</CardDescription>
         </CardHeader>
         <CardContent>{top_n_AgentSelectionComponent}</CardContent>
       </Card>
-      <Card className="w-[350px]">
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>Reset Selection</CardTitle>
           <CardDescription>Only finalized resets are considered</CardDescription>
         </CardHeader>
         <CardContent>{last_n_ResetsSelectionComponent}</CardContent>
       </Card>
-      <Card className="w-[350px]">
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>Chart Config</CardTitle>
         </CardHeader>
@@ -418,7 +418,7 @@ function AllTimeComponent() {
           {durationSelection}
           <div className="flex flex-col gap-2">{prettyTable(table)}</div>
         </div>
-        <div className="content p-2 flex flex-col gap-4">
+        <div className="content flex flex-col gap-4">
           <Card className="flex flex-col gap-4 p-4 w-full">
             <h2 className="text-xl font-bold">
               Performance of {currentRankFilter.name} agents over {currentResetFilter.name} resets
@@ -438,7 +438,7 @@ function AllTimeComponent() {
 
   let periodCardDisplay = (
     <CardContent>
-      <div className="grid grid-cols-2 w-fit gap-6">
+      <div className="grid grid-cols-2 w-fit gap-4">
         {renderKvPair("Agents", currentRankFilter.name)}
         {renderKvPair("Resets", currentResetFilter.name)}
       </div>
