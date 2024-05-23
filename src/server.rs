@@ -134,7 +134,7 @@ pub mod leaderboard {
             schemas(GetLeaderboardForResetResponseContent),
             schemas(GetHistoryDataForResetResponseContent),
             schemas(ListResetDatesResponseContent),
-            schemas(AgentSymbolFilterBody),
+            schemas(ResetAgentPeriodFilterBody),
             schemas(ApiTradeSymbol),
             schemas(ApiAgentHistoryEntry),
             schemas(ApiConstructionMaterialHistoryEntry),
@@ -390,10 +390,13 @@ pub mod leaderboard {
         jump_gate_assignments
     }
 
-    /// Agent Symbols Filter
+    /// Filter for period and agent symbols
     #[derive(Deserialize, ToSchema)]
-    pub(crate) struct AgentSymbolFilterBody {
+    pub(crate) struct ResetAgentPeriodFilterBody {
         pub(crate) agent_symbols: Vec<String>,
+        pub(crate) resolution_minutes: u16,
+        pub(crate) from_event_time_minutes_gte: u32,
+        pub(crate) to_event_time_minutes_lte: u32,
     }
 
     /// Get the history data for a reset
@@ -404,12 +407,12 @@ pub mod leaderboard {
     params(
         ("resetDate" = NaiveDate, Path, description = "The reset date"),
     ),
-    request_body = AgentSymbolFilterBody
+    request_body = ResetAgentPeriodFilterBody
     )]
     pub(crate) async fn get_history_data_for_reset(
         State(pool): State<Pool<Sqlite>>,
         Path(reset_date): Path<NaiveDate>,
-        Json(filter): Json<AgentSymbolFilterBody>,
+        Json(filter): Json<ResetAgentPeriodFilterBody>,
     ) -> Json<GetHistoryDataForResetResponseContent> {
         let jump_gate_assignments = load_jump_gate_assignments(&pool, reset_date).await;
 
