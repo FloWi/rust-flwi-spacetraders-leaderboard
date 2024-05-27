@@ -1,12 +1,12 @@
-import {createFileRoute} from "@tanstack/react-router";
-import {JSX, useState} from "react";
-import {RangeSlider} from "../components/range-slider.tsx";
-import {RadioGroup, RadioGroupItem} from "../@/components/ui/radio-group.tsx";
-import {Label} from "../@/components/ui/label.tsx";
-import {Slider} from "../@/components/ui/slider.tsx";
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "../@/components/ui/card.tsx";
-import {renderKvPair} from "../lib/key-value-card-helper.tsx";
-import {prettyDuration} from "../lib/formatters.ts";
+import { createFileRoute } from "@tanstack/react-router";
+import { JSX, useState } from "react";
+import { RangeSlider } from "../components/range-slider.tsx";
+import { RadioGroup, RadioGroupItem } from "../@/components/ui/radio-group.tsx";
+import { Label } from "../@/components/ui/label.tsx";
+import { Slider } from "../@/components/ui/slider.tsx";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../@/components/ui/card.tsx";
+import { renderKvPair } from "../lib/key-value-card-helper.tsx";
+import { prettyDuration } from "../lib/formatters.ts";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,89 +21,104 @@ export const Route = createFileRoute("/slider-playground")({
 });
 
 type SlidingMode = "one" | "two";
-type OffsetOrigin = "start" | "end";
 const allSlidingModes: SlidingMode[] = ["one", "two"];
-const allOffsetOrigins: OffsetOrigin[] = ["start", "end"];
+const allOffsetOrigins: SelectionMode[] = ["first", "last"];
 
-let predefinedRanges: LabelledRangeSelection[] = [
-  {
-    label: "first 6h",
-    rangeSelection: {
-      mode: "one",
-      offsetOrigin: "start",
-      hoursLimitIncluded: 6,
-    },
-  },
-  {
-    label: "first 12h",
-    rangeSelection: {
-      mode: "one",
-      offsetOrigin: "start",
-      hoursLimitIncluded: 12,
-    },
-  },
-  {
-    label: "first 24h",
-    rangeSelection: {
-      mode: "one",
-      offsetOrigin: "start",
-      hoursLimitIncluded: 24,
-    },
-  },
-  {
-    label: "first 7d",
-    rangeSelection: {
-      mode: "one",
-      offsetOrigin: "start",
-      hoursLimitIncluded: 7 * 24,
-    },
-  },
-  {
-    label: "last 6h",
-    rangeSelection: {
-      mode: "one",
-      offsetOrigin: "end",
-      hoursLimitIncluded: 6,
-    },
-  },
-  {
-    label: "last 12h",
-    rangeSelection: {
-      mode: "one",
-      offsetOrigin: "end",
-      hoursLimitIncluded: 12,
-    },
-  },
-  {
-    label: "last 24h",
-    rangeSelection: {
-      mode: "one",
-      offsetOrigin: "end",
-      hoursLimitIncluded: 24,
-    },
-  },
-  {
-    label: "last 7d",
-    rangeSelection: {
-      mode: "one",
-      offsetOrigin: "end",
-      hoursLimitIncluded: 7 * 24,
-    },
-  },
-];
+export type SelectionMode = "first" | "last";
+
+type RangeSelection =
+  | {
+      mode: "one";
+      selectionMode: SelectionMode;
+      hoursLte: number;
+    }
+  | {
+      mode: "two";
+      selectionMode: SelectionMode;
+      hoursLte: number;
+      hoursGte: number;
+    };
 
 type LabelledRangeSelection = {
   label: string;
   rangeSelection: RangeSelection;
 };
 
-function calcDefaultValue(slidingMode: SlidingMode, offsetOrigin: OffsetOrigin) {
+let defaultRangeSelection: LabelledRangeSelection = {
+  label: "last 6h",
+  rangeSelection: {
+    mode: "one",
+    selectionMode: "last",
+    hoursLte: 6,
+  },
+};
+let predefinedRanges: LabelledRangeSelection[] = [
+  {
+    label: "first 6h",
+    rangeSelection: {
+      mode: "one",
+      selectionMode: "first",
+      hoursLte: 6,
+    },
+  },
+  {
+    label: "first 12h",
+    rangeSelection: {
+      mode: "one",
+      selectionMode: "first",
+      hoursLte: 12,
+    },
+  },
+  {
+    label: "first 24h",
+    rangeSelection: {
+      mode: "one",
+      selectionMode: "first",
+      hoursLte: 24,
+    },
+  },
+  {
+    label: "first 7d",
+    rangeSelection: {
+      mode: "one",
+      selectionMode: "first",
+      hoursLte: 7 * 24,
+    },
+  },
+  defaultRangeSelection,
+  {
+    label: "last 12h",
+    rangeSelection: {
+      mode: "one",
+      selectionMode: "last",
+      hoursLte: 12,
+    },
+  },
+  {
+    label: "last 24h",
+    rangeSelection: {
+      mode: "one",
+      selectionMode: "last",
+      hoursLte: 24,
+    },
+  },
+  {
+    label: "last 7d",
+    rangeSelection: {
+      mode: "one",
+      selectionMode: "last",
+      hoursLte: 7 * 24,
+    },
+  },
+];
+
+function calcDefaultValue(slidingMode: SlidingMode, offsetOrigin: SelectionMode) {
   switch (slidingMode) {
     case "one":
       switch (offsetOrigin) {
-        case "start":
+        case "first":
           return [24];
-        case "end":
+        case "last":
           return [24];
         default:
           return [-42];
@@ -111,9 +126,9 @@ function calcDefaultValue(slidingMode: SlidingMode, offsetOrigin: OffsetOrigin) 
 
     case "two":
       switch (offsetOrigin) {
-        case "start":
+        case "first":
           return [24, 72];
-        case "end":
+        case "last":
           return [24, 72];
         default:
           return [-42, -42];
@@ -121,37 +136,24 @@ function calcDefaultValue(slidingMode: SlidingMode, offsetOrigin: OffsetOrigin) 
   }
 }
 
-type RangeSelection =
-  | {
-  mode: "one";
-  offsetOrigin: OffsetOrigin;
-  hoursLimitIncluded: number;
-}
-  | {
-  mode: "two";
-  offsetOrigin: OffsetOrigin;
-  hoursLte: number;
-  hoursGte: number;
-};
-
 type RangeSelectionLabel = { from: string; to: string };
 
 function calcRangeSelectionLabels(rangeSelection: RangeSelection): RangeSelectionLabel {
   switch (rangeSelection.mode) {
     case "one":
-      return rangeSelection.offsetOrigin === "start"
-        ? {from: "Start", to: `${hourToPrettyString(rangeSelection.hoursLimitIncluded)} from start`}
-        : {from: `${hourToPrettyString(rangeSelection.hoursLimitIncluded)} from end`, to: "End"};
+      return rangeSelection.selectionMode === "first"
+        ? { from: "Start", to: `${hourToPrettyString(rangeSelection.hoursLte)} from start` }
+        : { from: `${hourToPrettyString(rangeSelection.hoursLte)} from end`, to: "End" };
     case "two":
-      return rangeSelection.offsetOrigin === "start"
+      return rangeSelection.selectionMode === "first"
         ? {
-          from: `${hourToPrettyString(rangeSelection.hoursGte)} from start`,
-          to: `${hourToPrettyString(rangeSelection.hoursLte)} from start`,
-        }
+            from: `${hourToPrettyString(rangeSelection.hoursGte)} from start`,
+            to: `${hourToPrettyString(rangeSelection.hoursLte)} from start`,
+          }
         : {
-          from: `${hourToPrettyString(rangeSelection.hoursGte)} from end`,
-          to: `${hourToPrettyString(rangeSelection.hoursLte)} from end`,
-        };
+            from: `${hourToPrettyString(rangeSelection.hoursGte)} from end`,
+            to: `${hourToPrettyString(rangeSelection.hoursLte)} from end`,
+          };
   }
 }
 
@@ -168,16 +170,16 @@ function hourToPrettyString(hourValue: number): string {
   return prettyDuration(hourValue * 60 * 60 * 1000);
 }
 
-function calcRangeSelection(slidingMode: SlidingMode, offsetOrigin: OffsetOrigin, slidingValuesMinutes: number[]) {
+function calcRangeSelection(slidingMode: SlidingMode, selectionMode: SelectionMode, slidingValuesMinutes: number[]) {
   let rangeSelection: RangeSelection;
   switch (slidingMode) {
     case "one":
-      rangeSelection = {mode: "one", offsetOrigin, hoursLimitIncluded: slidingValuesMinutes.at(0) ?? 0};
+      rangeSelection = { mode: "one", selectionMode, hoursLte: slidingValuesMinutes.at(0) ?? 0 };
       break;
     case "two":
       rangeSelection = {
         mode: "two",
-        offsetOrigin,
+        selectionMode,
         hoursGte: slidingValuesMinutes.at(0) ?? 0,
         hoursLte: slidingValuesMinutes.at(1) ?? 24,
       };
@@ -189,7 +191,7 @@ function calcRangeSelection(slidingMode: SlidingMode, offsetOrigin: OffsetOrigin
 
 function SliderPlaygroundComponent() {
   let [slidingMode, setSlidingMode] = useState<SlidingMode>("one");
-  let [offsetOrigin, setOffsetOrigin] = useState<OffsetOrigin>("end");
+  let [offsetOrigin, setOffsetOrigin] = useState<SelectionMode>("last");
   let maxValueHours = 3 * 7 * 24;
   let stepValueHours = 6;
 
@@ -205,13 +207,13 @@ function SliderPlaygroundComponent() {
   }
 
   function setRangeSelection(rangeSelection: RangeSelection) {
-    setOffsetOrigin(rangeSelection.offsetOrigin);
+    setOffsetOrigin(rangeSelection.selectionMode);
     setSlidingMode(rangeSelection.mode);
     switch (rangeSelection.mode) {
       case "one":
-        setOffsetOrigin(rangeSelection.offsetOrigin);
-        setSliderValuesHours([rangeSelection.hoursLimitIncluded]);
-        setSlidingValuesHours([rangeSelection.hoursLimitIncluded]);
+        setOffsetOrigin(rangeSelection.selectionMode);
+        setSliderValuesHours([rangeSelection.hoursLte]);
+        setSlidingValuesHours([rangeSelection.hoursLte]);
         break;
       case "two":
         setSliderValuesHours([rangeSelection.hoursGte, rangeSelection.hoursLte]);
@@ -223,11 +225,11 @@ function SliderPlaygroundComponent() {
   function createPreSelectionDropdownMenu() {
     return (
       <DropdownMenu>
-        <DropdownMenuTrigger>Predefined Range</DropdownMenuTrigger>
+        <DropdownMenuTrigger>Select Range</DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuLabel>Predefined Range</DropdownMenuLabel>
-          <DropdownMenuSeparator/>
-          {predefinedRanges.map(({label, rangeSelection}) => {
+          <DropdownMenuLabel>Predefined Ranges</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {predefinedRanges.map(({ label, rangeSelection }) => {
             return (
               <DropdownMenuItem
                 key={label}
@@ -245,7 +247,7 @@ function SliderPlaygroundComponent() {
   }
 
   function handleOffsetOriginChange(newValue: string) {
-    let newOffsetOrigin = newValue as OffsetOrigin;
+    let newOffsetOrigin = newValue as SelectionMode;
 
     setOffsetOrigin(newOffsetOrigin);
     //setSliderValuesHours(calcDefaultValue(slidingMode, newOffsetOrigin));
@@ -260,7 +262,7 @@ function SliderPlaygroundComponent() {
             <CardTitle>Range Selection</CardTitle>
             <CardDescription>Select the range you want to view</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+          <CardContent className="flex flex-col gap-4 items-start">
             {createPreSelectionDropdownMenu()}
 
             <div className="flex flex-row gap-2">
@@ -268,7 +270,7 @@ function SliderPlaygroundComponent() {
                 {allSlidingModes.map((mode) => {
                   return (
                     <div key={mode} className="flex items-center space-x-2">
-                      <RadioGroupItem value={mode} id={mode}/>
+                      <RadioGroupItem value={mode} id={mode} />
                       <Label htmlFor={mode}>{mode}</Label>
                     </div>
                   );
@@ -279,7 +281,7 @@ function SliderPlaygroundComponent() {
                 {allOffsetOrigins.map((mode) => {
                   return (
                     <div key={mode} className="flex items-center space-x-2">
-                      <RadioGroupItem value={mode} id={mode}/>
+                      <RadioGroupItem value={mode} id={mode} />
                       <Label htmlFor={mode}>{mode}</Label>
                     </div>
                   );
@@ -297,7 +299,7 @@ function SliderPlaygroundComponent() {
             ) : (
               <Slider
                 value={slidingValuesHours}
-                inverted={offsetOrigin === "end"}
+                inverted={offsetOrigin === "last"}
                 min={6}
                 max={maxValueHours}
                 step={stepValueHours}

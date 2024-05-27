@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { CrateService } from "../../generated";
 import * as _ from "lodash";
+import { RangeSelection } from "./rangeSelection.ts";
 
 export const resetDatesQueryOptions = queryOptions({
   queryKey: ["resetDates"],
@@ -29,11 +30,13 @@ export const leaderboardQueryOptions = (resetDate: string) =>
     staleTime: 5 * 60 * 1000,
   });
 
-export const historyBaseQueryKey = (resetDate: string) => ["historyData", resetDate];
+export const historyBaseQueryKey = (resetDate: string, rangeSelection: RangeSelection) => {
+  return ["historyData", resetDate, rangeSelection.selectionMode, rangeSelection.hoursGte, rangeSelection.hoursLte];
+};
 
-export const preciseHistoryQueryOptions = (resetDate: string, agentSymbols: string[]) =>
+export const preciseHistoryQueryOptions = (resetDate: string, agentSymbols: string[], rangeSelection: RangeSelection) =>
   queryOptions({
-    queryKey: [...historyBaseQueryKey(resetDate), { agentSymbols: _.sortBy(_.uniq(agentSymbols)) }],
+    queryKey: [...historyBaseQueryKey(resetDate, rangeSelection), { agentSymbols: _.sortBy(_.uniq(agentSymbols)) }],
     queryFn: () =>
       CrateService.getHistoryDataForReset({
         resetDate,
