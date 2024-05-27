@@ -88,7 +88,7 @@ order by r.reset desc
     .await
 }
 
-async fn load_reset_date(
+pub(crate) async fn load_reset_date(
     pool: &Pool<Sqlite>,
     reset_date: NaiveDate,
 ) -> Result<Option<ResetDate>, Error> {
@@ -324,7 +324,7 @@ pub(crate) async fn select_construction_progress_for_reset(
     jump_gate_waypoint_symbols: Vec<String>,
 ) -> Result<Vec<DbConstructionMaterialHistoryEntry>, Error> {
     // TODO: resolution (include latest ts even if it's not included in modulo)
-    let or_gte_value_to_include_latest = to_event_time_minutes_lte - resolution_minutes;
+    let or_gte_value_to_include_latest = to_event_time_minutes_lte;
     let jump_gate_waypoint_json_string =
         serde_json::to_string(&jump_gate_waypoint_symbols).unwrap();
 
@@ -430,7 +430,7 @@ pub(crate) async fn select_agent_history(
     agent_symbols: Vec<String>,
 ) -> Result<Vec<DbAgentHistoryEntry>, Error> {
     // TODO: resolution (include latest ts even if it's not included in modulo)
-    let or_gte_value_to_include_latest = to_event_time_minutes_lte - resolution_minutes;
+    let or_gte_value_to_include_latest = to_event_time_minutes_lte;
     let agent_symbols_json_string = serde_json::to_string(&agent_symbols).unwrap();
 
     dbg!(reset_date);

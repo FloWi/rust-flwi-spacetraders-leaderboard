@@ -18,18 +18,27 @@ import {
 import {Data} from "plotly.js";
 import {calcSortedAndColoredLeaderboard, UiLeaderboardEntry} from "../../lib/leaderboard-helper.ts";
 import * as _ from "lodash";
-import {capitalize} from "lodash";
+import {capitalize, parseInt} from "lodash";
 import {AgentSelectionSheetPage} from "../../components/agent-selection-sheet-page.tsx";
 import {createLeaderboardTable} from "../../components/agent-selection-table.tsx";
 import {RowSelectionState, SortingState} from "@tanstack/react-table";
-import {defaultRangeSelection, predefinedRanges, RangeSelection, SelectionMode} from "../../utils/rangeSelection.ts";
+import {
+  AllSelectionModes,
+  defaultRangeSelection,
+  predefinedRanges,
+  RangeSelection,
+  SelectionMode,
+} from "../../utils/rangeSelection.ts";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "../../@/components/ui/select.tsx";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "../../@/components/ui/card.tsx";
+import {renderKvPair} from "../../lib/key-value-card-helper.tsx";
 
 type AgentSelectionSearch = {
   agents?: string[];
   selectionMode: SelectionMode;
   hoursLte: number;
   hoursGte?: number;
+  logAxis?: boolean;
 };
 
 export const Route = createFileRoute("/resets/$resetDate/history")({
@@ -41,11 +50,17 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
   validateSearch: (search: Record<string, unknown>): AgentSelectionSearch => {
     // validate and parse the search params into a typed state
 
+    let inputSelectionMode = search?.selectionMode as SelectionMode;
+    let selectionMode = AllSelectionModes.includes(inputSelectionMode)
+      ? inputSelectionMode
+      : defaultRangeSelection.selectionMode;
+
     return {
       agents: search?.agents as string[],
-      selectionMode: (search?.selectionMode as SelectionMode) || defaultRangeSelection.selectionMode,
+      selectionMode,
       hoursLte: (search?.hoursLte as number) || defaultRangeSelection.hoursLte,
       hoursGte: search?.hoursGte as number,
+      logAxis: (search?.logAxis as boolean) || true,
     };
   },
 
@@ -159,9 +174,12 @@ function bestMatchingQuery(queryCache: QueryCache, existingQueries: Array<Query>
   });
 }
 
-function rangeSelectionComponent(rangeSelectionFromQueryParams: RangeSelection): React.ReactNode {
+function rangeSelectionComponent(
+  rangeSelectionFromQueryParams: RangeSelection,
+  selectPredefinedRange: (rangeSelectionIndex: number) => void,
+): React.ReactNode {
   let items = predefinedRanges.map((r, idx) => {
-    let key = `${r.selectionMode}-${r.hoursGte}-${r.hoursLte}`;
+    let key = `${idx}`;
     return (
       <SelectItem key={key} value={idx.toString()}>
         {prettyPrintRangeSelection(r)}
@@ -186,10 +204,16 @@ function rangeSelectionComponent(rangeSelectionFromQueryParams: RangeSelection):
 
   let maybePredefinedIdx = predefinedIdx >= 0 ? predefinedIdx : undefined;
 
-  console.log("rangeSelectionComponent: maybePredefinedIdx", maybePredefinedIdx);
-
   return (
-    <Select value={maybePredefinedIdx?.toString()}>
+    <Select
+      value={maybePredefinedIdx?.toString()}
+      onValueChange={(idxStr) => {
+        let parsed = Number(idxStr);
+        if (!isNaN(parsed)) {
+          selectPredefinedRange(parsed);
+        }
+      }}
+    >
       <SelectTrigger className="w-fit">
         <SelectValue placeholder="Select Range"/>
       </SelectTrigger>
@@ -205,7 +229,7 @@ function HistoryComponent() {
   let rangeSelectionFromSearchParams: RangeSelection = {selectionMode, hoursLte, hoursGte};
 
   const {data: resetDates} = useQuery(resetDatesQueryOptions);
-  const {data: historyDataFromCache} = useQuery(
+  const {data: historyData} = useQuery(
     preciseHistoryQueryOptions(resetDate, agents ?? [], rangeSelectionFromSearchParams),
   );
   const {data: jumpGateMostRecentConstructionProgress} = useQuery(jumpGateMostRecentProgressQueryOptions(resetDate));
@@ -228,13 +252,13 @@ function HistoryComponent() {
     return calcSortedAndColoredLeaderboard(current.leaderboard);
   }, [current.leaderboard]);
 
-  let selectedReset = useMemo(() => {
+  let selectedReset: ApiResetDateMeta | undefined = useMemo(() => {
     return resetDates?.find((r) => r.resetDate === resetDate);
   }, [resetDate, resetDates]);
 
   let charts = useMemo(() => {
-    let agentHistory = historyDataFromCache?.agentHistory.filter((h) => agents?.includes(h.agentSymbol)) ?? [];
-    let constructionMaterialHistory = historyDataFromCache?.constructionMaterialHistory ?? []; //TODO: filter construction entries based on agents
+    let agentHistory = historyData?.agentHistory.filter((h) => agents?.includes(h.agentSymbol)) ?? [];
+    let constructionMaterialHistory = historyData?.constructionMaterialHistory ?? []; //TODO: filter construction entries based on agents
 
     return renderTimeSeriesCharts(
       isLog,
@@ -244,7 +268,7 @@ function HistoryComponent() {
       agents ?? [],
       selectedReset,
     );
-  }, [resetDate, historyDataFromCache, isLog]);
+  }, [resetDate, historyData, isLog]);
 
   const navigate = useNavigate({from: Route.fullPath});
 
@@ -256,11 +280,27 @@ function HistoryComponent() {
       search: () => ({
         agents: newAgentSelection,
         selectionMode,
+        logAxis: isLog,
         hoursLte,
         hoursGte,
       }),
     });
-  }, [resetDate, rowSelection]);
+  }, [resetDate, rowSelection, isLog]);
+
+  const selectPredefinedRange = (rangeSelectionIndex: number) => {
+    let maybePredefinedRange = predefinedRanges.at(rangeSelectionIndex);
+
+    if (maybePredefinedRange) {
+      navigate({
+        search: (old) => ({
+          ...old,
+          selectionMode: maybePredefinedRange.selectionMode,
+          hoursLte: maybePredefinedRange.hoursLte,
+          hoursGte: maybePredefinedRange.hoursGte,
+        }),
+      });
+    }
+  };
 
   const selectAgents = (newSelectedAgents: string[]) => {
     const newSelection: RowSelectionState = newSelectedAgents.reduce((o, key) => ({...o, [key]: true}), {});
@@ -269,12 +309,14 @@ function HistoryComponent() {
 
   const table = createLeaderboardTable(memoizedLeaderboard, setRowSelection, sorting, rowSelection, setSorting);
 
-  let agentsWithData = historyDataFromCache?.agentHistory.map((h) => h.agentSymbol) ?? [];
+  let agentsWithData = historyData?.agentHistory.map((h) => h.agentSymbol) ?? [];
   const agentsWithMissingData = _.difference(agents, agentsWithData);
   const noDataMessage =
     agentsWithMissingData.length > 0
       ? `No data for ${agentsWithMissingData.length} agent(s) in this period: ${agentsWithMissingData.join(", ")}`
       : undefined;
+
+  selectedReset?.isOngoing;
 
   return (
     <AgentSelectionSheetPage
@@ -290,7 +332,9 @@ function HistoryComponent() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-row w-full">
           <h3 className="text-xl font-bold">Displaying {prettyPrintRangeSelection(rangeSelectionFromSearchParams)}</h3>
-          <div className="ml-auto">{rangeSelectionComponent(rangeSelectionFromSearchParams)}</div>
+          <div className="ml-auto">
+            {rangeSelectionComponent(rangeSelectionFromSearchParams, selectPredefinedRange)}
+          </div>
         </div>
 
         {charts}
@@ -333,6 +377,8 @@ function createMaterialChartTraces(
 
     return {
       type: "scatter",
+      mode: "lines+markers",
+
       name: `${h.jumpGateWaypointSymbol}: (${agentsInThisSystem.length} agent(s)\n${agentsDescription})`,
       x: convertMinutesIntoDateTime(firstTs, h.eventTimesMinutes),
       y: h.fulfilled,
@@ -362,6 +408,7 @@ function renderTimeSeriesCharts(
   const agentCreditsTraces: Data[] = agentHistory.map((foo) => {
     return {
       type: "scatter",
+      mode: "lines+markers",
       name: foo.agentSymbol,
       x: convertMinutesIntoDateTime(firstTs, foo.eventTimesMinutes),
       y: foo.creditsTimeline,
@@ -373,15 +420,16 @@ function renderTimeSeriesCharts(
     };
   });
 
-  const agentShipCountTraces: Data[] = agentHistory.map((foo) => {
+  const agentShipCountTraces: Data[] = agentHistory.map((ahe) => {
     return {
       type: "scatter",
-      name: foo.agentSymbol,
-      x: convertMinutesIntoDateTime(firstTs, foo.eventTimesMinutes),
-      y: foo.shipCountTimeline,
-      hovertemplate: `<b>${foo.agentSymbol}</b><br><b>Ships: </b>%{y:,d}<br><b>Date: </b>%{x}<extra></extra>`, // the empty extra-thingy disables the rendering of the trace-name in the hover info.
+      mode: "lines+markers",
+      name: ahe.agentSymbol,
+      x: convertMinutesIntoDateTime(firstTs, ahe.eventTimesMinutes),
+      y: ahe.shipCountTimeline,
+      hovertemplate: `<b>${ahe.agentSymbol}</b><br><b>Ships: </b>%{y:,d}<br><b>Date: </b>%{x}<extra></extra>`, // the empty extra-thingy disables the rendering of the trace-name in the hover info.
       marker: {
-        color: sortedAndColoredLeaderboard.find((l) => l.agentSymbol === foo.agentSymbol)?.displayColor ?? "black",
+        color: sortedAndColoredLeaderboard.find((l) => l.agentSymbol === ahe.agentSymbol)?.displayColor ?? "black",
       },
     };
   });
@@ -455,6 +503,8 @@ function renderLineChart({isLog, mutedColorTitle, title, data}: LineChartConfig)
         className="w-full"
         data={data}
         layout={{
+          //hovermode: "x unified", // this would show the tooltip for _all_ agents, but it doesn't sort them nicely.
+          hovermode: "closest",
           // remove margin reserved for title area
           margin: {
             l: 50,
@@ -472,7 +522,7 @@ function renderLineChart({isLog, mutedColorTitle, title, data}: LineChartConfig)
             size: 10,
             color: chartGridLineColor,
           },
-          paper_bgcolor: "rgba(0,0,0,0)",
+          paper_bgcolor: "rgba(0,0,0,100)",
           plot_bgcolor: "rgba(0,0,0,0)",
 
           xaxis: {

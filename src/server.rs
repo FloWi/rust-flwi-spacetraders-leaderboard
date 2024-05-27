@@ -1,9 +1,11 @@
 use std::io::Error;
+use std::ops::RangeInclusive;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
 use axum::{response::Result, routing, Router};
+use chrono::TimeDelta;
 use sqlx::{Pool, Sqlite};
 use tokio::net::TcpListener;
 use tower_http::classify::ServerErrorsFailureClass;
@@ -17,12 +19,13 @@ use utoipa_redoc::{Redoc, Servable};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::db::{
-    DbAgentHistoryEntry, DbConstructionMaterialHistoryEntry, DbConstructionMaterialMostRecentStatus,
+    DbAgentHistoryEntry, DbConstructionMaterialHistoryEntry,
+    DbConstructionMaterialMostRecentStatus, ResetDate,
 };
 use crate::server::leaderboard::{
     ApiAgentHistoryEntry, ApiAgentSymbol, ApiConstructionMaterialHistoryEntry,
-    ApiConstructionMaterialMostRecentProgressEntry, ApiResetDate, ApiTradeSymbol,
-    ApiWaypointSymbol,
+    ApiConstructionMaterialMostRecentProgressEntry, ApiResetAgentPeriodFilterBody, ApiResetDate,
+    ApiTradeSymbol, ApiWaypointSymbol, RangeSelectionMode,
 };
 
 pub fn with_static_file_server(router: Router, serve_dir: ServeDir) -> Router {
@@ -98,10 +101,12 @@ pub async fn http_server(
 }
 
 pub mod leaderboard {
+    use std::ops::{Range, RangeInclusive};
+
     use axum::extract::{Path, State};
     use axum::Json;
     use chrono::format::StrftimeItems;
-    use chrono::{NaiveDate, NaiveDateTime};
+    use chrono::{NaiveDate, NaiveDateTime, TimeDelta};
     use itertools::Itertools;
     use serde::{Deserialize, Serialize};
     use sqlx::{Pool, Sqlite};
@@ -109,10 +114,11 @@ pub mod leaderboard {
     use utoipa::{IntoParams, OpenApi, ToSchema};
 
     use crate::db::{
-        load_leaderboard_for_reset, load_reset_dates, select_agent_history,
+        load_leaderboard_for_reset, load_reset_date, load_reset_dates, select_agent_history,
         select_construction_progress_for_reset, select_jump_gate_agent_assignment_for_reset,
-        select_most_recent_construction_progress_for_reset,
+        select_most_recent_construction_progress_for_reset, ResetDate,
     };
+    use crate::server::{extract_reset_period_from_filter, ResetPeriodFilter};
 
     #[derive(OpenApi)]
     #[openapi(
@@ -134,13 +140,14 @@ pub mod leaderboard {
             schemas(GetLeaderboardForResetResponseContent),
             schemas(GetHistoryDataForResetResponseContent),
             schemas(ListResetDatesResponseContent),
-            schemas(ResetAgentPeriodFilterBody),
+            schemas(ApiResetAgentPeriodFilterBody),
             schemas(ApiTradeSymbol),
             schemas(ApiAgentHistoryEntry),
             schemas(ApiConstructionMaterialHistoryEntry),
             schemas(GetJumpGateMostRecentProgressForResetResponseContent),
             schemas(ApiJumpGateAssignmentEntry),
             schemas(ApiConstructionMaterialMostRecentProgressEntry),
+            schemas(RangeSelectionMode),
         )
     )]
     pub(crate) struct ApiDoc;
@@ -208,6 +215,7 @@ pub mod leaderboard {
         agent_history: Vec<ApiAgentHistoryEntry>,
         construction_material_history: Vec<ApiConstructionMaterialHistoryEntry>,
         requested_agents: Vec<ApiAgentSymbol>,
+        resolution_minutes: i64,
     }
 
     #[derive(Serialize, Deserialize, ToSchema, Debug)]
@@ -390,13 +398,21 @@ pub mod leaderboard {
         jump_gate_assignments
     }
 
+    #[derive(Deserialize, ToSchema, Debug)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) enum RangeSelectionMode {
+        First,
+        Last,
+    }
+
     /// Filter for period and agent symbols
     #[derive(Deserialize, ToSchema)]
-    pub(crate) struct ResetAgentPeriodFilterBody {
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct ApiResetAgentPeriodFilterBody {
         pub(crate) agent_symbols: Vec<String>,
-        pub(crate) resolution_minutes: u16,
-        pub(crate) from_event_time_minutes_gte: u32,
-        pub(crate) to_event_time_minutes_lte: u32,
+        pub(crate) event_time_minutes_lte: u32,
+        pub(crate) event_time_minutes_gte: Option<u32>,
+        pub(crate) selection_mode: RangeSelectionMode,
     }
 
     /// Get the history data for a reset
@@ -407,14 +423,22 @@ pub mod leaderboard {
     params(
         ("resetDate" = NaiveDate, Path, description = "The reset date"),
     ),
-    request_body = ResetAgentPeriodFilterBody
+    request_body = ApiResetAgentPeriodFilterBody
     )]
     pub(crate) async fn get_history_data_for_reset(
         State(pool): State<Pool<Sqlite>>,
         Path(reset_date): Path<NaiveDate>,
-        Json(filter): Json<ResetAgentPeriodFilterBody>,
+        Json(filter): Json<ApiResetAgentPeriodFilterBody>,
     ) -> Json<GetHistoryDataForResetResponseContent> {
         let jump_gate_assignments = load_jump_gate_assignments(&pool, reset_date).await;
+
+        let reset_infos = load_reset_date(&pool, reset_date).await.unwrap().unwrap();
+
+        let ResetPeriodFilter {
+            from_event_time_minutes,
+            to_event_time_minutes,
+            resolution_minutes,
+        } = extract_reset_period_from_filter(&filter, reset_infos);
 
         let agent_symbols = filter.agent_symbols; //.unwrap_or(vec![]);
 
@@ -432,18 +456,24 @@ pub mod leaderboard {
         let construction_material_progress = select_construction_progress_for_reset(
             &pool,
             reset_date,
-            0,
-            1 * 24 * 60,
-            30,
+            from_event_time_minutes.into(),
+            to_event_time_minutes.into(),
+            resolution_minutes,
             jump_gate_symbols.clone(),
         )
         .await
         .unwrap();
 
-        let agent_history_progress =
-            select_agent_history(&pool, reset_date, 0, 1 * 24 * 60, 30, agent_symbols.clone())
-                .await
-                .unwrap();
+        let agent_history_progress = select_agent_history(
+            &pool,
+            reset_date,
+            from_event_time_minutes.into(),
+            to_event_time_minutes.into(),
+            resolution_minutes,
+            agent_symbols.clone(),
+        )
+        .await
+        .unwrap();
 
         let api_construction_progress: Vec<_> = construction_material_progress
             .iter()
@@ -460,14 +490,15 @@ pub mod leaderboard {
 
         event!(
             Level::DEBUG,
-            "Done collecting history agent data for {num_agents}",
+            "Done collecting history agent data for {num_agents}. from_event_time_minutes: {from_event_time_minutes}; to_event_time_minutes: {to_event_time_minutes}; selection_mode: {selection_mode:?}",
+            selection_mode=filter.selection_mode
         );
         event!(
             Level::DEBUG,
             "Agent Symbols are {}",
             agent_symbols.join(", ")
         );
-        dbg!(agent_history_progress);
+        //dbg!(agent_history_progress);
         event!(
             Level::DEBUG,
             "Done collecting history construction data for {num_jump_gates} jump gates",
@@ -478,7 +509,7 @@ pub mod leaderboard {
             jump_gate_symbols.join(", ")
         );
 
-        dbg!(construction_material_progress);
+        //dbg!(construction_material_progress);
 
         let response = GetHistoryDataForResetResponseContent {
             requested_agents: agent_symbols
@@ -488,9 +519,65 @@ pub mod leaderboard {
             reset_date: ApiResetDate(reset_date.format("%Y-%m-%d").to_string()),
             agent_history: api_agent_history_progress,
             construction_material_history: api_construction_progress,
+            resolution_minutes,
         };
 
         Json(response)
+    }
+}
+
+struct ResetPeriodFilter {
+    from_event_time_minutes: i64,
+    to_event_time_minutes: i64,
+    resolution_minutes: i64,
+}
+
+fn safe_range(v1: u32, v2: u32) -> RangeInclusive<u32> {
+    if v1 > v2 {
+        v2..=v1
+    } else {
+        v1..=v2
+    }
+}
+
+fn extract_reset_period_from_filter(
+    filter: &ApiResetAgentPeriodFilterBody,
+    reset_infos: ResetDate,
+) -> ResetPeriodFilter {
+    let event_time_minutes = match filter.selection_mode {
+        RangeSelectionMode::First => {
+            (safe_range(
+                filter.event_time_minutes_gte.unwrap_or(0),
+                filter.event_time_minutes_lte,
+            ))
+        }
+        RangeSelectionMode::Last => {
+            let num_minutes = (reset_infos.latest_ts - reset_infos.first_ts)
+                .num_minutes()
+                .abs() as u32;
+            (safe_range(
+                num_minutes - filter.event_time_minutes_gte.unwrap_or(0),
+                num_minutes - filter.event_time_minutes_lte,
+            ))
+        }
+    };
+
+    let from_event_time_minutes: i64 = (*event_time_minutes.start()).into();
+    let to_event_time_minutes: i64 = (*event_time_minutes.end()).into();
+    let num_minutes: i64 = to_event_time_minutes - from_event_time_minutes;
+
+    let resolution_minutes: i64 = if num_minutes < TimeDelta::hours(6).num_minutes() {
+        5
+    } else if num_minutes < TimeDelta::days(1).num_minutes() {
+        15
+    } else {
+        60
+    };
+
+    ResetPeriodFilter {
+        from_event_time_minutes,
+        to_event_time_minutes,
+        resolution_minutes,
     }
 }
 

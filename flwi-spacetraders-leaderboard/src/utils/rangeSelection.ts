@@ -1,5 +1,7 @@
 export type SelectionMode = "first" | "last";
 
+export const AllSelectionModes: SelectionMode[] = ["first", "last"];
+
 export type RangeSelection = {
   selectionMode: SelectionMode;
   hoursLte: number;
