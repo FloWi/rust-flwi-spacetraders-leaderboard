@@ -20,7 +20,6 @@ import {
   extractSystemSymbol,
   MaterialSummary,
   mockDataConstructionProgress,
-  rawData,
 } from "../../lib/constructionHelper.ts";
 
 import { durationMillis } from "../../lib/utils.ts";
@@ -72,9 +71,10 @@ const columns = [
       align: "right",
     },
   }),
-  columnHelperConstructionOverview.accessor((row) => `${percentNumberFmt.format(row.fulfilled / row.required)}`, {
-    id: "completed",
+  columnHelperConstructionOverview.accessor((row) => row.fulfilled / row.required, {
+    id: "progress",
     header: "Progress",
+    cell: (info) => percentNumberFmt.format(info.getValue()),
     meta: {
       align: "right",
     },
@@ -232,12 +232,35 @@ function JumpGateComponent(): JSX.Element {
   const { resetDate } = Route.useParams();
   const { agents } = Route.useSearch();
 
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sortingLeaderboard, setSortingLeaderboard] = React.useState<SortingState>([
+    {
+      id: "credits",
+      desc: true,
+    },
+  ]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({}); //manage your own row selection state
 
-  const [sortingConstruction, setSortingConstruction] = React.useState<SortingState>([]);
+  const [sortingConstruction, setSortingConstruction] = React.useState<SortingState>([
+    {
+      id: "tradeSymbol",
+      desc: false,
+    },
+    {
+      id: "progress",
+      desc: true,
+    },
+  ]);
 
-  const [sortingAssignment, setSortingAssignment] = React.useState<SortingState>([]);
+  const [sortingAssignment, setSortingAssignment] = React.useState<SortingState>([
+    {
+      id: "numAgentsInSystem",
+      desc: true,
+    },
+    {
+      id: "agentsInSystem",
+      desc: false,
+    },
+  ]);
 
   const { data: leaderboardData } = useSuspenseQuery(leaderboardQueryOptions(resetDate));
 
@@ -277,9 +300,9 @@ function JumpGateComponent(): JSX.Element {
   const leaderboardTable = createLeaderboardTable(
     memoizedLeaderboard,
     setRowSelection,
-    sorting,
+    sortingLeaderboard,
     rowSelection,
-    setSorting,
+    setSortingLeaderboard,
   );
 
   const assignmentTable = useReactTable({
@@ -294,7 +317,7 @@ function JumpGateComponent(): JSX.Element {
     debugTable: true,
   });
 
-  const table = useReactTable({
+  const constructionProgressTable = useReactTable({
     data: constructionProgressData,
     enableRowSelection: false,
     columns,
@@ -333,7 +356,7 @@ function JumpGateComponent(): JSX.Element {
           <h2 className="text-2xl font-bold pt-2">Gate to Agent Mapping</h2>
           {prettyTable(assignmentTable)}
           <h2 className="text-2xl font-bold pt-4 h-fit">Construction Overview</h2>
-          {prettyTable(table)}
+          {prettyTable(constructionProgressTable)}
         </div>
       </AgentSelectionSheetPage>
     </>

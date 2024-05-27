@@ -18,7 +18,7 @@ import {
 import { Data } from "plotly.js";
 import { calcSortedAndColoredLeaderboard, UiLeaderboardEntry } from "../../lib/leaderboard-helper.ts";
 import * as _ from "lodash";
-import { capitalize, parseInt } from "lodash";
+import { capitalize } from "lodash";
 import { AgentSelectionSheetPage } from "../../components/agent-selection-sheet-page.tsx";
 import { createLeaderboardTable } from "../../components/agent-selection-table.tsx";
 import { RowSelectionState, SortingState } from "@tanstack/react-table";
@@ -30,8 +30,6 @@ import {
   SelectionMode,
 } from "../../utils/rangeSelection.ts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../@/components/ui/select.tsx";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../@/components/ui/card.tsx";
-import { renderKvPair } from "../../lib/key-value-card-helper.tsx";
 
 type AgentSelectionSearch = {
   agents?: string[];
@@ -235,7 +233,12 @@ function HistoryComponent() {
   const { data: jumpGateMostRecentConstructionProgress } = useQuery(jumpGateMostRecentProgressQueryOptions(resetDate));
   const [isLog, setIsLog] = React.useState(true);
 
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sortingLeaderboard, setSortingLeaderboard] = React.useState<SortingState>([
+    {
+      id: "credits",
+      desc: true,
+    },
+  ]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({}); //manage your own row selection state
 
   const { data: leaderboardData } = useSuspenseQuery(leaderboardQueryOptions(resetDate));
@@ -307,7 +310,13 @@ function HistoryComponent() {
     setRowSelection((_) => newSelection);
   };
 
-  const table = createLeaderboardTable(memoizedLeaderboard, setRowSelection, sorting, rowSelection, setSorting);
+  const table = createLeaderboardTable(
+    memoizedLeaderboard,
+    setRowSelection,
+    sortingLeaderboard,
+    rowSelection,
+    setSortingLeaderboard,
+  );
 
   let agentsWithData = historyData?.agentHistory.map((h) => h.agentSymbol) ?? [];
   const agentsWithMissingData = _.difference(agents, agentsWithData);
@@ -341,6 +350,10 @@ function HistoryComponent() {
         <p className="text-sm text-muted-foreground">
           Zoom by dragging on area the charts. Individual agents can be (de)selected by clicking on the item in the
           legend. Clicking on an item in the legend toggles its visibility - a double-click isolates that trace.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          The charts for the construction materials have been merged if multiple agents spawned in the same system. The
+          color is that of the first entry in the leaderboard.
         </p>
       </div>
     </AgentSelectionSheetPage>

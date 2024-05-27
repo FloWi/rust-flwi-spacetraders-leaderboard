@@ -151,7 +151,12 @@ function renderBarChart({ title, mutedColorTitle, isLog, xValues, yValues, color
 function LeaderboardComponent() {
   const { resetDate } = Route.useParams();
   const resetDateToUse = resetDate;
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sortingLeaderboard, setSortingLeaderboard] = React.useState<SortingState>([
+    {
+      id: "credits",
+      desc: true,
+    },
+  ]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({}); //manage your own row selection state
 
   const { data: leaderboardData } = useSuspenseQuery(leaderboardQueryOptions(resetDate));
@@ -238,7 +243,13 @@ function LeaderboardComponent() {
       };
     });
   }, [rowSelection, current.leaderboard, isLog]);
-  const table = createLeaderboardTable(memoizedLeaderboard, setRowSelection, sorting, rowSelection, setSorting);
+  const table = createLeaderboardTable(
+    memoizedLeaderboard,
+    setRowSelection,
+    sortingLeaderboard,
+    rowSelection,
+    setSortingLeaderboard,
+  );
 
   const navigate = useNavigate({ from: Route.fullPath });
 
