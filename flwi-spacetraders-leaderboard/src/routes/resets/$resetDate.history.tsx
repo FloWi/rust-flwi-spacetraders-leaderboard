@@ -336,9 +336,12 @@ function HistoryComponent() {
             {rangeSelectionComponent(rangeSelectionFromSearchParams, selectPredefinedRange)}
           </div>
         </div>
-
-        {charts}
         <p className="text-sm text-muted-foreground">{`Displaying charts for ${agentsWithData.length} agent(s). ${noDataMessage ?? ""}`}</p>
+        {charts}
+        <p className="text-sm text-muted-foreground">
+          Zoom by dragging on area the charts. Individual agents can be (de)selected by clicking on the item in the
+          legend. Clicking on an item in the legend toggles its visibility - a double-click isolates that trace.
+        </p>
       </div>
     </AgentSelectionSheetPage>
   );
@@ -493,7 +496,7 @@ function renderLineChart({isLog, mutedColorTitle, title, data}: LineChartConfig)
   let chartGridLineColor = "rgb(102,102,108)";
 
   return (
-    <div key={title}>
+    <div key={title} className="touch-manipulation">
       <div className="flex flex-row items-center">
         <h3 className="text-lg font-bold">{title}</h3>
         {mutedColorTitle ? <p className="text-sm text-muted-foreground">&nbsp; | &nbsp;</p> : <></>}
@@ -514,10 +517,10 @@ function renderLineChart({isLog, mutedColorTitle, title, data}: LineChartConfig)
             //pad: 4,
           },
           modebar: {orientation: "h"},
-          showlegend: false,
+          showlegend: true,
           legend: {orientation: "h"},
 
-          height: 500,
+          height: 750,
           font: {
             size: 10,
             color: chartGridLineColor,
@@ -544,7 +547,7 @@ function renderLineChart({isLog, mutedColorTitle, title, data}: LineChartConfig)
             tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
           },
         }}
-        config={{displayModeBar: false, responsive: true}}
+        config={{displayModeBar: false, responsive: true /*doubleClickDelay: 500*/}}
       />
     </div>
   );

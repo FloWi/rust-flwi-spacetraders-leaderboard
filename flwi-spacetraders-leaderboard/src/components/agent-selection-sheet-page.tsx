@@ -115,7 +115,7 @@ export function AgentSelectionSheetPage({
   function mobileLayout(): JSX.Element {
     return (
       <Sheet>
-        <div className="sub-header flex flex-row gap-2 mt-4 items-center">
+        <div className="sub-header flex flex-row gap-2 mt-1 items-center">
           <h2 className="text-2xl font-bold">{title}</h2>
           <SheetTrigger asChild className={`block lg:hidden mr-2`}>
             <HamburgerMenuIcon className="ml-auto"/>
