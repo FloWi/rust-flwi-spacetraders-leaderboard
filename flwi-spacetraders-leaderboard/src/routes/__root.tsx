@@ -7,12 +7,11 @@ import {
   RouterState,
   useRouterState,
 } from "@tanstack/react-router";
-import {TanStackRouterDevtools} from "@tanstack/router-devtools";
-import {QueryClient} from "@tanstack/react-query";
-import {SwaggerIcon} from "../components/swagger-icon.tsx";
-import {GitHubLogoIcon} from "@radix-ui/react-icons";
-import {resetDatesQueryOptions} from "../utils/queryOptions.ts";
-import {createSamePageOtherResetNavigationMenuItem} from "../utils/resetNavigationHelper.tsx";
+import { QueryClient } from "@tanstack/react-query";
+import { SwaggerIcon } from "../components/swagger-icon.tsx";
+import { GitHubLogoIcon } from "@radix-ui/react-icons";
+import { resetDatesQueryOptions } from "../utils/queryOptions.ts";
+import { createSamePageOtherResetNavigationMenuItem } from "../utils/resetNavigationHelper.tsx";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -20,10 +19,12 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "../@/components/ui/navigation-menu.tsx";
-import {MyLink} from "../components/myLink.tsx";
+import { MyLink } from "../components/myLink.tsx";
 import * as _ from "lodash";
-import {Separator} from "../@/components/ui/separator.tsx";
-import {useMediaQuery} from "react-responsive";
+import { Separator } from "../@/components/ui/separator.tsx";
+import { useMediaQuery } from "react-responsive";
+import React, { Suspense } from "react";
+import { TanStackRouterDevtools } from "../components/TanStackRouterDevtools.tsx";
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
@@ -51,9 +52,9 @@ function getTitleOfCurrentResetPage(routerState: RouterState<RegisteredRouter["r
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   loader: async ({
-                   //deps: { agents },
-                   context: {queryClient},
-                 }) => {
+    //deps: { agents },
+    context: { queryClient },
+  }) => {
     return queryClient.ensureQueryData(resetDatesQueryOptions);
   },
 
@@ -77,7 +78,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     let currentResetLeaderboardLink = maybeLatestResetDate ? (
       <MyLink
         to="/resets/$resetDate/leaderboard"
-        params={{resetDate: maybeLatestResetDate?.resetDate}}
+        params={{ resetDate: maybeLatestResetDate?.resetDate }}
         className="flex h-7 items-center justify-center rounded-full px-2 text-center text-sm transition-colors hover:text-primary text-muted-foreground
               [&.active]:bg-muted
               [&.active]:font-medium
@@ -189,17 +190,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                     </MyLink>
                   </li>
                   <li>
-                    <Separator/>
+                    <Separator />
                     <div className="flex flex-row gap-4 mt-4">
                       <a href="/docs/swagger-ui" title="Swagger API docs" target="_blank">
-                        <SwaggerIcon.icon className="mr-2 h-6 w-6" title="Swagger API docs"/>
+                        <SwaggerIcon.icon className="mr-2 h-6 w-6" title="Swagger API docs" />
                       </a>
                       <a
                         href="https://github.com/FloWi/rust-flwi-spacetraders-leaderboard"
                         title="Github Repository"
                         target="_blank"
                       >
-                        <GitHubLogoIcon className="mr-2 h-6 w-6"/>
+                        <GitHubLogoIcon className="mr-2 h-6 w-6" />
                       </a>
                     </div>
                   </li>
@@ -222,12 +223,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         <div className={`${isDesktopOrLaptop ? "desktop-page" : "mobile-page"} bg-background shadow-md`}>
           <div className="header">
             {headerContent}
-            <Separator/>
+            <Separator />
           </div>
-          <Outlet/>
+          <Outlet />
         </div>
-
-        <TanStackRouterDevtools/>
+        <Suspense>
+          <TanStackRouterDevtools />
+        </Suspense>{" "}
       </>
     );
   },
