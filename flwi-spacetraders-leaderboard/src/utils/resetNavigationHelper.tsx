@@ -82,9 +82,12 @@ function createLinksToOtherResets(
         resetDate: r,
         props: (
           <Link
+            from="/resets/$resetDate/history"
             to="/resets/$resetDate/history"
             params={{ resetDate: r }}
-            search={{ agents: current?.selectedAgents }}
+            search={(old) => {
+              return { ...old, agents: current?.selectedAgents };
+            }}
             className="[&.active]:font-bold"
           >
             {r}

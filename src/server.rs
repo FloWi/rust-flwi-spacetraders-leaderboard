@@ -28,7 +28,7 @@ use crate::server::leaderboard::{
     ApiTradeSymbol, ApiWaypointSymbol, RangeSelectionMode,
 };
 
-pub fn with_static_file_server(router: Router, serve_dir: ServeDir) -> Router {
+pub fn with_static_file_server(router: Router, _serve_dir: ServeDir) -> Router {
     // FIXME: ???
     router
 }
@@ -72,7 +72,7 @@ pub async fn http_server(
         )
         .layer(CorsLayer::very_permissive())
         .layer(TraceLayer::new_for_http().on_failure(
-            |error: ServerErrorsFailureClass, latency: Duration, _span: &Span| {
+            |_error: ServerErrorsFailureClass, _latency: Duration, _span: &Span| {
                 tracing::debug!("something went wrong")
             },
         ))
@@ -101,7 +101,6 @@ pub async fn http_server(
 }
 
 pub mod leaderboard {
-    use std::ops::{Range, RangeInclusive};
 
     use axum::extract::{Path, State};
     use axum::Json;
@@ -111,12 +110,12 @@ pub mod leaderboard {
     use serde::{Deserialize, Serialize};
     use sqlx::{Pool, Sqlite};
     use tracing::{event, Level};
-    use utoipa::{IntoParams, OpenApi, ToSchema};
+    use utoipa::{OpenApi, ToSchema};
 
     use crate::db::{
         load_leaderboard_for_reset, load_reset_date, load_reset_dates, select_agent_history,
         select_construction_progress_for_reset, select_jump_gate_agent_assignment_for_reset,
-        select_most_recent_construction_progress_for_reset, ResetDate,
+        select_most_recent_construction_progress_for_reset,
     };
     use crate::server::{extract_reset_period_from_filter, ResetPeriodFilter};
 
@@ -545,20 +544,18 @@ fn extract_reset_period_from_filter(
     reset_infos: ResetDate,
 ) -> ResetPeriodFilter {
     let event_time_minutes = match filter.selection_mode {
-        RangeSelectionMode::First => {
-            (safe_range(
-                filter.event_time_minutes_gte.unwrap_or(0),
-                filter.event_time_minutes_lte,
-            ))
-        }
+        RangeSelectionMode::First => safe_range(
+            filter.event_time_minutes_gte.unwrap_or(0),
+            filter.event_time_minutes_lte,
+        ),
         RangeSelectionMode::Last => {
             let num_minutes = (reset_infos.latest_ts - reset_infos.first_ts)
                 .num_minutes()
                 .abs() as u32;
-            (safe_range(
+            safe_range(
                 num_minutes - filter.event_time_minutes_gte.unwrap_or(0),
                 num_minutes - filter.event_time_minutes_lte,
-            ))
+            )
         }
     };
 
