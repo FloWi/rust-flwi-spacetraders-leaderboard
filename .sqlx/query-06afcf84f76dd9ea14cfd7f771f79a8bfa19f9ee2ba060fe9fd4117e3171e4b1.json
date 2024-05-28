@@ -1,0 +1,68 @@
+{
+  "db_name": "SQLite",
+  "query": "\nwith last_entry_of_reset as (select *\n                             from (select r.reset_id\n                                        , r.first_ts\n                                        , r.reset\n                                        , row_number() over (partition by jr.reset_id order by jr.query_time desc) as rn\n                                        , jr.query_time                                                            as ts_latest_entry_of_reset\n                                        , jr.id                                                                    as job_run_id_latest_entry\n                                   from reset_date r\n                                            join main.job_run jr\n                                                 on r.reset_id = jr.reset_id\n                                   where reset = ?\n                                   ) sub\n                             where rn = 1)\nselect l.reset_id as \"reset_id: _\"\n     , l.reset as \"reset: _\"\n     , l.first_ts as \"ts_start_of_reset: _\"\n     , l.ts_latest_entry_of_reset as \"ts_latest_entry_of_reset: _\"\n     , cr.trade_symbol\n     , cml.fulfilled\n     , cr.required\n     , cs.jump_gate_waypoint_symbol\n     , cl.is_complete as is_jump_gate_complete\nfrom construction_material_log cml\n         join main.construction_log cl\n              on cml.construction_log_id = cl.id\n         join main.construction_site cs\n              on cl.construction_site_id = cs.id\n         join main.construction_requirement cr\n              on cml.construction_requirement_id = cr.id\n         join last_entry_of_reset l\n              on l.job_run_id_latest_entry = cl.job_id\nwhere required > 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "reset_id: _",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "reset: _",
+        "ordinal": 1,
+        "type_info": "Date"
+      },
+      {
+        "name": "ts_start_of_reset: _",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "ts_latest_entry_of_reset: _",
+        "ordinal": 3,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "trade_symbol",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "fulfilled",
+        "ordinal": 5,
+        "type_info": "Int64"
+      },
+      {
+        "name": "required",
+        "ordinal": 6,
+        "type_info": "Int64"
+      },
+      {
+        "name": "jump_gate_waypoint_symbol",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "is_jump_gate_complete",
+        "ordinal": 8,
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "06afcf84f76dd9ea14cfd7f771f79a8bfa19f9ee2ba060fe9fd4117e3171e4b1"
+}

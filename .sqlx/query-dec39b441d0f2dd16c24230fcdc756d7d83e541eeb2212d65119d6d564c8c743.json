@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n    insert into mat_view_current_construction_progress (is_jump_gate_complete,\n                                                        construction_site_id,\n                                                        construction_requirement_id,\n                                                        fulfilled,\n                                                        reset_id)\n    with last_entry_of_reset as (select *\n                                 from (select r.reset_id\n                                            , r.first_ts\n                                            , r.reset\n                                            , row_number() over (partition by jr.reset_id order by jr.query_time desc) as rn\n                                            , jr.query_time                                                            as ts_latest_entry_of_reset\n                                            , jr.id                                                                    as job_run_id_latest_entry\n                                       from reset_date r\n                                                join main.job_run jr\n                                                     on r.reset_id = jr.reset_id) sub\n                                 where rn = 1)\n\n    select cl.is_complete as is_jump_gate_complete\n         , cl.construction_site_id\n         , cml.construction_requirement_id\n         , cml.fulfilled\n         , l.reset_id\n    from construction_material_log cml\n             join main.construction_log cl\n                  on cml.construction_log_id = cl.id\n             join main.construction_site cs\n                  on cl.construction_site_id = cs.id\n             join main.construction_requirement cr\n                  on cml.construction_requirement_id = cr.id\n             join last_entry_of_reset l\n                  on l.job_run_id_latest_entry = cl.job_id\n    where required > 1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "dec39b441d0f2dd16c24230fcdc756d7d83e541eeb2212d65119d6d564c8c743"
+}

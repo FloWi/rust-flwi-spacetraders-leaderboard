@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n    insert into mat_view_material_delivery_events (reset_id,\n                                                   construction_site_id,\n                                                   construction_requirement_id,\n                                                   first_ts,\n                                                   query_time,\n                                                   duration_seconds,\n                                                   delivery_event)\n    select reset_id,\n           construction_site_id,\n           construction_requirement_id,\n           first_ts,\n           query_time,\n           duration_seconds,\n           delivery_event\n    from v_material_delivery_events\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "d3ac933a5e96584fbb27d43695f10490e65eb974362c6179606e67c2f73535fa"
+}

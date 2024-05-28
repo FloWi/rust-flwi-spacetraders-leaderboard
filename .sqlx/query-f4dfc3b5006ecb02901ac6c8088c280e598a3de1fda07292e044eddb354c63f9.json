@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n    delete\n    from mat_view_material_delivery_events\n    where true\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "f4dfc3b5006ecb02901ac6c8088c280e598a3de1fda07292e044eddb354c63f9"
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\nselect r.reset_id as \"reset_id!\"\n     , r.reset as \"reset!\"\n     , r.first_ts as \"first_ts!\"\n     , max(jr.query_time) as \"latest_ts! :_\"\n     , (select count(*) from reset_date next where next.reset > r.reset ) = 0 as \"is_ongoing! :_\"\n  from reset_date r\n  join main.job_run jr\n       on r.reset_id = jr.reset_id\ngroup by r.reset_id, r.first_ts, r.reset\norder by r.reset desc\n        ",
+  "query": "\nselect r.reset_id as \"reset_id!\"\n     , r.reset as \"reset!\"\n     , r.first_ts as \"first_ts!\"\n     , coalesce(max(jr.query_time), r.first_ts) as \"latest_ts! :_\"\n     , (select count(*) from reset_date next where next.reset > r.reset ) = 0 as \"is_ongoing! :_\"\n  from reset_date r\n  left join main.job_run jr\n       on r.reset_id = jr.reset_id\ngroup by r.reset_id, r.first_ts, r.reset\norder by r.reset desc\n        ",
   "describe": {
     "columns": [
       {
@@ -40,5 +40,5 @@
       null
     ]
   },
-  "hash": "c4e25a2cdf26914e38900987ef472641db93f553668b01fbb4991a5ee1df7735"
+  "hash": "a378e5ecf6fe6c482548e9ba8d5e1b1f93b344f3d8853e4fca084f1145c5ab3c"
 }

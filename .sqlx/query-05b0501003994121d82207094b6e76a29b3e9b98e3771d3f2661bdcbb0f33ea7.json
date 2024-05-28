@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n    delete\n    from mat_view_current_construction_progress\n    where true\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "05b0501003994121d82207094b6e76a29b3e9b98e3771d3f2661bdcbb0f33ea7"
+}
