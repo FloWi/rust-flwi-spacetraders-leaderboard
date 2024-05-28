@@ -1,0 +1,54 @@
+# fly.toml app configuration file generated for flwi-spacetraders-leaderboard-crimson-waterfall-7968 on 2023-12-04T20:31:53+01:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = "flwi-spacetraders-rust-leaderboard"
+primary_region = "ams"
+
+[experimental]
+auto_rollback = true
+
+[build]
+image = "registry.fly.io/flwi-spacetraders-rust-leaderboard:latest"
+
+[env]
+LEADERBOARD_DATABASE_URL = "sqlite://data/flwi-leaderboard.db?mode=rwc"
+LEADERBOARD_HOST = "0.0.0.0"
+LEADERBOARD_PORT = "9000"
+LEADERBOARD_ASSET_DIR = "/dist"
+RUST_LOG = "info,flwi_spacetraders_leaderboard::pagination=trace,tower_http=trace"
+
+
+[[services]]
+protocol = "tcp"
+internal_port = 9000
+processes = ["app"]
+
+[[services.ports]]
+port = 80
+handlers = ["http"]
+force_https = true
+
+[[services.ports]]
+port = 443
+handlers = ["tls", "http"]
+
+[services.concurrency]
+type = "connections"
+hard_limit = 25
+soft_limit = 20
+
+[[services.tcp_checks]]
+interval = "15s"
+timeout = "2s"
+grace_period = "1s"
+
+[[vm]]
+cpu_kind = "shared"
+cpus = 1
+memory_mb = 1024
+
+[mounts]
+source = "spacetraders_rust_leaderboard"
+destination = "/data"

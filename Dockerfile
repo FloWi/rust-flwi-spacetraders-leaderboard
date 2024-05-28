@@ -53,4 +53,4 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install --yes ca-certificates openssl sqlite3 && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/flwi-spacetraders-leaderboard /usr/local/bin/app
 COPY --from=frontend-builder /app/flwi-spacetraders-leaderboard/dist /dist
-CMD ["app"]
+CMD ["app", "run-server"]
