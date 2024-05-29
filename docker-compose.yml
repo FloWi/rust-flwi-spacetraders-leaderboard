@@ -1,7 +1,7 @@
 services:
   leaderboard:
     # our SQL database
-    image: flwi-rust-leaderboard
+    image: registry.fly.io/flwi-spacetraders-rust-leaderboard
     container_name: flwi-rust-leaderboard
     profiles: [ "leaderboard" ]
     ports:
