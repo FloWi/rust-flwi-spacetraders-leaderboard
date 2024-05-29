@@ -332,7 +332,7 @@ pub(crate) async fn select_construction_progress_for_reset(
     // using an alias with a type handles that
     sqlx::query_as!(
         DbConstructionMaterialHistoryEntry,
-        "
+        r#"
 with construction_material_details as (
     select cs.jump_gate_waypoint_symbol
          , cr.trade_symbol
@@ -352,16 +352,18 @@ with construction_material_details as (
       and cr.required > 1
       and cs.jump_gate_waypoint_symbol in (select json_each.value as jump_gate_waypoint_symbol
                                            from json_each(json(?)))
+ order by cs.jump_gate_waypoint_symbol
+        , event_time_minutes
 )
 select jump_gate_waypoint_symbol
      , trade_symbol
-     , max(required) as \"required: i64\"
-     , group_concat(event_time_minutes, ',') as \"event_time_minutes_csv: String\"
-     , group_concat(fulfilled, ',') as \"fulfilled_csv: String\"
+     , max(required) as "required: i64"
+     , group_concat(event_time_minutes, ',') as "event_time_minutes_csv: String"
+     , group_concat(fulfilled, ',') as "fulfilled_csv: String"
 from construction_material_details
 group by jump_gate_waypoint_symbol
        , trade_symbol
-        ",
+        "#,
         reset_date,
         from_event_time_minutes_gte,
         to_event_time_minutes_lte,
