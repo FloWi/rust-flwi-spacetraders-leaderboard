@@ -21,13 +21,13 @@ function extractPathAndSearchParams(
   // haven't found a proper way to extract the params and search in a typesafe way,
 
   try {
-    let params: any = match.params;
+    const params: any = match.params;
     let resetDate: string | undefined;
     let selectedAgents: string[] | undefined;
     if (params.resetDate) {
       resetDate = params.resetDate;
     }
-    let search = match.search as any;
+    const search = match.search as any;
     if (search.selectedAgents) {
       selectedAgents = search.selectedAgents;
     }
@@ -58,7 +58,7 @@ function createLinksToOtherResets(
   // console.log("routerState", routerState);
 
   let resetLinks: ResetLink[] = [];
-  let current = deepestMatch ? extractPathAndSearchParams(deepestMatch) : undefined;
+  const current = deepestMatch ? extractPathAndSearchParams(deepestMatch) : undefined;
 
   if (deepestMatch?.routeId == "/resets/$resetDate/leaderboard") {
     resetLinks = resetDates.map((r) => {
@@ -108,12 +108,12 @@ function createLinksToOtherResets(
     });
   }
 
-  let sortedEntries = _.sortBy(resetLinks, ({ resetDate }) => resetDate);
+  const sortedEntries = _.sortBy(resetLinks, ({ resetDate }) => resetDate);
   if (current?.currentResetDate) {
-    let currentResetIdx = sortedEntries.findIndex(({ resetDate }) => resetDate == current?.currentResetDate);
+    const currentResetIdx = sortedEntries.findIndex(({ resetDate }) => resetDate == current?.currentResetDate);
     if (currentResetIdx >= 0) {
-      let previousIndex = currentResetIdx >= 1 ? currentResetIdx - 1 : undefined;
-      let nextIndex = currentResetIdx < sortedEntries.length - 1 ? currentResetIdx + 1 : undefined;
+      const previousIndex = currentResetIdx >= 1 ? currentResetIdx - 1 : undefined;
+      const nextIndex = currentResetIdx < sortedEntries.length - 1 ? currentResetIdx + 1 : undefined;
       return {
         allResets: sortedEntries,
         currentlySelectedResetDate: current?.currentResetDate,
@@ -133,12 +133,12 @@ export function createSamePageOtherResetNavigationMenuItem(
   resetDates: string[],
   currentState: RouterState<RegisteredRouter["routeTree"]>,
 ): JSX.Element | undefined {
-  let res = createLinksToOtherResets(resetDates, currentState);
+  const res = createLinksToOtherResets(resetDates, currentState);
 
   if (res) {
-    let { allResets, currentlySelectedResetDate, nextReset, previousReset, latestReset } = res;
+    const { allResets, currentlySelectedResetDate, nextReset, previousReset, latestReset } = res;
 
-    let directNavigationLinks = intersperse(
+    const directNavigationLinks = intersperse(
       [
         previousReset ? (
           <MyLink key={"previousReset"} {...previousReset.props}>

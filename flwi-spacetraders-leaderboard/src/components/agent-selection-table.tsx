@@ -6,9 +6,9 @@ import {
   RowSelectionState,
   useReactTable,
 } from "@tanstack/react-table";
-import {compactNumberFmt} from "../lib/formatters.ts";
-import {chartColors} from "../utils/chartColors.ts";
-import {ApiLeaderboardEntry} from "../../generated";
+import { compactNumberFmt } from "../lib/formatters.ts";
+import { chartColors } from "../utils/chartColors.ts";
+import { ApiLeaderboardEntry } from "../../generated";
 
 const columnHelper = createColumnHelper<ApiLeaderboardEntry>();
 export const columns = [
@@ -31,17 +31,17 @@ export const columns = [
 
        */
 
-      let selectedAgents = info.table.getSelectedRowModel().rows.map((r) => r.id);
-      let myIndex = selectedAgents.findIndex((a) => a === info.row.id);
-      let isSelected = info.row.getIsSelected();
+      const selectedAgents = info.table.getSelectedRowModel().rows.map((r) => r.id);
+      const myIndex = selectedAgents.findIndex((a) => a === info.row.id);
+      const isSelected = info.row.getIsSelected();
       //console.log("rowId", info.row.id, "selectedAgents", selectedAgents, "myIndex", myIndex, "isSelected", isSelected);
-      let hexColor = isSelected ? chartColors[myIndex % chartColors.length] : "darkgray";
-      let style = {
+      const hexColor = isSelected ? chartColors[myIndex % chartColors.length] : "darkgray";
+      const style = {
         borderColor: isSelected ? "transparent" : hexColor,
         backgroundColor: isSelected ? hexColor : "transparent",
       };
 
-      return <span className="border-2 w-4 h-4 rounded inline-block" style={style}/>;
+      return <span className="border-2 w-4 h-4 rounded inline-block" style={style} />;
     },
     id: "selected",
     header: "",
@@ -61,7 +61,7 @@ export const columns = [
   }),
 ];
 
-export function createLeaderboardTable(
+export function useLeaderboardTable(
   memoizedLeaderboard: {
     leaderboard: ApiLeaderboardEntry[];
   },
@@ -75,7 +75,7 @@ export function createLeaderboardTable(
     columns,
     getRowId: (row) => row.agentSymbol,
     onRowSelectionChange: setRowSelection, //hoist up the row selection state to your own scope
-    state: {sorting, rowSelection},
+    state: { sorting, rowSelection },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),

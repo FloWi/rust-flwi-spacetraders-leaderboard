@@ -44,26 +44,26 @@ export function AgentSelectionSheetPage({
                                           table,
                                           children,
                                         }: SheetPageProps) {
-  let top10Agents = memoizedLeaderboard.leaderboard.slice(0, 10).map((e) => e.agentSymbol);
+  const top10Agents = memoizedLeaderboard.leaderboard.slice(0, 10).map((e) => e.agentSymbol);
 
-  let jumpGatesUnderConstruction = jumpGateMostRecentConstructionProgress
+  const jumpGatesUnderConstruction = jumpGateMostRecentConstructionProgress
     .filter((cpe) => cpe.fulfilled > 0 && cpe.required > 1)
     .map((cpe) => cpe.jumpGateWaypointSymbol);
-  let buildingAgents = memoizedLeaderboard.leaderboard
+  const buildingAgents = memoizedLeaderboard.leaderboard
     .filter((e) => jumpGatesUnderConstruction.includes(e.jumpGateWaypointSymbol))
     .map((e) => e.agentSymbol);
 
-  let selectTop10: () => void = () => {
+  const selectTop10: () => void = () => {
     setSelectedAgents(top10Agents);
   };
-  let selectBuilders: () => void = () => {
+  const selectBuilders: () => void = () => {
     setSelectedAgents(buildingAgents);
   };
-  let clearSelection: () => void = () => {
+  const clearSelection: () => void = () => {
     setSelectedAgents([]);
   };
 
-  let preselectionButtons = (
+  const preselectionButtons = (
     <div className="flex flex-row gap-2 w-full items-stretch">
       <Button variant="outline" size="sm" onClick={selectTop10}>
         Top 10
@@ -81,7 +81,7 @@ export function AgentSelectionSheetPage({
   // Mobile view shows the hamburger-menu and the lg-view shows the side panel all the time
   // TODO: DRY up this view to make it clear what is being shown when
 
-  let sheetContent = (
+  const sheetContent = (
     <SheetContent side="left" className="w-11/12 h-5/6 lg:w-fit flex flex-col gap-4">
       <SheetHeader className="space-y-1">
         <SheetTitle className="text-sm font-medium leading-none">Agent Selection</SheetTitle>

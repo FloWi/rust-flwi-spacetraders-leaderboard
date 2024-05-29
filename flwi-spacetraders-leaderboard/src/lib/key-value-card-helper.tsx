@@ -1,4 +1,6 @@
-export const renderKvPair = (label: string, value: any) => {
+import React from "react";
+
+export const renderKvPair = (label: string, value: React.ReactNode) => {
   return (
     <>
       <div className="space-y-1 text-left">

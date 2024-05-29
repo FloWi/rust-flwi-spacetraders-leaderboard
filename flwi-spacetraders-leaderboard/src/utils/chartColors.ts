@@ -1,4 +1,4 @@
-export let chartColors = [
+export const chartColors = [
   // d3 category 20 scheme
   "#1f77b4",
   "#ffbb78",

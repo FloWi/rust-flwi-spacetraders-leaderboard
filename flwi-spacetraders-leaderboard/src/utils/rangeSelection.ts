@@ -8,11 +8,11 @@ export type RangeSelection = {
   hoursGte?: number;
 };
 
-export let defaultRangeSelection: RangeSelection = {
+export const defaultRangeSelection: RangeSelection = {
   selectionMode: "last",
   hoursLte: 6,
 };
-export let predefinedRanges: RangeSelection[] = [
+export const predefinedRanges: RangeSelection[] = [
   {
     selectionMode: "first",
     hoursLte: 6,

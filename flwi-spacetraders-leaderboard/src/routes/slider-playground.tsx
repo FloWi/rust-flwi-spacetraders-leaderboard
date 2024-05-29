@@ -44,7 +44,7 @@ type LabelledRangeSelection = {
   rangeSelection: RangeSelection;
 };
 
-let defaultRangeSelection: LabelledRangeSelection = {
+const defaultRangeSelection: LabelledRangeSelection = {
   label: "last 6h",
   rangeSelection: {
     mode: "one",
@@ -52,7 +52,7 @@ let defaultRangeSelection: LabelledRangeSelection = {
     hoursLte: 6,
   },
 };
-let predefinedRanges: LabelledRangeSelection[] = [
+const predefinedRanges: LabelledRangeSelection[] = [
   {
     label: "first 6h",
     rangeSelection: {
@@ -190,16 +190,16 @@ function calcRangeSelection(slidingMode: SlidingMode, selectionMode: SelectionMo
 }
 
 function SliderPlaygroundComponent() {
-  let [slidingMode, setSlidingMode] = useState<SlidingMode>("one");
-  let [offsetOrigin, setOffsetOrigin] = useState<SelectionMode>("last");
-  let maxValueHours = 3 * 7 * 24;
-  let stepValueHours = 6;
+  const [slidingMode, setSlidingMode] = useState<SlidingMode>("one");
+  const [offsetOrigin, setOffsetOrigin] = useState<SelectionMode>("last");
+  const maxValueHours = 3 * 7 * 24;
+  const stepValueHours = 6;
 
-  let [sliderValuesHours, setSliderValuesHours] = useState(calcDefaultValue(slidingMode, offsetOrigin));
-  let [slidingValuesHours, setSlidingValuesHours] = useState(calcDefaultValue(slidingMode, offsetOrigin));
+  const [sliderValuesHours, setSliderValuesHours] = useState(calcDefaultValue(slidingMode, offsetOrigin));
+  const [slidingValuesHours, setSlidingValuesHours] = useState(calcDefaultValue(slidingMode, offsetOrigin));
 
   function handleSlidingModeChange(newValue: string) {
-    let newSlidingMode = newValue as SlidingMode;
+    const newSlidingMode = newValue as SlidingMode;
 
     setSlidingMode(newSlidingMode);
     setSlidingValuesHours(calcDefaultValue(newSlidingMode, offsetOrigin));
@@ -247,7 +247,7 @@ function SliderPlaygroundComponent() {
   }
 
   function handleOffsetOriginChange(newValue: string) {
-    let newOffsetOrigin = newValue as SelectionMode;
+    const newOffsetOrigin = newValue as SelectionMode;
 
     setOffsetOrigin(newOffsetOrigin);
     //setSliderValuesHours(calcDefaultValue(slidingMode, newOffsetOrigin));

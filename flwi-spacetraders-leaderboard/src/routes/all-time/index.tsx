@@ -28,7 +28,7 @@ type RankFilter = { name: string; maxRank?: number };
 type ResetFilter = { name: string; numberResets?: number };
 type RankFilterId = "top1" | "top3" | "top5" | "top10" | "all";
 
-let rankFilters: Map<RankFilterId, RankFilter> = new Map([
+const rankFilters: Map<RankFilterId, RankFilter> = new Map([
   [
     "top1",
     {
@@ -109,8 +109,8 @@ export const Route = createFileRoute("/all-time/")({
   },
   pendingComponent: () => <div>Loading...</div>,
   validateSearch: (search: Record<string, unknown>): AllTimeSelectionSearch => {
-    let resetFilterStr = search?.resetFilter as string;
-    let rankFilterStr = search?.rankFilter as string;
+    const resetFilterStr = search?.resetFilter as string;
+    const rankFilterStr = search?.rankFilter as string;
 
     return {
       resetFilter: resetFilters.has(resetFilterStr as ResetFilterId) ? (resetFilterStr as ResetFilterId) : "last5",
@@ -160,18 +160,18 @@ const allTimeColumns = [
 ];
 
 function AllTimeComponent() {
-  let {data: allResetDates} = useQuery(resetDatesQueryOptions);
+  const {data: allResetDates} = useQuery(resetDatesQueryOptions);
 
-  let {rankFilter, resetFilter} = Route.useSearch();
+  const {rankFilter, resetFilter} = Route.useSearch();
 
   const navigate = useNavigate({from: Route.fullPath});
 
-  let {currentRankFilter, currentResetFilter} = React.useMemo(() => {
+  const {currentRankFilter, currentResetFilter} = React.useMemo(() => {
     return {currentRankFilter: rankFilters.get(rankFilter)!, currentResetFilter: resetFilters.get(resetFilter)!};
   }, [rankFilter, resetFilter]);
 
-  let {allTimeData, resetDates} = useMemo(() => {
-    let resetDates = Array.from(new Set(mockDataAllTime.map((d) => d.reset)))
+  const {allTimeData, resetDates} = useMemo(() => {
+    const resetDates = Array.from(new Set(mockDataAllTime.map((d) => d.reset)))
       .toSorted()
       .toReversed();
     return {allTimeData: mockDataAllTime, resetDates};
@@ -180,8 +180,8 @@ function AllTimeComponent() {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [isLog, setIsLog] = React.useState(true);
 
-  let relevantData: AllTimeRankEntry[] = useMemo(() => {
-    let relevantResetDates = new Set(
+  const relevantData: AllTimeRankEntry[] = useMemo(() => {
+    const relevantResetDates = new Set(
       currentResetFilter.numberResets ? resetDates.slice(0, currentResetFilter.numberResets) : resetDates,
     );
     return allTimeData
@@ -191,10 +191,10 @@ function AllTimeComponent() {
         );
       })
       .flatMap((d) => {
-        let resetMeta = allResetDates?.find((rd) => rd.resetDate === d.reset);
+        const resetMeta = allResetDates?.find((rd) => rd.resetDate === d.reset);
         return resetMeta ? [{...d, resetDate: resetMeta, reset: resetMeta.resetDate}] : [];
       });
-  }, [currentRankFilter, currentResetFilter]);
+  }, [currentRankFilter, currentResetFilter, allResetDates, allTimeData, resetDates]);
 
   const table = useReactTable({
     defaultColumn: {
@@ -212,14 +212,14 @@ function AllTimeComponent() {
   });
 
   const chartData = React.useMemo(() => {
-    let maxRank = currentRankFilter.maxRank ?? 10;
-    let resets = Array.from(new Set(relevantData.map((d) => d.reset))).toSorted();
-    let ranks = Array.from(Array(maxRank).keys()).map((r) => r + 1);
+    const maxRank = currentRankFilter.maxRank ?? 10;
+    const resets = Array.from(new Set(relevantData.map((d) => d.reset))).toSorted();
+    const ranks = Array.from(Array(maxRank).keys()).map((r) => r + 1);
 
-    let data = ranks.map((rank) => {
-      let rankData = resets.flatMap((r) => relevantData.filter((d) => d.reset === r && d.rank === rank));
-      let yValues = rankData.map((d) => d.credits);
-      let texts = rankData.map((d) => d.agentSymbol);
+    const data = ranks.map((rank) => {
+      const rankData = resets.flatMap((r) => relevantData.filter((d) => d.reset === r && d.rank === rank));
+      const yValues = rankData.map((d) => d.credits);
+      const texts = rankData.map((d) => d.agentSymbol);
 
       return {
         type: "bar" as PlotType,
@@ -232,15 +232,15 @@ function AllTimeComponent() {
     });
     console.log("chartData", data);
     return data;
-  }, [relevantData]);
+  }, [relevantData, currentRankFilter.maxRank]);
 
-  let mobileLegend: Partial<Legend> = {
+  const mobileLegend: Partial<Legend> = {
     orientation: "h",
     y: 10,
     valign: "top",
   };
 
-  let desktopLegend: Partial<Legend> = {
+  const desktopLegend: Partial<Legend> = {
     orientation: "v",
   };
 
@@ -248,7 +248,7 @@ function AllTimeComponent() {
     query: "(min-width: 1024px)",
   });
 
-  let allTimeRanksChart = (
+  const allTimeRanksChart = (
     <Plot
       className="w-full"
       data={chartData}
@@ -291,7 +291,7 @@ function AllTimeComponent() {
       config={{displayModeBar: false, responsive: true}}
     />
   );
-  let top_n_AgentSelectionComponent = (
+  const top_n_AgentSelectionComponent = (
     <ToggleGroup
       className="items-start justify-start"
       type={`single`}
@@ -312,7 +312,7 @@ function AllTimeComponent() {
       ))}
     </ToggleGroup>
   );
-  let last_n_ResetsSelectionComponent = (
+  const last_n_ResetsSelectionComponent = (
     <ToggleGroup
       className="items-start justify-start"
       type={`single`}
@@ -334,7 +334,7 @@ function AllTimeComponent() {
     </ToggleGroup>
   );
 
-  let durationSelection = (
+  const durationSelection = (
     <div className="flex flex-col gap-2 place-items-start">
       <Card className="w-full">
         <CardHeader>
@@ -435,7 +435,7 @@ function AllTimeComponent() {
     );
   }
 
-  let periodCardDisplay = (
+  const periodCardDisplay = (
     <CardContent>
       <div className="grid grid-cols-2 w-fit gap-4">
         {renderKvPair("Agents", currentRankFilter.name)}

@@ -20,7 +20,7 @@ import { Data } from "plotly.js";
 import * as _ from "lodash";
 import { capitalize } from "lodash";
 import { AgentSelectionSheetPage } from "../../components/agent-selection-sheet-page.tsx";
-import { createLeaderboardTable } from "../../components/agent-selection-table.tsx";
+import { useLeaderboardTable } from "../../components/agent-selection-table.tsx";
 import { RowSelectionState, SortingState } from "@tanstack/react-table";
 import {
   AllSelectionModes,
@@ -49,8 +49,8 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
   validateSearch: (search: Record<string, unknown>): AgentSelectionSearch => {
     // validate and parse the search params into a typed state
 
-    let inputSelectionMode = search?.selectionMode as SelectionMode;
-    let selectionMode = AllSelectionModes.includes(inputSelectionMode)
+    const inputSelectionMode = search?.selectionMode as SelectionMode;
+    const selectionMode = AllSelectionModes.includes(inputSelectionMode)
       ? inputSelectionMode
       : defaultRangeSelection.selectionMode;
 
@@ -72,42 +72,42 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
 
   beforeLoad: async (arg) => {
     console.log("before load:");
-    let selectedAgents = _.sortBy(_.uniq(arg.search.agents ?? []));
+    const selectedAgents = _.sortBy(_.uniq(arg.search.agents ?? []));
 
-    let rangeSelection = {
+    const rangeSelection = {
       selectionMode: arg.search.selectionMode,
       hoursLte: arg.search.hoursLte,
       hoursGte: arg.search.hoursGte,
     };
 
-    let preciseOptions = preciseHistoryQueryOptions(arg.params.resetDate, selectedAgents, rangeSelection);
+    const preciseOptions = preciseHistoryQueryOptions(arg.params.resetDate, selectedAgents, rangeSelection);
 
-    let queryClient = arg.context.queryClient;
+    const queryClient = arg.context.queryClient;
     const queryCache = queryClient.getQueryCache();
     const preciseQuery = queryCache.find<GetHistoryDataForResetResponseContent>({
       queryKey: preciseOptions.queryKey,
     });
 
     if (preciseQuery) {
-      let agentsInCache = _.sortBy(_.uniq(preciseQuery.state.data?.requestedAgents ?? []));
+      const agentsInCache = _.sortBy(_.uniq(preciseQuery.state.data?.requestedAgents ?? []));
 
       console.log(`found exact match for agents ${agentsInCache}- no need to refresh/fetch anything`);
     } else {
-      let existingQueries: Array<Query> = queryCache.findAll({
+      const existingQueries: Array<Query> = queryCache.findAll({
         queryKey: historyBaseQueryKey(arg.params.resetDate, rangeSelection),
       });
 
-      let queryEvaluationResults = bestMatchingQuery(queryCache, existingQueries, selectedAgents);
+      const queryEvaluationResults = bestMatchingQuery(queryCache, existingQueries, selectedAgents);
       console.log("queryEvaluationResults", queryEvaluationResults);
-      let maybeMatch = queryEvaluationResults.find((r) => r.isMatch);
+      const maybeMatch = queryEvaluationResults.find((r) => r.isMatch);
       if (maybeMatch) {
         // found match
         console.log("found query that already contains all selected agents. Adding query to cache");
         console.log("selectedAgents", selectedAgents);
         console.log("matching query", maybeMatch.typedQuery);
-        let matchingQuery = maybeMatch.typedQuery;
-        let entry: GetHistoryDataForResetResponseContent | undefined = matchingQuery?.state?.data;
-        let modifiedEntry = entry
+        const matchingQuery = maybeMatch.typedQuery;
+        const entry: GetHistoryDataForResetResponseContent | undefined = matchingQuery?.state?.data;
+        const modifiedEntry = entry
           ? {
               ...entry,
               requestedAgents: selectedAgents,
@@ -132,7 +132,7 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
 
-    let rangeSelection = { selectionMode, hoursLte, hoursGte };
+    const rangeSelection = { selectionMode, hoursLte, hoursGte };
 
     await queryClient.ensureQueryData(leaderboardQueryOptions(resetDate));
     await queryClient.ensureQueryData(preciseHistoryQueryOptions(resetDate, agents ?? [], rangeSelection));
@@ -142,17 +142,17 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
 });
 
 function prettyPrintRangeDuration(hours: number): string {
-  let oneWeek = 7 * 24;
-  let oneDay = 24;
+  const oneWeek = 7 * 24;
+  const oneDay = 24;
   if (hours % oneWeek === 0) {
-    let res = hours / oneWeek;
+    const res = hours / oneWeek;
 
     return `${res === 1 ? "" : res} week` + (res !== 1 ? "s" : "");
   } else if (hours % oneDay === 0) {
-    let res = hours / oneDay;
+    const res = hours / oneDay;
     return `${res === 1 ? "" : res} day` + (res !== 1 ? "s" : "");
   } else {
-    let res = hours;
+    const res = hours;
     return `${res === 1 ? "" : res} hour` + (res !== 1 ? "s" : "");
   }
 }
@@ -165,10 +165,10 @@ function prettyPrintRangeSelection(rangeSelection: RangeSelection): React.ReactN
 
 function bestMatchingQuery(queryCache: QueryCache, existingQueries: Array<Query>, selectedAgents: string[]) {
   return existingQueries.map((q) => {
-    let typedQuery = queryCache.find<GetHistoryDataForResetResponseContent>({ queryKey: q.queryKey });
-    let agents = _.sortedUniq(typedQuery?.state.data?.requestedAgents ?? []);
-    let intersection = _.intersection(selectedAgents, agents);
-    let isMatch = _.isEqual(selectedAgents, intersection);
+    const typedQuery = queryCache.find<GetHistoryDataForResetResponseContent>({ queryKey: q.queryKey });
+    const agents = _.sortedUniq(typedQuery?.state.data?.requestedAgents ?? []);
+    const intersection = _.intersection(selectedAgents, agents);
+    const isMatch = _.isEqual(selectedAgents, intersection);
     return { typedQuery, agents, intersection, isMatch };
   });
 }
@@ -177,8 +177,8 @@ function rangeSelectionComponent(
   rangeSelectionFromQueryParams: RangeSelection,
   selectPredefinedRange: (rangeSelectionIndex: number) => void,
 ): React.ReactNode {
-  let items = predefinedRanges.map((r, idx) => {
-    let key = `${idx}`;
+  const items = predefinedRanges.map((r, idx) => {
+    const key = `${idx}`;
     return (
       <SelectItem key={key} value={idx.toString()}>
         {prettyPrintRangeSelection(r)}
@@ -186,7 +186,7 @@ function rangeSelectionComponent(
     );
   });
 
-  let predefinedIdx = predefinedRanges.findIndex((r) => {
+  const predefinedIdx = predefinedRanges.findIndex((r) => {
     // isEqual doesn't work here, because the runtime version `rangeSelectionFromQueryParams` doesn't have the hoursGte property.
     // The compile-time version from the list of predefined range _does_ have the property and there it is undefined
     // using isMatch (with the args in the correct order!) compares correctly.
@@ -201,13 +201,13 @@ function rangeSelectionComponent(
     return _.isMatch(rangeSelectionFromQueryParams, r);
   });
 
-  let maybePredefinedIdx = predefinedIdx >= 0 ? predefinedIdx : undefined;
+  const maybePredefinedIdx = predefinedIdx >= 0 ? predefinedIdx : undefined;
 
   return (
     <Select
       value={maybePredefinedIdx?.toString()}
       onValueChange={(idxStr) => {
-        let parsed = Number(idxStr);
+        const parsed = Number(idxStr);
         if (!isNaN(parsed)) {
           selectPredefinedRange(parsed);
         }
@@ -225,7 +225,7 @@ function HistoryComponent() {
   const { resetDate } = Route.useParams();
   const { agents, selectionMode, hoursLte, hoursGte } = Route.useSearch();
 
-  let rangeSelectionFromSearchParams: RangeSelection = { selectionMode, hoursLte, hoursGte };
+  const rangeSelectionFromSearchParams: RangeSelection = { selectionMode, hoursLte, hoursGte };
 
   const { data: resetDates } = useQuery(resetDatesQueryOptions);
   const { data: historyData } = useQuery(
@@ -246,23 +246,23 @@ function HistoryComponent() {
   // const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
   const leaderboardEntries = leaderboardData.leaderboardEntries;
 
-  let current = { leaderboard: leaderboardEntries };
+  const current = { leaderboard: leaderboardEntries };
 
-  let memoizedLeaderboard = React.useMemo(() => {
-    let selectedAgents: Record<string, boolean> = {};
+  const memoizedLeaderboard = React.useMemo(() => {
+    const selectedAgents: Record<string, boolean> = {};
     agents?.forEach((agentSymbol) => (selectedAgents[agentSymbol] = true));
 
     setRowSelection(selectedAgents);
     return { leaderboard: current.leaderboard };
-  }, [current.leaderboard]);
+  }, [current.leaderboard, agents]);
 
-  let selectedReset: ApiResetDateMeta | undefined = useMemo(() => {
+  const selectedReset: ApiResetDateMeta | undefined = useMemo(() => {
     return resetDates?.find((r) => r.resetDate === resetDate);
   }, [resetDate, resetDates]);
 
-  let charts = useMemo(() => {
-    let agentHistory = historyData?.agentHistory.filter((h) => agents?.includes(h.agentSymbol)) ?? [];
-    let constructionMaterialHistory = historyData?.constructionMaterialHistory ?? []; //TODO: filter construction entries based on agents
+  const charts = useMemo(() => {
+    const agentHistory = historyData?.agentHistory.filter((h) => agents?.includes(h.agentSymbol)) ?? [];
+    const constructionMaterialHistory = historyData?.constructionMaterialHistory ?? []; //TODO: filter construction entries based on agents
 
     return renderTimeSeriesCharts(
       isLog,
@@ -272,12 +272,12 @@ function HistoryComponent() {
       agents ?? [],
       selectedReset,
     );
-  }, [resetDate, historyData, isLog]);
+  }, [historyData, isLog, agents, memoizedLeaderboard.leaderboard, selectedReset]);
 
   const navigate = useNavigate({ from: Route.fullPath });
 
   useEffect(() => {
-    let newAgentSelection = Object.keys(rowSelection);
+    const newAgentSelection = Object.keys(rowSelection);
 
     //fire-and-forget promise call seems to be ok? YOLO
     navigate({
@@ -289,10 +289,10 @@ function HistoryComponent() {
         hoursGte,
       }),
     });
-  }, [resetDate, rowSelection, isLog]);
+  }, [resetDate, rowSelection, isLog, hoursGte, hoursLte, navigate, selectionMode]);
 
   const selectPredefinedRange = (rangeSelectionIndex: number) => {
-    let maybePredefinedRange = predefinedRanges.at(rangeSelectionIndex);
+    const maybePredefinedRange = predefinedRanges.at(rangeSelectionIndex);
 
     if (maybePredefinedRange) {
       navigate({
@@ -308,10 +308,10 @@ function HistoryComponent() {
 
   const selectAgents = (newSelectedAgents: string[]) => {
     const newSelection: RowSelectionState = newSelectedAgents.reduce((o, key) => ({ ...o, [key]: true }), {});
-    setRowSelection((_) => newSelection);
+    setRowSelection(newSelection);
   };
 
-  const table = createLeaderboardTable(
+  const table = useLeaderboardTable(
     memoizedLeaderboard,
     setRowSelection,
     sortingLeaderboard,
@@ -319,7 +319,7 @@ function HistoryComponent() {
     setSortingLeaderboard,
   );
 
-  let agentsWithData = historyData?.agentHistory.map((h) => h.agentSymbol) ?? [];
+  const agentsWithData = historyData?.agentHistory.map((h) => h.agentSymbol) ?? [];
   const agentsWithMissingData = _.difference(agents, agentsWithData);
   const noDataMessage =
     agentsWithMissingData.length > 0
@@ -372,26 +372,26 @@ function createMaterialChartTraces(
   selectedAgents: string[],
   firstTs: Date,
 ): Data[] {
-  let relevantHistoryEntries = constructionMaterialHistory
+  const relevantHistoryEntries = constructionMaterialHistory
     .filter((h) => h.tradeSymbol === tradeGoodSymbol)
     .filter((h) => h.fulfilled.some((value) => value > 0));
 
-  let relevantSortedAndColoredLeaderboard = leaderboard.filter((lb) => selectedAgents.includes(lb.agentSymbol));
+  const relevantSortedAndColoredLeaderboard = leaderboard.filter((lb) => selectedAgents.includes(lb.agentSymbol));
 
   return relevantHistoryEntries.map((h) => {
     const idx = relevantSortedAndColoredLeaderboard.findIndex(
       (lb) => lb.jumpGateWaypointSymbol === h.jumpGateWaypointSymbol,
     );
-    let color = idx >= 0 ? chartColors[idx % chartColors.length] : "black";
+    const color = idx >= 0 ? chartColors[idx % chartColors.length] : "black";
 
-    let agentsInThisSystem = leaderboard
+    const agentsInThisSystem = leaderboard
       .map((lb, idx) => {
         return { ...lb, rank: idx + 1 };
       })
       .filter((lb) => lb.jumpGateWaypointSymbol === h.jumpGateWaypointSymbol)
       .map((lb) => lb);
 
-    let agentsDescription = agentsInThisSystem.map((a) => `${a.rank}. ${a.agentSymbol}`).join(", ");
+    const agentsDescription = agentsInThisSystem.map((a) => `${a.rank}. ${a.agentSymbol}`).join(", ");
 
     return {
       type: "scatter",
@@ -426,7 +426,7 @@ function renderTimeSeriesCharts(
   selectedAgents: string[],
   selectedReset: ApiResetDateMeta | undefined,
 ) {
-  let maybeFirstTs = selectedReset?.firstTs;
+  const maybeFirstTs = selectedReset?.firstTs;
   const firstTs = maybeFirstTs ? new Date(Date.parse(maybeFirstTs)) : new Date(0);
   const agentCreditsTraces: Data[] = agentHistory.map((ahe) => {
     return {
@@ -488,7 +488,7 @@ function renderTimeSeriesCharts(
     },
   );
 
-  let chartConfigs: LineChartConfig[] = [
+  const chartConfigs: LineChartConfig[] = [
     {
       title: "Credits",
       isLog: isLog,
@@ -513,7 +513,7 @@ type LineChartConfig = {
 };
 
 function renderLineChart({ isLog, mutedColorTitle, title, data }: LineChartConfig) {
-  let chartGridLineColor = "rgb(102,102,108)";
+  const chartGridLineColor = "rgb(102,102,108)";
 
   return (
     <div key={title} className="touch-manipulation" /* this disables capturing the double-tap event to zoom.  */>
