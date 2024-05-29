@@ -32,6 +32,13 @@ export const predefinedRanges: RangeSelection[] = [
     selectionMode: "first",
     hoursLte: 7 * 24,
   },
+  {
+    // YOLO
+    // "fake-entry" to get _all_ data for reset. Won't work properly if reset is > 4 weeks
+    // TODO: make _both_ hour-filters optional to allow applying no filter
+    selectionMode: "first",
+    hoursLte: 4 * 7 * 24,
+  },
 
   defaultRangeSelection,
   {
@@ -43,7 +50,6 @@ export const predefinedRanges: RangeSelection[] = [
     selectionMode: "last",
     hoursLte: 24,
   },
-
   {
     selectionMode: "last",
     hoursLte: 7 * 24,

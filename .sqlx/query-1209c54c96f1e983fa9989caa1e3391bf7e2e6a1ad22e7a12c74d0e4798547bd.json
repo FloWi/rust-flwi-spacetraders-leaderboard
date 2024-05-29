@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "\nselect first_event.first_ts   as ts_start_of_reset\n     , cr.trade_symbol\n     , cur.fulfilled\n     , cr.required\n     , cs.jump_gate_waypoint_symbol\n     , first_event.query_time as ts_first_construction_event\n     , last_event.query_time  as ts_last_construction_event\n     , cur.is_jump_gate_complete\nfrom mat_view_material_delivery_events first_event\n         join main.construction_site cs\n              on first_event.construction_site_id = cs.id\n         join main.construction_requirement cr\n              on first_event.construction_requirement_id = cr.id\n                  and first_event.delivery_event = 'first'\n         left join mat_view_material_delivery_events last_event\n                   on first_event.construction_requirement_id = last_event.construction_requirement_id\n                       and first_event.construction_site_id = last_event.construction_site_id\n                       and last_event.delivery_event = 'last'\n         join mat_view_current_construction_progress cur\n              on cur.reset_id = cs.reset_id\n                  and cur.construction_site_id = cs.id\n                  and cur.construction_requirement_id = cr.id\n         join reset_date rd\n              on first_event.reset_id = rd.reset_id\nwhere reset = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "ts_start_of_reset",
+        "ordinal": 0,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "trade_symbol",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "fulfilled",
+        "ordinal": 2,
+        "type_info": "Int64"
+      },
+      {
+        "name": "required",
+        "ordinal": 3,
+        "type_info": "Int64"
+      },
+      {
+        "name": "jump_gate_waypoint_symbol",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "ts_first_construction_event",
+        "ordinal": 5,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "ts_last_construction_event",
+        "ordinal": 6,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "is_jump_gate_complete",
+        "ordinal": 7,
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "1209c54c96f1e983fa9989caa1e3391bf7e2e6a1ad22e7a12c74d0e4798547bd"
+}

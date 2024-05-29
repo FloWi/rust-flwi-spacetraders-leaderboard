@@ -20,12 +20,14 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use crate::db::{
     DbAgentHistoryEntry, DbConstructionMaterialHistoryEntry,
-    DbConstructionMaterialMostRecentStatus, ResetDate,
+    DbConstructionMaterialMostRecentStatus, DbJumpGateConstructionEventOverviewEntry, ResetDate,
 };
 use crate::server::leaderboard::{
     ApiAgentHistoryEntry, ApiAgentSymbol, ApiConstructionMaterialHistoryEntry,
-    ApiConstructionMaterialMostRecentProgressEntry, ApiResetAgentPeriodFilterBody, ApiResetDate,
-    ApiTradeSymbol, ApiWaypointSymbol, RangeSelectionMode,
+    ApiConstructionMaterialMostRecentProgressEntry,
+    ApiGetJumpGateConstructionEventOverviewResponse, ApiJumpGateConstructionEventOverviewEntry,
+    ApiResetAgentPeriodFilterBody, ApiResetDate, ApiTradeSymbol, ApiWaypointSymbol,
+    RangeSelectionMode,
 };
 
 pub fn with_static_file_server(router: Router, _serve_dir: ServeDir) -> Router {
@@ -67,6 +69,10 @@ pub async fn http_server(
             routing::get(leaderboard::get_jump_gate_most_recent_progress),
         )
         .route(
+            "/api/jump-gate-construction-event-overview/:reset_date",
+            routing::get(leaderboard::get_jump_gate_construction_event_overview),
+        )
+        .route(
             "/api/history/:reset_date",
             routing::post(leaderboard::get_history_data_for_reset),
         )
@@ -101,12 +107,11 @@ pub async fn http_server(
 }
 
 pub mod leaderboard {
-
     use axum::extract::{Path, State};
     use axum::Json;
     use chrono::format::StrftimeItems;
     use chrono::{NaiveDate, NaiveDateTime, TimeDelta};
-    use itertools::Itertools;
+    use itertools::{process_results, Itertools};
     use serde::{Deserialize, Serialize};
     use sqlx::{Pool, Sqlite};
     use tracing::{event, Level};
@@ -115,7 +120,8 @@ pub mod leaderboard {
     use crate::db::{
         load_leaderboard_for_reset, load_reset_date, load_reset_dates, select_agent_history,
         select_construction_progress_for_reset, select_jump_gate_agent_assignment_for_reset,
-        select_most_recent_construction_progress_for_reset,
+        select_jump_gate_construction_event_overview_for_reset,
+        select_most_recent_construction_progress_for_reset, ResetDate,
     };
     use crate::server::{extract_reset_period_from_filter, ResetPeriodFilter};
 
@@ -126,7 +132,8 @@ pub mod leaderboard {
             get_leaderboard,
             get_jump_gate_agents_assignment,
             get_history_data_for_reset,
-            get_jump_gate_most_recent_progress
+            get_jump_gate_most_recent_progress,
+            get_jump_gate_construction_event_overview
         ),
         components(
             schemas(ApiAgentSymbol),
@@ -146,6 +153,8 @@ pub mod leaderboard {
             schemas(GetJumpGateMostRecentProgressForResetResponseContent),
             schemas(ApiJumpGateAssignmentEntry),
             schemas(ApiConstructionMaterialMostRecentProgressEntry),
+            schemas(ApiGetJumpGateConstructionEventOverviewResponse),
+            schemas(ApiJumpGateConstructionEventOverviewEntry),
             schemas(RangeSelectionMode),
         )
     )]
@@ -188,6 +197,13 @@ pub mod leaderboard {
         progress_entries: Vec<ApiConstructionMaterialMostRecentProgressEntry>,
     }
 
+    #[derive(Serialize, Deserialize, ToSchema)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct ApiGetJumpGateConstructionEventOverviewResponse {
+        reset_date: ApiResetDate,
+        event_entries: Vec<ApiJumpGateConstructionEventOverviewEntry>,
+    }
+
     #[derive(Serialize, Deserialize, ToSchema, Debug)]
     #[serde(rename_all = "camelCase")]
     pub(crate) struct ApiAgentHistoryEntry {
@@ -195,6 +211,19 @@ pub mod leaderboard {
         pub(crate) event_times_minutes: Vec<u32>,
         pub(crate) credits_timeline: Vec<i64>,
         pub(crate) ship_count_timeline: Vec<u32>,
+    }
+
+    #[derive(Serialize, Deserialize, ToSchema, Debug)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct ApiJumpGateConstructionEventOverviewEntry {
+        pub(crate) ts_start_of_reset: NaiveDateTime,
+        pub(crate) trade_symbol: ApiTradeSymbol,
+        pub(crate) fulfilled: u32,
+        pub(crate) required: u32,
+        pub(crate) jump_gate_waypoint_symbol: ApiWaypointSymbol,
+        pub(crate) ts_first_construction_event: NaiveDateTime,
+        pub(crate) ts_last_construction_event: Option<NaiveDateTime>,
+        pub(crate) is_jump_gate_complete: bool,
     }
 
     #[derive(Serialize, Deserialize, ToSchema, Debug)]
@@ -352,6 +381,35 @@ pub mod leaderboard {
         Json(GetJumpGateMostRecentProgressForResetResponseContent {
             reset_date: ApiResetDate(reset_date.format("%Y-%m-%d").to_string()),
             progress_entries,
+        })
+    }
+
+    /// Get the jump-gate to agents assignment for a reset.
+    #[utoipa::path(
+    get,
+    path = "/api/jump-gate-construction-event-overview/{resetDate}",
+    responses((status = 200, body = ApiGetJumpGateConstructionEventOverviewResponse)),
+    params(
+        ("resetDate" = NaiveDate, Path, description = "The reset date"),
+    )
+    )]
+    pub(crate) async fn get_jump_gate_construction_event_overview(
+        State(pool): State<Pool<Sqlite>>,
+        Path(reset_date): Path<NaiveDate>,
+    ) -> Json<ApiGetJumpGateConstructionEventOverviewResponse> {
+        let db_progress_entries =
+            select_jump_gate_construction_event_overview_for_reset(&pool, reset_date)
+                .await
+                .unwrap();
+
+        let progress_entries: Vec<ApiJumpGateConstructionEventOverviewEntry> = db_progress_entries
+            .iter()
+            .map(|e| e.clone().try_into().unwrap())
+            .collect();
+
+        Json(ApiGetJumpGateConstructionEventOverviewResponse {
+            reset_date: ApiResetDate(reset_date.format("%Y-%m-%d").to_string()),
+            event_entries: progress_entries,
         })
     }
 
@@ -627,6 +685,24 @@ impl TryFrom<DbConstructionMaterialMostRecentStatus>
             required: u32::try_from(db.required).unwrap(),
             jump_gate_waypoint_symbol: ApiWaypointSymbol(db.jump_gate_waypoint_symbol),
             is_jump_gate_complete: db.is_jump_gate_complete,
+        })
+    }
+}
+
+impl TryFrom<DbJumpGateConstructionEventOverviewEntry>
+    for ApiJumpGateConstructionEventOverviewEntry
+{
+    type Error = ();
+    fn try_from(db: DbJumpGateConstructionEventOverviewEntry) -> Result<Self, Self::Error> {
+        Ok(ApiJumpGateConstructionEventOverviewEntry {
+            ts_start_of_reset: db.ts_start_of_reset,
+            trade_symbol: ApiTradeSymbol(db.trade_symbol),
+            fulfilled: u32::try_from(db.fulfilled.unwrap_or(0)).unwrap(),
+            required: u32::try_from(db.required).unwrap(),
+            jump_gate_waypoint_symbol: ApiWaypointSymbol(db.jump_gate_waypoint_symbol),
+            ts_first_construction_event: db.ts_first_construction_event,
+            ts_last_construction_event: db.ts_last_construction_event,
+            is_jump_gate_complete: db.is_jump_gate_complete.unwrap_or(false),
         })
     }
 }

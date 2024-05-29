@@ -24,5 +24,6 @@ export function zipRepeat2nd<T, U>(a: T[], b: U[]): [T, U][] {
 }
 
 export function durationMillis(from: Date, to: Date): number {
+  console.log("durationMillis", "from", from, typeof (from), "to", to, typeof (to));
   return to.getTime() - from.getTime();
 }

@@ -315,6 +315,45 @@ select id
     .await
 }
 
+pub(crate) async fn select_jump_gate_construction_event_overview_for_reset(
+    pool: &Pool<Sqlite>,
+    reset_date: NaiveDate,
+) -> Result<Vec<DbJumpGateConstructionEventOverviewEntry>, Error> {
+    sqlx::query_as!(
+        DbJumpGateConstructionEventOverviewEntry,
+        r#"
+select first_event.first_ts   as ts_start_of_reset
+     , cr.trade_symbol
+     , cur.fulfilled
+     , cr.required
+     , cs.jump_gate_waypoint_symbol
+     , first_event.query_time as ts_first_construction_event
+     , last_event.query_time  as ts_last_construction_event
+     , cur.is_jump_gate_complete
+from mat_view_material_delivery_events first_event
+         join main.construction_site cs
+              on first_event.construction_site_id = cs.id
+         join main.construction_requirement cr
+              on first_event.construction_requirement_id = cr.id
+                  and first_event.delivery_event = 'first'
+         left join mat_view_material_delivery_events last_event
+                   on first_event.construction_requirement_id = last_event.construction_requirement_id
+                       and first_event.construction_site_id = last_event.construction_site_id
+                       and last_event.delivery_event = 'last'
+         join mat_view_current_construction_progress cur
+              on cur.reset_id = cs.reset_id
+                  and cur.construction_site_id = cs.id
+                  and cur.construction_requirement_id = cr.id
+         join reset_date rd
+              on first_event.reset_id = rd.reset_id
+where reset = ?
+        "#,
+            reset_date
+    )
+        .fetch_all(pool)
+        .await
+}
+
 pub(crate) async fn select_construction_progress_for_reset(
     pool: &Pool<Sqlite>,
     reset_date: NaiveDate,
@@ -767,6 +806,18 @@ pub(crate) struct DbConstructionMaterialHistoryEntry {
     pub(crate) required: Option<i64>,
     pub(crate) event_time_minutes_csv: Option<String>,
     pub(crate) fulfilled_csv: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub(crate) struct DbJumpGateConstructionEventOverviewEntry {
+    pub(crate) ts_start_of_reset: NaiveDateTime,
+    pub(crate) trade_symbol: String,
+    pub(crate) fulfilled: Option<i64>,
+    pub(crate) required: i64,
+    pub(crate) jump_gate_waypoint_symbol: String,
+    pub(crate) ts_first_construction_event: NaiveDateTime,
+    pub(crate) ts_last_construction_event: Option<NaiveDateTime>,
+    pub(crate) is_jump_gate_complete: Option<bool>,
 }
 
 // starting to dislike sqlx, since it always thinks values are optional
