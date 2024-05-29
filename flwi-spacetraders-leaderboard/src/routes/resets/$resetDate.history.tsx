@@ -362,7 +362,8 @@ function convertMinutesIntoDateTime(firstTs: Date, minutes: number[]): Date[] {
 }
 
 function createMaterialChartTraces(
-  leaderboard: ApiLeaderboardEntry[],
+  completeLeaderboard: ApiLeaderboardEntry[],
+  relevantSortedAndColoredLeaderboard: ApiLeaderboardEntry[],
   tradeGoodSymbol: string,
   constructionMaterialHistory: Array<ApiConstructionMaterialHistoryEntry>,
   selectedAgents: string[],
@@ -372,7 +373,6 @@ function createMaterialChartTraces(
     .filter((h) => h.tradeSymbol === tradeGoodSymbol)
     .filter((h) => h.fulfilled.some((value) => value > 0));
 
-  const relevantSortedAndColoredLeaderboard = leaderboard.filter((lb) => selectedAgents.includes(lb.agentSymbol));
 
   return relevantHistoryEntries.map((h) => {
     const idx = relevantSortedAndColoredLeaderboard.findIndex(
@@ -380,7 +380,7 @@ function createMaterialChartTraces(
     );
     const color = idx >= 0 ? chartColors[idx % chartColors.length] : "black";
 
-    const agentsInThisSystem = leaderboard
+    const agentsInThisSystem = completeLeaderboard
       .map((lb, idx) => {
         return {...lb, rank: idx + 1};
       })
@@ -409,8 +409,10 @@ function createMaterialChartTraces(
   });
 }
 
-function getColorForAgent(agentSymbol: string, leaderboard: ApiLeaderboardEntry[]): string {
-  const idx = leaderboard.findIndex((e) => e.agentSymbol === agentSymbol);
+function getColorForAgent(agentSymbol: string, relevantSortedLeaderboard: ApiLeaderboardEntry[]): string {
+  console.log("getColorForAgent", agentSymbol, relevantSortedLeaderboard);
+
+  const idx = relevantSortedLeaderboard.findIndex((e) => e.agentSymbol === agentSymbol);
   return idx >= 0 ? chartColors[idx % chartColors.length] : "black";
 }
 
@@ -422,6 +424,8 @@ function renderTimeSeriesCharts(
   selectedAgents: string[],
   selectedReset: ApiResetDateMeta | undefined,
 ) {
+  const selectedAgentsSet = new Set(selectedAgents)
+  const relevantSortedLeaderboard = sortedLeaderboard.filter(l => selectedAgentsSet.has(l.agentSymbol))
   const maybeFirstTs = selectedReset?.firstTs;
   const firstTs = maybeFirstTs ?? new Date(0);
   const agentCreditsTraces: Data[] = agentHistory.map((ahe) => {
@@ -434,7 +438,7 @@ function renderTimeSeriesCharts(
       hovertemplate: `<b>${ahe.agentSymbol}</b><br><b>Credits: </b>%{y:,d}<br><b>Date: </b>%{x}<extra></extra>`, // the empty extra-thingy disables the rendering of the trace-name in the hover info.
       hoverinfo: "x+y",
       marker: {
-        color: getColorForAgent(ahe.agentSymbol, sortedLeaderboard),
+        color: getColorForAgent(ahe.agentSymbol, relevantSortedLeaderboard),
       },
     };
   });
@@ -448,7 +452,7 @@ function renderTimeSeriesCharts(
       y: ahe.shipCountTimeline,
       hovertemplate: `<b>${ahe.agentSymbol}</b><br><b>Ships: </b>%{y:,d}<br><b>Date: </b>%{x}<extra></extra>`, // the empty extra-thingy disables the rendering of the trace-name in the hover info.
       marker: {
-        color: getColorForAgent(ahe.agentSymbol, sortedLeaderboard),
+        color: getColorForAgent(ahe.agentSymbol, relevantSortedLeaderboard),
       },
     };
   });
@@ -465,6 +469,7 @@ function renderTimeSeriesCharts(
       required,
       materialChartTraces: createMaterialChartTraces(
         sortedLeaderboard,
+        relevantSortedLeaderboard,
         tradeSymbol,
         constructionMaterialHistory,
         selectedAgents,
