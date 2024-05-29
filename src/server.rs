@@ -19,12 +19,12 @@ use utoipa_redoc::{Redoc, Servable};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::db::{
-    DbAgentHistoryEntry, DbConstructionMaterialHistoryEntry,
+    DbAgentHistoryEntry, DbAllTimePerformanceEntry, DbConstructionMaterialHistoryEntry,
     DbConstructionMaterialMostRecentStatus, DbJumpGateConstructionEventOverviewEntry, ResetDate,
 };
 use crate::server::leaderboard::{
-    ApiAgentHistoryEntry, ApiAgentSymbol, ApiConstructionMaterialHistoryEntry,
-    ApiConstructionMaterialMostRecentProgressEntry,
+    ApiAgentHistoryEntry, ApiAgentSymbol, ApiAllTimePerformanceEntry,
+    ApiConstructionMaterialHistoryEntry, ApiConstructionMaterialMostRecentProgressEntry,
     ApiGetJumpGateConstructionEventOverviewResponse, ApiJumpGateConstructionEventOverviewEntry,
     ApiResetAgentPeriodFilterBody, ApiResetDate, ApiTradeSymbol, ApiWaypointSymbol,
     RangeSelectionMode,
@@ -55,6 +55,10 @@ pub async fn http_server(
         .route(
             "/api/reset-dates",
             routing::get(leaderboard::get_reset_dates),
+        )
+        .route(
+            "/api/all-time-performance",
+            routing::get(leaderboard::get_all_time_performance),
         )
         .route(
             "/api/leaderboard/:reset_date",
@@ -119,7 +123,8 @@ pub mod leaderboard {
 
     use crate::db::{
         load_leaderboard_for_reset, load_reset_date, load_reset_dates, select_agent_history,
-        select_construction_progress_for_reset, select_jump_gate_agent_assignment_for_reset,
+        select_all_time_performance, select_construction_progress_for_reset,
+        select_jump_gate_agent_assignment_for_reset,
         select_jump_gate_construction_event_overview_for_reset,
         select_most_recent_construction_progress_for_reset, ResetDate,
     };
@@ -133,28 +138,31 @@ pub mod leaderboard {
             get_jump_gate_agents_assignment,
             get_history_data_for_reset,
             get_jump_gate_most_recent_progress,
-            get_jump_gate_construction_event_overview
+            get_jump_gate_construction_event_overview,
+            get_all_time_performance
         ),
         components(
-            schemas(ApiAgentSymbol),
-            schemas(ApiJumpGateAssignmentEntry),
-            schemas(ApiLeaderboardEntry),
-            schemas(ApiResetDate),
-            schemas(ApiResetDateMeta),
-            schemas(ApiWaypointSymbol),
-            schemas(GetJumpGateAgentsAssignmentForResetResponseContent),
-            schemas(GetLeaderboardForResetResponseContent),
-            schemas(GetHistoryDataForResetResponseContent),
-            schemas(ListResetDatesResponseContent),
-            schemas(ApiResetAgentPeriodFilterBody),
-            schemas(ApiTradeSymbol),
             schemas(ApiAgentHistoryEntry),
+            schemas(ApiAgentSymbol),
+            schemas(ApiAllTimePerformanceEntry),
             schemas(ApiConstructionMaterialHistoryEntry),
-            schemas(GetJumpGateMostRecentProgressForResetResponseContent),
-            schemas(ApiJumpGateAssignmentEntry),
             schemas(ApiConstructionMaterialMostRecentProgressEntry),
             schemas(ApiGetJumpGateConstructionEventOverviewResponse),
+            schemas(ApiJumpGateAssignmentEntry),
+            schemas(ApiJumpGateAssignmentEntry),
             schemas(ApiJumpGateConstructionEventOverviewEntry),
+            schemas(ApiLeaderboardEntry),
+            schemas(ApiResetAgentPeriodFilterBody),
+            schemas(ApiResetDate),
+            schemas(ApiResetDateMeta),
+            schemas(ApiTradeSymbol),
+            schemas(ApiWaypointSymbol),
+            schemas(GetAllTimePerformanceResult),
+            schemas(GetHistoryDataForResetResponseContent),
+            schemas(GetJumpGateAgentsAssignmentForResetResponseContent),
+            schemas(GetJumpGateMostRecentProgressForResetResponseContent),
+            schemas(GetLeaderboardForResetResponseContent),
+            schemas(ListResetDatesResponseContent),
             schemas(RangeSelectionMode),
         )
     )]
@@ -188,6 +196,12 @@ pub mod leaderboard {
     pub(crate) struct GetJumpGateAgentsAssignmentForResetResponseContent {
         reset_date: ApiResetDate,
         jump_gate_assignment_entries: Vec<ApiJumpGateAssignmentEntry>,
+    }
+
+    #[derive(Serialize, Deserialize, ToSchema)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct GetAllTimePerformanceResult {
+        entries: Vec<ApiAllTimePerformanceEntry>,
     }
 
     #[derive(Serialize, Deserialize, ToSchema)]
@@ -289,6 +303,15 @@ pub mod leaderboard {
         pub(crate) is_jump_gate_complete: bool,
     }
 
+    #[derive(Serialize, Deserialize, ToSchema, Debug)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct ApiAllTimePerformanceEntry {
+        pub(crate) reset: ApiResetDate,
+        pub(crate) agent_symbol: ApiAgentSymbol,
+        pub(crate) credits: i64,
+        pub(crate) rank: u32,
+    }
+
     /// List all reset-dates
     #[utoipa::path(get, path = "/api/reset-dates", responses((status = 200, body = ListResetDatesResponseContent)))]
     pub(crate) async fn get_reset_dates(
@@ -339,6 +362,25 @@ pub mod leaderboard {
         Json(GetLeaderboardForResetResponseContent {
             reset_date: ApiResetDate(reset_date.format("%Y-%m-%d").to_string()),
             leaderboard_entries: response,
+        })
+    }
+
+    /// Get the ranked agents entries for all resets.
+    #[utoipa::path(
+    get,
+    path = "/api/all-time-performance",
+    responses((status = 200, body = GetAllTimePerformanceResult)),
+    )]
+    pub(crate) async fn get_all_time_performance(
+        State(pool): State<Pool<Sqlite>>,
+    ) -> Json<GetAllTimePerformanceResult> {
+        let performance_entries = select_all_time_performance(&pool).await.unwrap();
+
+        Json(GetAllTimePerformanceResult {
+            entries: performance_entries
+                .into_iter()
+                .map(|e| e.try_into().unwrap())
+                .collect(),
         })
     }
 
@@ -703,6 +745,18 @@ impl TryFrom<DbJumpGateConstructionEventOverviewEntry>
             ts_first_construction_event: db.ts_first_construction_event,
             ts_last_construction_event: db.ts_last_construction_event,
             is_jump_gate_complete: db.is_jump_gate_complete.unwrap_or(false),
+        })
+    }
+}
+
+impl TryFrom<DbAllTimePerformanceEntry> for ApiAllTimePerformanceEntry {
+    type Error = ();
+    fn try_from(db: DbAllTimePerformanceEntry) -> Result<Self, Self::Error> {
+        Ok(ApiAllTimePerformanceEntry {
+            reset: ApiResetDate(db.reset.format("%Y-%m-%d").to_string()),
+            agent_symbol: ApiAgentSymbol(db.agent_symbol),
+            credits: db.credits,
+            rank: u32::try_from(db.rank).unwrap(),
         })
     }
 }

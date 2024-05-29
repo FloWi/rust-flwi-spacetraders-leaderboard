@@ -9,6 +9,7 @@ use crate::leaderboard_model::{
     LeaderboardCurrentAgentInfo, LeaderboardCurrentConstructionInfo, LeaderboardStaticAgentInfo,
 };
 use crate::model::ConstructionMaterial;
+use crate::server::leaderboard::{ApiAgentSymbol, ApiResetDate};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -522,6 +523,43 @@ group by ad.agent_symbol
     .fetch_all(pool)
     .await
 }
+pub(crate) async fn select_all_time_performance(
+    pool: &Pool<Sqlite>,
+) -> Result<Vec<DbAllTimePerformanceEntry>, Error> {
+    // sqlx doesn't understand a group-concat with int-values apparently
+    // using an alias with a type handles that
+    sqlx::query_as!(
+        DbAllTimePerformanceEntry,
+        r#"
+with last_entry_of_reset as (select *
+                             from (select r.reset_id
+                                        , r.first_ts
+                                        , r.reset
+                                        , row_number() over (partition by jr.reset_id order by jr.query_time desc) as rn
+                                        , jr.query_time                                                            as ts_latest_entry_of_reset
+                                        , jr.id                                                                    as job_run_id_latest_entry
+                                   from reset_date r
+                                            join main.job_run jr
+                                                 on r.reset_id = jr.reset_id) sub
+                             where rn = 1)
+   , ranked as (select rd.reset
+                     , sai.agent_symbol
+                     , al.credits
+                     , row_number() over (partition by rd.reset order by credits desc, sai.agent_symbol) as rank
+                from reset_date rd
+                         join main.job_run jr on rd.reset_id = jr.reset_id
+                         join main.agent_log al on jr.id = al.job_id
+                         join main.static_agent_info sai on al.agent_id = sai.id
+                         join last_entry_of_reset last
+                              on last.job_run_id_latest_entry = jr.id)
+select *
+from ranked
+order by reset
+        "#
+    )
+    .fetch_all(pool)
+    .await
+}
 
 async fn insert_agent_log_entry(
     pool: &Pool<Sqlite>,
@@ -876,4 +914,11 @@ pub struct DbConstructionRequirement {
     pub reset_id: i64,
     pub trade_symbol: String,
     pub required: i64,
+}
+
+pub(crate) struct DbAllTimePerformanceEntry {
+    pub(crate) reset: NaiveDate,
+    pub(crate) agent_symbol: String,
+    pub(crate) credits: i64,
+    pub(crate) rank: i64,
 }

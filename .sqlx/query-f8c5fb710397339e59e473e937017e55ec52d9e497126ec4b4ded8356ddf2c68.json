@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\nwith last_entry_of_reset as (select *\n                             from (select r.reset_id\n                                        , r.first_ts\n                                        , r.reset\n                                        , row_number() over (partition by jr.reset_id order by jr.query_time desc) as rn\n                                        , jr.query_time                                                            as ts_latest_entry_of_reset\n                                        , jr.id                                                                    as job_run_id_latest_entry\n                                   from reset_date r\n                                            join main.job_run jr\n                                                 on r.reset_id = jr.reset_id) sub\n                             where rn = 1)\n   , ranked as (select rd.reset\n                     , sai.agent_symbol\n                     , al.credits\n                     , row_number() over (partition by rd.reset order by credits desc, sai.agent_symbol) as rank\n                from reset_date rd\n                         join main.job_run jr on rd.reset_id = jr.reset_id\n                         join main.agent_log al on jr.id = al.job_id\n                         join main.static_agent_info sai on al.agent_id = sai.id\n                         join last_entry_of_reset last\n                              on last.job_run_id_latest_entry = jr.id)\nselect *\nfrom ranked\norder by reset\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "reset",
+        "ordinal": 0,
+        "type_info": "Date"
+      },
+      {
+        "name": "agent_symbol",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "credits",
+        "ordinal": 2,
+        "type_info": "Int64"
+      },
+      {
+        "name": "rank",
+        "ordinal": 3,
+        "type_info": "Int"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f8c5fb710397339e59e473e937017e55ec52d9e497126ec4b4ded8356ddf2c68"
+}
