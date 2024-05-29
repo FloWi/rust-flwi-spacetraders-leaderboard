@@ -6,12 +6,13 @@ import {
   RowSelectionState,
   useReactTable,
 } from "@tanstack/react-table";
-import { UiLeaderboardEntry } from "../lib/leaderboard-helper.ts";
-import { compactNumberFmt } from "../lib/formatters.ts";
+import {compactNumberFmt} from "../lib/formatters.ts";
+import {chartColors} from "../utils/chartColors.ts";
+import {ApiLeaderboardEntry} from "../../generated";
 
-const columnHelper = createColumnHelper<UiLeaderboardEntry>();
+const columnHelper = createColumnHelper<ApiLeaderboardEntry>();
 export const columns = [
-  columnHelper.accessor("displayColor", {
+  columnHelper.accessor((row) => row.agentSymbol, {
     cell: (info) => {
       /*
                       span(
@@ -22,16 +23,27 @@ export const columns = [
                 )
 
        */
+      /*
+      FOO  2M   [ ]
+      BAR  1M   [x]
+      BAZ  0.5M [x]
+      QUX  0.4M [ ]
 
+       */
+
+      let selectedAgents = info.table.getSelectedRowModel().rows.map((r) => r.id);
+      let myIndex = selectedAgents.findIndex((a) => a === info.row.id);
       let isSelected = info.row.getIsSelected();
-      let hexColor = info.getValue();
+      //console.log("rowId", info.row.id, "selectedAgents", selectedAgents, "myIndex", myIndex, "isSelected", isSelected);
+      let hexColor = isSelected ? chartColors[myIndex % chartColors.length] : "darkgray";
       let style = {
         borderColor: isSelected ? "transparent" : hexColor,
         backgroundColor: isSelected ? hexColor : "transparent",
       };
 
-      return <span className="border-2 w-4 h-4 rounded inline-block" style={style} />;
+      return <span className="border-2 w-4 h-4 rounded inline-block" style={style}/>;
     },
+    id: "selected",
     header: "",
     size: 8,
     footer: (info) => info.column.id,
@@ -51,7 +63,7 @@ export const columns = [
 
 export function createLeaderboardTable(
   memoizedLeaderboard: {
-    sortedAndColoredLeaderboard: UiLeaderboardEntry[];
+    leaderboard: ApiLeaderboardEntry[];
   },
   setRowSelection: (value: ((prevState: RowSelectionState) => RowSelectionState) | RowSelectionState) => void,
   sorting: ColumnSort[],
@@ -59,11 +71,11 @@ export function createLeaderboardTable(
   setSorting: (value: ((prevState: ColumnSort[]) => ColumnSort[]) | ColumnSort[]) => void,
 ) {
   return useReactTable({
-    data: memoizedLeaderboard.sortedAndColoredLeaderboard,
+    data: memoizedLeaderboard.leaderboard,
     columns,
     getRowId: (row) => row.agentSymbol,
     onRowSelectionChange: setRowSelection, //hoist up the row selection state to your own scope
-    state: { sorting, rowSelection },
+    state: {sorting, rowSelection},
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),

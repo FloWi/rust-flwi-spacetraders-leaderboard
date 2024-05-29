@@ -1,5 +1,4 @@
-import {UiLeaderboardEntry} from "../lib/leaderboard-helper.ts";
-import {ApiConstructionMaterialMostRecentProgressEntry} from "../../generated";
+import {ApiConstructionMaterialMostRecentProgressEntry, ApiLeaderboardEntry} from "../../generated";
 import {Table} from "@tanstack/react-table";
 import {JSX, ReactNode} from "react";
 import {
@@ -26,11 +25,11 @@ type SheetPageProps = {
   selectedAgents: string[];
   setSelectedAgents: (newSelection: string[]) => void;
   memoizedLeaderboard: {
-    sortedAndColoredLeaderboard: UiLeaderboardEntry[];
+    leaderboard: ApiLeaderboardEntry[];
   };
 
   jumpGateMostRecentConstructionProgress: Array<ApiConstructionMaterialMostRecentProgressEntry>;
-  table: Table<UiLeaderboardEntry>;
+  table: Table<ApiLeaderboardEntry>;
   children: ReactNode;
 };
 
@@ -45,12 +44,12 @@ export function AgentSelectionSheetPage({
                                           table,
                                           children,
                                         }: SheetPageProps) {
-  let top10Agents = memoizedLeaderboard.sortedAndColoredLeaderboard.slice(0, 10).map((e) => e.agentSymbol);
+  let top10Agents = memoizedLeaderboard.leaderboard.slice(0, 10).map((e) => e.agentSymbol);
 
   let jumpGatesUnderConstruction = jumpGateMostRecentConstructionProgress
     .filter((cpe) => cpe.fulfilled > 0 && cpe.required > 1)
     .map((cpe) => cpe.jumpGateWaypointSymbol);
-  let buildingAgents = memoizedLeaderboard.sortedAndColoredLeaderboard
+  let buildingAgents = memoizedLeaderboard.leaderboard
     .filter((e) => jumpGatesUnderConstruction.includes(e.jumpGateWaypointSymbol))
     .map((e) => e.agentSymbol);
 
@@ -88,7 +87,7 @@ export function AgentSelectionSheetPage({
         <SheetTitle className="text-sm font-medium leading-none">Agent Selection</SheetTitle>
         <SheetDescription>
           <span className="text-sm text-muted-foreground">
-            {selectedAgents.length} of {memoizedLeaderboard.sortedAndColoredLeaderboard.length} selected
+            {selectedAgents.length} of {memoizedLeaderboard.leaderboard.length} selected
           </span>
         </SheetDescription>
       </SheetHeader>

@@ -12,11 +12,11 @@ import React, { useEffect, useMemo } from "react";
 import {
   ApiAgentHistoryEntry,
   ApiConstructionMaterialHistoryEntry,
+  ApiLeaderboardEntry,
   ApiResetDateMeta,
   GetHistoryDataForResetResponseContent,
 } from "../../../generated";
 import { Data } from "plotly.js";
-import { calcSortedAndColoredLeaderboard, UiLeaderboardEntry } from "../../lib/leaderboard-helper.ts";
 import * as _ from "lodash";
 import { capitalize } from "lodash";
 import { AgentSelectionSheetPage } from "../../components/agent-selection-sheet-page.tsx";
@@ -30,6 +30,7 @@ import {
   SelectionMode,
 } from "../../utils/rangeSelection.ts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../@/components/ui/select.tsx";
+import { chartColors } from "../../utils/chartColors.ts";
 
 type AgentSelectionSearch = {
   agents?: string[];
@@ -252,7 +253,7 @@ function HistoryComponent() {
     agents?.forEach((agentSymbol) => (selectedAgents[agentSymbol] = true));
 
     setRowSelection(selectedAgents);
-    return calcSortedAndColoredLeaderboard(current.leaderboard);
+    return { leaderboard: current.leaderboard };
   }, [current.leaderboard]);
 
   let selectedReset: ApiResetDateMeta | undefined = useMemo(() => {
@@ -267,7 +268,7 @@ function HistoryComponent() {
       isLog,
       agentHistory,
       constructionMaterialHistory,
-      memoizedLeaderboard.sortedAndColoredLeaderboard,
+      memoizedLeaderboard.leaderboard,
       agents ?? [],
       selectedReset,
     );
@@ -365,7 +366,7 @@ function convertMinutesIntoDateTime(firstTs: Date, minutes: number[]): Date[] {
 }
 
 function createMaterialChartTraces(
-  sortedAndColoredLeaderboard: UiLeaderboardEntry[],
+  leaderboard: ApiLeaderboardEntry[],
   tradeGoodSymbol: string,
   constructionMaterialHistory: Array<ApiConstructionMaterialHistoryEntry>,
   selectedAgents: string[],
@@ -375,16 +376,15 @@ function createMaterialChartTraces(
     .filter((h) => h.tradeSymbol === tradeGoodSymbol)
     .filter((h) => h.fulfilled.some((value) => value > 0));
 
-  let relevantSortedAndColoredLeaderboard = sortedAndColoredLeaderboard.filter((lb) =>
-    selectedAgents.includes(lb.agentSymbol),
-  );
+  let relevantSortedAndColoredLeaderboard = leaderboard.filter((lb) => selectedAgents.includes(lb.agentSymbol));
 
   return relevantHistoryEntries.map((h) => {
-    let color =
-      relevantSortedAndColoredLeaderboard.find((lb) => lb.jumpGateWaypointSymbol === h.jumpGateWaypointSymbol)
-        ?.displayColor ?? "black";
+    const idx = relevantSortedAndColoredLeaderboard.findIndex(
+      (lb) => lb.jumpGateWaypointSymbol === h.jumpGateWaypointSymbol,
+    );
+    let color = idx >= 0 ? chartColors[idx % chartColors.length] : "black";
 
-    let agentsInThisSystem = sortedAndColoredLeaderboard
+    let agentsInThisSystem = leaderboard
       .map((lb, idx) => {
         return { ...lb, rank: idx + 1 };
       })
@@ -413,11 +413,16 @@ function createMaterialChartTraces(
   });
 }
 
+function getColorForAgent(agentSymbol: string, leaderboard: ApiLeaderboardEntry[]): string {
+  const idx = leaderboard.findIndex((e) => e.agentSymbol === agentSymbol);
+  return idx >= 0 ? chartColors[idx % chartColors.length] : "black";
+}
+
 function renderTimeSeriesCharts(
   isLog: boolean,
   agentHistory: Array<ApiAgentHistoryEntry>,
   constructionMaterialHistory: Array<ApiConstructionMaterialHistoryEntry>,
-  sortedAndColoredLeaderboard: UiLeaderboardEntry[],
+  sortedLeaderboard: ApiLeaderboardEntry[],
   selectedAgents: string[],
   selectedReset: ApiResetDateMeta | undefined,
 ) {
@@ -433,7 +438,7 @@ function renderTimeSeriesCharts(
       hovertemplate: `<b>${ahe.agentSymbol}</b><br><b>Credits: </b>%{y:,d}<br><b>Date: </b>%{x}<extra></extra>`, // the empty extra-thingy disables the rendering of the trace-name in the hover info.
       hoverinfo: "x+y",
       marker: {
-        color: sortedAndColoredLeaderboard.find((l) => l.agentSymbol === ahe.agentSymbol)?.displayColor ?? "black",
+        color: getColorForAgent(ahe.agentSymbol, sortedLeaderboard),
       },
     };
   });
@@ -447,7 +452,7 @@ function renderTimeSeriesCharts(
       y: ahe.shipCountTimeline,
       hovertemplate: `<b>${ahe.agentSymbol}</b><br><b>Ships: </b>%{y:,d}<br><b>Date: </b>%{x}<extra></extra>`, // the empty extra-thingy disables the rendering of the trace-name in the hover info.
       marker: {
-        color: sortedAndColoredLeaderboard.find((l) => l.agentSymbol === ahe.agentSymbol)?.displayColor ?? "black",
+        color: getColorForAgent(ahe.agentSymbol, sortedLeaderboard),
       },
     };
   });
@@ -463,7 +468,7 @@ function renderTimeSeriesCharts(
       tradeSymbol,
       required,
       materialChartTraces: createMaterialChartTraces(
-        sortedAndColoredLeaderboard,
+        sortedLeaderboard,
         tradeSymbol,
         constructionMaterialHistory,
         selectedAgents,
