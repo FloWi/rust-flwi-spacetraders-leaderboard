@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {createFileRoute, useNavigate} from "@tanstack/react-router";
 import {
   historyBaseQueryKey,
   jumpGateMostRecentProgressQueryOptions,
@@ -6,9 +6,9 @@ import {
   preciseHistoryQueryOptions,
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
-import { Query, QueryCache, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import {Query, QueryCache, useQuery, useSuspenseQuery} from "@tanstack/react-query";
 import Plot from "react-plotly.js";
-import React, { useEffect, useMemo } from "react";
+import React, {useEffect, useMemo} from "react";
 import {
   ApiAgentHistoryEntry,
   ApiConstructionMaterialHistoryEntry,
@@ -16,12 +16,12 @@ import {
   ApiResetDateMeta,
   GetHistoryDataForResetResponseContent,
 } from "../../../generated";
-import { Data } from "plotly.js";
+import {Data} from "plotly.js";
 import * as _ from "lodash";
-import { capitalize } from "lodash";
-import { AgentSelectionSheetPage } from "../../components/agent-selection-sheet-page.tsx";
-import { useLeaderboardTable } from "../../components/agent-selection-table.tsx";
-import { RowSelectionState, SortingState } from "@tanstack/react-table";
+import {capitalize} from "lodash";
+import {AgentSelectionSheetPage} from "../../components/agent-selection-sheet-page.tsx";
+import {useLeaderboardTable} from "../../components/agent-selection-table.tsx";
+import {RowSelectionState, SortingState} from "@tanstack/react-table";
 import {
   AllSelectionModes,
   defaultRangeSelection,
@@ -29,8 +29,8 @@ import {
   RangeSelection,
   SelectionMode,
 } from "../../utils/rangeSelection.ts";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../@/components/ui/select.tsx";
-import { chartColors } from "../../utils/chartColors.ts";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "../../@/components/ui/select.tsx";
+import {chartColors} from "../../utils/chartColors.ts";
 
 type AgentSelectionSearch = {
   agents?: string[];
@@ -44,7 +44,7 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
   component: HistoryComponent,
   pendingComponent: () => <div>Loading...</div>,
 
-  staticData: { customData: "I'm the history route" },
+  staticData: {customData: "I'm the history route"},
 
   validateSearch: (search: Record<string, unknown>): AgentSelectionSearch => {
     // validate and parse the search params into a typed state
@@ -63,7 +63,7 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
     };
   },
 
-  loaderDeps: ({ search: { agents, selectionMode, hoursLte, hoursGte } }) => ({
+  loaderDeps: ({search: {agents, selectionMode, hoursLte, hoursGte}}) => ({
     agents,
     selectionMode,
     hoursLte,
@@ -71,7 +71,7 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
   }),
 
   beforeLoad: async (arg) => {
-    console.log("before load:");
+    // console.log("before load:");
     const selectedAgents = _.sortBy(_.uniq(arg.search.agents ?? []));
 
     const rangeSelection = {
@@ -88,17 +88,13 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
       queryKey: preciseOptions.queryKey,
     });
 
-    if (preciseQuery) {
-      const agentsInCache = _.sortBy(_.uniq(preciseQuery.state.data?.requestedAgents ?? []));
-
-      console.log(`found exact match for agents ${agentsInCache}- no need to refresh/fetch anything`);
-    } else {
+    if (!preciseQuery) {
       const existingQueries: Array<Query> = queryCache.findAll({
         queryKey: historyBaseQueryKey(arg.params.resetDate, rangeSelection),
       });
 
       const queryEvaluationResults = bestMatchingQuery(queryCache, existingQueries, selectedAgents);
-      console.log("queryEvaluationResults", queryEvaluationResults);
+      // console.log("queryEvaluationResults", queryEvaluationResults);
       const maybeMatch = queryEvaluationResults.find((r) => r.isMatch);
       if (maybeMatch) {
         // found match
@@ -109,11 +105,11 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
         const entry: GetHistoryDataForResetResponseContent | undefined = matchingQuery?.state?.data;
         const modifiedEntry = entry
           ? {
-              ...entry,
-              requestedAgents: selectedAgents,
-              agentHistory: entry.agentHistory.filter((h) => selectedAgents.includes(h.agentSymbol)),
-              //TODO: filter construction entries
-            }
+            ...entry,
+            requestedAgents: selectedAgents,
+            agentHistory: entry.agentHistory.filter((h) => selectedAgents.includes(h.agentSymbol)),
+            //TODO: filter construction entries
+          }
           : undefined;
         queryClient.setQueryData(preciseOptions.queryKey, modifiedEntry, {
           updatedAt: matchingQuery?.state.dataUpdatedAt,
@@ -125,14 +121,14 @@ export const Route = createFileRoute("/resets/$resetDate/history")({
   },
 
   loader: async ({
-    params: { resetDate },
-    context: { queryClient },
-    deps: { agents, selectionMode, hoursLte, hoursGte },
-  }) => {
+                   params: {resetDate},
+                   context: {queryClient},
+                   deps: {agents, selectionMode, hoursLte, hoursGte},
+                 }) => {
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
 
-    const rangeSelection = { selectionMode, hoursLte, hoursGte };
+    const rangeSelection = {selectionMode, hoursLte, hoursGte};
 
     await queryClient.ensureQueryData(leaderboardQueryOptions(resetDate));
     await queryClient.ensureQueryData(preciseHistoryQueryOptions(resetDate, agents ?? [], rangeSelection));
@@ -165,11 +161,11 @@ function prettyPrintRangeSelection(rangeSelection: RangeSelection): React.ReactN
 
 function bestMatchingQuery(queryCache: QueryCache, existingQueries: Array<Query>, selectedAgents: string[]) {
   return existingQueries.map((q) => {
-    const typedQuery = queryCache.find<GetHistoryDataForResetResponseContent>({ queryKey: q.queryKey });
+    const typedQuery = queryCache.find<GetHistoryDataForResetResponseContent>({queryKey: q.queryKey});
     const agents = _.sortedUniq(typedQuery?.state.data?.requestedAgents ?? []);
     const intersection = _.intersection(selectedAgents, agents);
     const isMatch = _.isEqual(selectedAgents, intersection);
-    return { typedQuery, agents, intersection, isMatch };
+    return {typedQuery, agents, intersection, isMatch};
   });
 }
 
@@ -193,7 +189,7 @@ function rangeSelectionComponent(
     // I really miss scala :'-(
     //
     // example
-    // console.log("comparing values", r, rangeSelectionFromQueryParams, result);
+    // // console.log("comparing values", r, rangeSelectionFromQueryParams, result);
     // comparing values
     // Object { selectionMode: "first", hoursLte: 12 }
     //
@@ -214,7 +210,7 @@ function rangeSelectionComponent(
       }}
     >
       <SelectTrigger className="w-fit">
-        <SelectValue placeholder="Select Range" />
+        <SelectValue placeholder="Select Range"/>
       </SelectTrigger>
       <SelectContent>{items}</SelectContent>
     </Select>
@@ -222,16 +218,16 @@ function rangeSelectionComponent(
 }
 
 function HistoryComponent() {
-  const { resetDate } = Route.useParams();
-  const { agents, selectionMode, hoursLte, hoursGte } = Route.useSearch();
+  const {resetDate} = Route.useParams();
+  const {agents, selectionMode, hoursLte, hoursGte} = Route.useSearch();
 
-  const rangeSelectionFromSearchParams: RangeSelection = { selectionMode, hoursLte, hoursGte };
+  const rangeSelectionFromSearchParams: RangeSelection = {selectionMode, hoursLte, hoursGte};
 
-  const { data: resetDates } = useQuery(resetDatesQueryOptions);
-  const { data: historyData } = useQuery(
+  const {data: resetDates} = useQuery(resetDatesQueryOptions);
+  const {data: historyData} = useQuery(
     preciseHistoryQueryOptions(resetDate, agents ?? [], rangeSelectionFromSearchParams),
   );
-  const { data: jumpGateMostRecentConstructionProgress } = useQuery(jumpGateMostRecentProgressQueryOptions(resetDate));
+  const {data: jumpGateMostRecentConstructionProgress} = useQuery(jumpGateMostRecentProgressQueryOptions(resetDate));
   const [isLog, setIsLog] = React.useState(true);
 
   const [sortingLeaderboard, setSortingLeaderboard] = React.useState<SortingState>([
@@ -242,18 +238,18 @@ function HistoryComponent() {
   ]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({}); //manage your own row selection state
 
-  const { data: leaderboardData } = useSuspenseQuery(leaderboardQueryOptions(resetDate));
+  const {data: leaderboardData} = useSuspenseQuery(leaderboardQueryOptions(resetDate));
   // const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
   const leaderboardEntries = leaderboardData.leaderboardEntries;
 
-  const current = { leaderboard: leaderboardEntries };
+  const current = {leaderboard: leaderboardEntries};
 
   const memoizedLeaderboard = React.useMemo(() => {
     const selectedAgents: Record<string, boolean> = {};
     agents?.forEach((agentSymbol) => (selectedAgents[agentSymbol] = true));
 
     setRowSelection(selectedAgents);
-    return { leaderboard: current.leaderboard };
+    return {leaderboard: current.leaderboard};
   }, [current.leaderboard, agents]);
 
   const selectedReset: ApiResetDateMeta | undefined = useMemo(() => {
@@ -274,7 +270,7 @@ function HistoryComponent() {
     );
   }, [historyData, isLog, agents, memoizedLeaderboard.leaderboard, selectedReset]);
 
-  const navigate = useNavigate({ from: Route.fullPath });
+  const navigate = useNavigate({from: Route.fullPath});
 
   useEffect(() => {
     const newAgentSelection = Object.keys(rowSelection);
@@ -307,7 +303,7 @@ function HistoryComponent() {
   };
 
   const selectAgents = (newSelectedAgents: string[]) => {
-    const newSelection: RowSelectionState = newSelectedAgents.reduce((o, key) => ({ ...o, [key]: true }), {});
+    const newSelection: RowSelectionState = newSelectedAgents.reduce((o, key) => ({...o, [key]: true}), {});
     setRowSelection(newSelection);
   };
 
@@ -386,7 +382,7 @@ function createMaterialChartTraces(
 
     const agentsInThisSystem = leaderboard
       .map((lb, idx) => {
-        return { ...lb, rank: idx + 1 };
+        return {...lb, rank: idx + 1};
       })
       .filter((lb) => lb.jumpGateWaypointSymbol === h.jumpGateWaypointSymbol)
       .map((lb) => lb);
@@ -427,7 +423,7 @@ function renderTimeSeriesCharts(
   selectedReset: ApiResetDateMeta | undefined,
 ) {
   const maybeFirstTs = selectedReset?.firstTs;
-  const firstTs = maybeFirstTs ? new Date(Date.parse(maybeFirstTs)) : new Date(0);
+  const firstTs = maybeFirstTs ?? new Date(0);
   const agentCreditsTraces: Data[] = agentHistory.map((ahe) => {
     return {
       type: "scatter",
@@ -463,7 +459,7 @@ function renderTimeSeriesCharts(
     tradeSymbol: string;
     required: number;
     materialChartTraces: Data[];
-  }[] = _.sortBy(constructionMaterialTradeSymbols, (cm) => cm.tradeSymbol).map(({ tradeSymbol, required }) => {
+  }[] = _.sortBy(constructionMaterialTradeSymbols, (cm) => cm.tradeSymbol).map(({tradeSymbol, required}) => {
     return {
       tradeSymbol,
       required,
@@ -478,7 +474,7 @@ function renderTimeSeriesCharts(
   });
 
   const materialChartConfigs: LineChartConfig[] = materialTraces.map(
-    ({ tradeSymbol, required, materialChartTraces }) => {
+    ({tradeSymbol, required, materialChartTraces}) => {
       return {
         title: tradeSymbol,
         mutedColorTitle: `${required} required`,
@@ -512,7 +508,7 @@ type LineChartConfig = {
   data: Data[];
 };
 
-function renderLineChart({ isLog, mutedColorTitle, title, data }: LineChartConfig) {
+function renderLineChart({isLog, mutedColorTitle, title, data}: LineChartConfig) {
   const chartGridLineColor = "rgb(102,102,108)";
 
   return (
@@ -536,9 +532,9 @@ function renderLineChart({ isLog, mutedColorTitle, title, data }: LineChartConfi
             t: 50,
             //pad: 4,
           },
-          modebar: { orientation: "h" },
+          modebar: {orientation: "h"},
           showlegend: true,
-          legend: { orientation: "h" },
+          legend: {orientation: "h"},
 
           height: 700,
           font: {
@@ -567,7 +563,7 @@ function renderLineChart({ isLog, mutedColorTitle, title, data }: LineChartConfi
             tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
           },
         }}
-        config={{ displayModeBar: false, responsive: true /*doubleClickDelay: 500*/ }}
+        config={{displayModeBar: false, responsive: true /*doubleClickDelay: 500*/}}
       />
     </div>
   );

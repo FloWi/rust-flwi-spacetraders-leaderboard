@@ -1,19 +1,19 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { GetLeaderboardForResetResponseContent } from "../../../generated";
+import {createFileRoute, useNavigate} from "@tanstack/react-router";
+import {GetLeaderboardForResetResponseContent} from "../../../generated";
 
-import { RowSelectionState, SortingState } from "@tanstack/react-table";
-import React, { useEffect } from "react";
+import {RowSelectionState, SortingState} from "@tanstack/react-table";
+import React, {useEffect} from "react";
 import Plot from "react-plotly.js";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {useSuspenseQuery} from "@tanstack/react-query";
 import {
   jumpGateMostRecentProgressQueryOptions,
   leaderboardQueryOptions,
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
 import * as _ from "lodash";
-import { AgentSelectionSheetPage } from "../../components/agent-selection-sheet-page.tsx";
-import { useLeaderboardTable } from "../../components/agent-selection-table.tsx";
-import { chartColors } from "../../utils/chartColors.ts";
+import {AgentSelectionSheetPage} from "../../components/agent-selection-sheet-page.tsx";
+import {useLeaderboardTable} from "../../components/agent-selection-table.tsx";
+import {chartColors} from "../../utils/chartColors.ts";
 
 type AgentSelectionSearch = {
   agents?: string[];
@@ -26,9 +26,9 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
     customData: "I'm the leaderboard route",
   },
 
-  loaderDeps: ({ search: { agents } }) => ({ agents }),
+  loaderDeps: ({search: {agents}}) => ({agents}),
   beforeLoad: async (arg) => {
-    console.log("before load:");
+    //console.log("before load:");
     const selectedAgents = arg.search.agents ?? [];
 
     const options = leaderboardQueryOptions(arg.params.resetDate);
@@ -43,24 +43,24 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
     const agentsInCache = entries.map((e) => e.agentSymbol);
 
     const needsInvalidation = selectedAgents.some((a) => !agentsInCache.includes(a));
-    console.log("selected agents", selectedAgents);
-    console.log("agents in cache", agentsInCache);
-    console.log("arg", arg);
-    console.log("needsInvalidation", needsInvalidation);
+    //console.log("selected agents", selectedAgents);
+    //console.log("agents in cache", agentsInCache);
+    //console.log("arg", arg);
+    //console.log("needsInvalidation", needsInvalidation);
 
     if (needsInvalidation) {
-      console.log("invalidating query");
+      //console.log("invalidating query");
 
-      await queryClient.invalidateQueries({ queryKey: options.queryKey });
+      await queryClient.invalidateQueries({queryKey: options.queryKey});
     }
 
-    // console.log("current state of query", query);
+    // //console.log("current state of query", query);
   },
   loader: async ({
-    //deps: { agents },
-    params: { resetDate },
-    context: { queryClient },
-  }) => {
+                   //deps: { agents },
+                   params: {resetDate},
+                   context: {queryClient},
+                 }) => {
     // intentional fire-and-forget according to docs :-/
     // https://tanstack.com/query/latest/docs/framework/react/guides/prefetching#router-integration
     queryClient.prefetchQuery(leaderboardQueryOptions(resetDate));
@@ -86,7 +86,7 @@ type BarChartConfig = {
   colors: string[];
 };
 
-function renderBarChart({ title, mutedColorTitle, isLog, xValues, yValues, colors }: BarChartConfig) {
+function renderBarChart({title, mutedColorTitle, isLog, xValues, yValues, colors}: BarChartConfig) {
   return (
     <div key={title}>
       <div className="flex flex-row gap-0.5 items-center ">
@@ -103,7 +103,7 @@ function renderBarChart({ title, mutedColorTitle, isLog, xValues, yValues, color
             x: xValues,
             y: yValues,
             name: title,
-            marker: { color: colors },
+            marker: {color: colors},
           },
         ]}
         layout={{
@@ -115,7 +115,7 @@ function renderBarChart({ title, mutedColorTitle, isLog, xValues, yValues, color
             t: 20,
             //pad: 4,
           },
-          modebar: { orientation: "h" },
+          modebar: {orientation: "h"},
           showlegend: false,
           height: 500,
           font: {
@@ -142,14 +142,14 @@ function renderBarChart({ title, mutedColorTitle, isLog, xValues, yValues, color
             tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
           },
         }}
-        config={{ displayModeBar: false, responsive: true }}
+        config={{displayModeBar: false, responsive: true}}
       />
     </div>
   );
 }
 
 function LeaderboardComponent() {
-  const { resetDate } = Route.useParams();
+  const {resetDate} = Route.useParams();
   const resetDateToUse = resetDate;
   const [sortingLeaderboard, setSortingLeaderboard] = React.useState<SortingState>([
     {
@@ -159,32 +159,32 @@ function LeaderboardComponent() {
   ]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({}); //manage your own row selection state
 
-  const { data: leaderboardData } = useSuspenseQuery(leaderboardQueryOptions(resetDate));
-  const { data: jumpGateMostRecentConstructionProgress } = useSuspenseQuery(
+  const {data: leaderboardData} = useSuspenseQuery(leaderboardQueryOptions(resetDate));
+  const {data: jumpGateMostRecentConstructionProgress} = useSuspenseQuery(
     jumpGateMostRecentProgressQueryOptions(resetDate),
   );
   // const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
   const leaderboardEntries = leaderboardData.leaderboardEntries;
-  const { agents } = Route.useSearch(); //leaderboardEntries.map((e) => e.agentSymbol);
+  const {agents} = Route.useSearch(); //leaderboardEntries.map((e) => e.agentSymbol);
 
   const [isLog, setIsLog] = React.useState(true);
 
-  const current = { leaderboard: leaderboardEntries };
+  const current = {leaderboard: leaderboardEntries};
 
   const memoizedLeaderboard = React.useMemo(() => {
     const selectedAgents: Record<string, boolean> = {};
     agents?.forEach((agentSymbol) => (selectedAgents[agentSymbol] = true));
 
     setRowSelection(selectedAgents);
-    return { leaderboard: current.leaderboard };
+    return {leaderboard: current.leaderboard};
   }, [current.leaderboard, agents]);
 
-  const { relevantEntries } = React.useMemo(() => {
+  const {relevantEntries} = React.useMemo(() => {
     const selectedAgents = Object.keys(rowSelection);
 
     const relevantEntries = memoizedLeaderboard.leaderboard.filter((e) => selectedAgents.includes(e.agentSymbol));
 
-    return { selectedAgents, relevantEntries };
+    return {selectedAgents, relevantEntries};
   }, [rowSelection, memoizedLeaderboard.leaderboard]);
 
   const agentChartConfigs: BarChartConfig[] = React.useMemo(() => {
@@ -219,12 +219,12 @@ function LeaderboardComponent() {
     );
 
     const relevantConstructionProgressEntries = jumpGateMostRecentConstructionProgress.progressEntries.filter(
-      ({ jumpGateWaypointSymbol }) => {
+      ({jumpGateWaypointSymbol}) => {
         return relevantJumpGates.includes(jumpGateWaypointSymbol);
       },
     );
 
-    return _.sortBy(constructionMaterialTradeSymbols, (cm) => cm.tradeSymbol).map(({ tradeSymbol, required }) => {
+    return _.sortBy(constructionMaterialTradeSymbols, (cm) => cm.tradeSymbol).map(({tradeSymbol, required}) => {
       const materialEntries = relevantConstructionProgressEntries.filter((cpe) => cpe.tradeSymbol === tradeSymbol);
 
       const fulfilledValues = relevantEntries.map((r) => {
@@ -249,7 +249,7 @@ function LeaderboardComponent() {
     setSortingLeaderboard,
   );
 
-  const navigate = useNavigate({ from: Route.fullPath });
+  const navigate = useNavigate({from: Route.fullPath});
 
   useEffect(() => {
     const newAgentSelection = Object.keys(rowSelection);
@@ -263,7 +263,7 @@ function LeaderboardComponent() {
   }, [resetDateToUse, rowSelection, navigate]);
 
   const selectAgents = (newSelectedAgents: string[]) => {
-    const newSelection: RowSelectionState = newSelectedAgents.reduce((o, key) => ({ ...o, [key]: true }), {});
+    const newSelection: RowSelectionState = newSelectedAgents.reduce((o, key) => ({...o, [key]: true}), {});
     setRowSelection((_) => newSelection);
   };
 

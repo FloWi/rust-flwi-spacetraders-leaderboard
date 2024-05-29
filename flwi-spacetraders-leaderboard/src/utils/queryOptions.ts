@@ -1,6 +1,6 @@
-import { queryOptions } from "@tanstack/react-query";
+import {queryOptions} from "@tanstack/react-query";
 import * as _ from "lodash";
-import { RangeSelection } from "./rangeSelection.ts";
+import {RangeSelection} from "./rangeSelection.ts";
 import {
   getAllTimePerformance,
   getHistoryDataForReset,
@@ -14,21 +14,28 @@ import {
 
 export const resetDatesQueryOptions = queryOptions({
   queryKey: ["resetDates"],
-  queryFn: () => getResetDates().then((r) => r.resetDates),
+  queryFn: () =>
+    getResetDates().then((response) => {
+      // TODO: dates are _not_ parsed currently. check if openapi-ts fixed the Date issue
+      // https://github.com/hey-api/openapi-ts/issues/145
+      return response.resetDates.map((r) => {
+        return {...r, firstTs: new Date(Date.parse(r.firstTs.toString()))};
+      });
+    }),
   staleTime: 5 * 60 * 1000,
 });
 
 export const jumpGateAssignmentsQueryOptions = (resetDate: string) =>
   queryOptions({
     queryKey: ["jumpGateData", resetDate],
-    queryFn: () => getJumpGateAgentsAssignment({ resetDate }),
+    queryFn: () => getJumpGateAgentsAssignment({resetDate}),
     staleTime: 5 * 60 * 1000,
   });
 
 export const jumpGateMostRecentProgressQueryOptions = (resetDate: string) =>
   queryOptions({
     queryKey: ["jumpGateMostRecentProgressData", resetDate],
-    queryFn: () => getJumpGateMostRecentProgress({ resetDate }),
+    queryFn: () => getJumpGateMostRecentProgress({resetDate}),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -66,7 +73,7 @@ export const jumpGateConstructionEventsQueryOptions = (resetDate: string) =>
 export const leaderboardQueryOptions = (resetDate: string) =>
   queryOptions({
     queryKey: ["leaderboardData", resetDate],
-    queryFn: () => getLeaderboard({ resetDate }),
+    queryFn: () => getLeaderboard({resetDate}),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -76,7 +83,7 @@ export const historyBaseQueryKey = (resetDate: string, rangeSelection: RangeSele
 
 export const preciseHistoryQueryOptions = (resetDate: string, agentSymbols: string[], rangeSelection: RangeSelection) =>
   queryOptions({
-    queryKey: [...historyBaseQueryKey(resetDate, rangeSelection), { agentSymbols: _.sortBy(_.uniq(agentSymbols)) }],
+    queryKey: [...historyBaseQueryKey(resetDate, rangeSelection), {agentSymbols: _.sortBy(_.uniq(agentSymbols))}],
     queryFn: () => {
       return getHistoryDataForReset({
         resetDate,
