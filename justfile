@@ -13,6 +13,9 @@ generate-openapi-spec-and-client:
 build-fly-docker-image:
   docker build --platform=linux/amd64 --tag registry.fly.io/flwi-spacetraders-rust-leaderboard .
 
+deploy:
+  fly deploy --local-only
+
 copy-db-to-fly-volume:
   rm temp_data/*.db*
   sqlite3 data/flwi-leaderboard.db '.backup temp_data/flwi-leaderboard.db'
