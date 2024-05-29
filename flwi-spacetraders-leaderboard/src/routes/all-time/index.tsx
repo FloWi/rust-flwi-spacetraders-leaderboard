@@ -1,6 +1,5 @@
-import {createFileRoute, useNavigate} from "@tanstack/react-router";
-import React, {JSX, useMemo} from "react";
-import {ApiAllTimeRankEntry, mockDataAllTime} from "../../lib/all-time-testdata.ts";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import React, { JSX, useMemo } from "react";
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -8,21 +7,21 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import {intNumberFmt, prettyDuration} from "../../lib/formatters.ts";
-import {ToggleGroup, ToggleGroupItem} from "../../@/components/ui/toggle-group.tsx";
-import {prettyTable} from "../../components/prettyTable.tsx";
+import { intNumberFmt, prettyDuration } from "../../lib/formatters.ts";
+import { ToggleGroup, ToggleGroupItem } from "../../@/components/ui/toggle-group.tsx";
+import { prettyTable } from "../../components/prettyTable.tsx";
 import Plot from "react-plotly.js";
-import {Legend, PlotType} from "plotly.js";
-import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger} from "../../@/components/ui/sheet.tsx";
-import {HamburgerMenuIcon} from "@radix-ui/react-icons";
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "../../@/components/ui/card.tsx";
-import {renderKvPair} from "../../lib/key-value-card-helper.tsx";
-import {useMediaQuery} from "react-responsive";
-import {Switch} from "../../@/components/ui/switch.tsx";
-import {Label} from "../../@/components/ui/label.tsx";
-import {useQuery} from "@tanstack/react-query";
-import {resetDatesQueryOptions} from "../../utils/queryOptions.ts";
-import {ApiResetDateMeta} from "../../../generated";
+import { Legend, PlotType } from "plotly.js";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../../@/components/ui/sheet.tsx";
+import { HamburgerMenuIcon } from "@radix-ui/react-icons";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../@/components/ui/card.tsx";
+import { renderKvPair } from "../../lib/key-value-card-helper.tsx";
+import { useMediaQuery } from "react-responsive";
+import { Switch } from "../../@/components/ui/switch.tsx";
+import { Label } from "../../@/components/ui/label.tsx";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { allTimePerformanceQueryOptions, resetDatesQueryOptions } from "../../utils/queryOptions.ts";
+import { ApiAllTimePerformanceEntry, ApiResetDateMeta } from "../../../generated";
 
 type RankFilter = { name: string; maxRank?: number };
 type ResetFilter = { name: string; numberResets?: number };
@@ -104,7 +103,9 @@ type AllTimeSelectionSearch = {
 
 export const Route = createFileRoute("/all-time/")({
   component: AllTimeComponent,
-  loader: async ({context: {queryClient}}) => {
+  loader: async ({ context: { queryClient } }) => {
+    queryClient.prefetchQuery(allTimePerformanceQueryOptions);
+
     await queryClient.prefetchQuery(resetDatesQueryOptions);
   },
   pendingComponent: () => <div>Loading...</div>,
@@ -113,13 +114,13 @@ export const Route = createFileRoute("/all-time/")({
     const rankFilterStr = search?.rankFilter as string;
 
     return {
-      resetFilter: resetFilters.has(resetFilterStr as ResetFilterId) ? (resetFilterStr as ResetFilterId) : "last5",
-      rankFilter: rankFilters.has(rankFilterStr as RankFilterId) ? (rankFilterStr as RankFilterId) : "top5",
+      resetFilter: resetFilters.has(resetFilterStr as ResetFilterId) ? (resetFilterStr as ResetFilterId) : "last10",
+      rankFilter: rankFilters.has(rankFilterStr as RankFilterId) ? (rankFilterStr as RankFilterId) : "top3",
     };
   },
 });
 
-interface AllTimeRankEntry extends ApiAllTimeRankEntry {
+interface AllTimeRankEntry extends ApiAllTimePerformanceEntry {
   resetDate: ApiResetDateMeta;
 }
 
@@ -160,24 +161,37 @@ const allTimeColumns = [
 ];
 
 function AllTimeComponent() {
-  const {data: allResetDates} = useQuery(resetDatesQueryOptions);
+  const { data: allResetDates } = useSuspenseQuery(resetDatesQueryOptions);
 
-  const {rankFilter, resetFilter} = Route.useSearch();
+  const { rankFilter, resetFilter } = Route.useSearch();
 
-  const navigate = useNavigate({from: Route.fullPath});
+  const navigate = useNavigate({ from: Route.fullPath });
 
-  const {currentRankFilter, currentResetFilter} = React.useMemo(() => {
-    return {currentRankFilter: rankFilters.get(rankFilter)!, currentResetFilter: resetFilters.get(resetFilter)!};
+  const { currentRankFilter, currentResetFilter } = React.useMemo(() => {
+    return { currentRankFilter: rankFilters.get(rankFilter)!, currentResetFilter: resetFilters.get(resetFilter)! };
   }, [rankFilter, resetFilter]);
 
-  const {allTimeData, resetDates} = useMemo(() => {
-    const resetDates = Array.from(new Set(mockDataAllTime.map((d) => d.reset)))
+  const {
+    data: { entries: allTimeData },
+  } = useSuspenseQuery(allTimePerformanceQueryOptions);
+
+  const resetDates = useMemo(() => {
+    return allResetDates
+      .map((r) => r.resetDate)
       .toSorted()
       .toReversed();
-    return {allTimeData: mockDataAllTime, resetDates};
-  }, []);
+  }, [allResetDates]);
 
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>([
+    {
+      id: "resetDate",
+      desc: true,
+    },
+    {
+      id: "rank",
+      desc: false,
+    },
+  ]);
   const [isLog, setIsLog] = React.useState(true);
 
   const relevantData: AllTimeRankEntry[] = useMemo(() => {
@@ -192,7 +206,7 @@ function AllTimeComponent() {
       })
       .flatMap((d) => {
         const resetMeta = allResetDates?.find((rd) => rd.resetDate === d.reset);
-        return resetMeta ? [{...d, resetDate: resetMeta, reset: resetMeta.resetDate}] : [];
+        return resetMeta ? [{ ...d, resetDate: resetMeta, reset: resetMeta.resetDate }] : [];
       });
   }, [currentRankFilter, currentResetFilter, allResetDates, allTimeData, resetDates]);
 
@@ -206,7 +220,7 @@ function AllTimeComponent() {
     //getRowId: (row) => `${row}-${row.tradeSymbol}`,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    state: {sorting},
+    state: { sorting },
     onSortingChange: setSorting,
     debugTable: true,
   });
@@ -288,7 +302,7 @@ function AllTimeComponent() {
           tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
         },
       }}
-      config={{displayModeBar: false, responsive: true}}
+      config={{ displayModeBar: false, responsive: true }}
     />
   );
   const top_n_AgentSelectionComponent = (
@@ -356,7 +370,7 @@ function AllTimeComponent() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-2 text-sm">
-            <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog}/>
+            <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog} />
             <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
           </div>
         </CardContent>
@@ -370,7 +384,7 @@ function AllTimeComponent() {
         <div className="sub-header flex flex-row gap-2 mt-4 items-center">
           <h2 className="text-2xl font-bold">All Time comparison</h2>
           <SheetTrigger asChild className={`block lg:hidden mr-2`}>
-            <HamburgerMenuIcon className="ml-auto"/>
+            <HamburgerMenuIcon className="ml-auto" />
           </SheetTrigger>
           {
             <SheetContent side="left" className="w-11/12 md:w-fit flex flex-col gap-4">
@@ -379,7 +393,7 @@ function AllTimeComponent() {
               </SheetHeader>
               {durationSelection}
               <div className="flex items-center space-x-2 text-sm">
-                <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog}/>
+                <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog} />
                 <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
               </div>
             </SheetContent>
