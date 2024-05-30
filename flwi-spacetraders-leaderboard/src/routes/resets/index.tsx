@@ -1,19 +1,19 @@
-import {createFileRoute, Link, Outlet} from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 
-import {OpenAPI} from "../../../generated";
-import {resetDatesQueryOptions} from "../../utils/queryOptions.ts";
-import {prettyDuration} from "../../lib/formatters.ts";
-import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "../../@/components/ui/table.tsx";
-import {CircleCheckBigIcon} from "lucide-react";
+import { OpenAPI } from "../../../generated";
+import { resetDatesQueryOptions } from "../../utils/queryOptions.ts";
+import { prettyDuration } from "../../lib/formatters.ts";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../@/components/ui/table.tsx";
+import { CircleCheckBigIcon } from "lucide-react";
 
 OpenAPI.BASE = "http://localhost:8080";
 
 export const Route = createFileRoute("/resets/")({
   component: ResetRouteComponent,
   loader: async ({
-                   //deps: { agents },
-                   context: {queryClient},
-                 }) => {
+    //deps: { agents },
+    context: { queryClient },
+  }) => {
     return queryClient.ensureQueryData(resetDatesQueryOptions);
   },
 });
@@ -46,7 +46,8 @@ function ResetRouteComponent() {
                       <TableCell className="font-medium">
                         <Link
                           to="/resets/$resetDate/leaderboard"
-                          params={{resetDate: date.resetDate}}
+                          params={{ resetDate: date.resetDate }}
+                          search={{ logAxis: true, agents: [] }}
                           // search={{agents: ["WHYANDO", "SG-1-DEVX56"]}}
                           className="[&.active]:font-bold"
                         >
@@ -54,7 +55,7 @@ function ResetRouteComponent() {
                         </Link>
                       </TableCell>
                       <TableCell className="text-right">{prettyDuration(date.durationMinutes * 60 * 1000)}</TableCell>
-                      <TableCell>{date.isOngoing ? <CircleCheckBigIcon/> : <></>}</TableCell>
+                      <TableCell>{date.isOngoing ? <CircleCheckBigIcon /> : <></>}</TableCell>
                     </TableRow>
                   ))}
               </TableBody>
@@ -62,7 +63,7 @@ function ResetRouteComponent() {
           </nav>
         </div>
 
-        <Outlet/>
+        <Outlet />
       </div>
     </>
   );
