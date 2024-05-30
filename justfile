@@ -16,6 +16,15 @@ build-fly-docker-image:
 deploy:
   fly deploy --local-only
 
+# delete local database, download production database
+download-prod-db:
+  mkdir -p data/backup-db
+  rm -f data/backup/backup.db
+  rm -f data/backup/backup.db-shm
+  rm -f data/backup/backup.db-wal
+  flyctl ssh console -C "rm -f /tmp/backup.db"
+  flyctl ssh console -C "sqlite3 /data/flwi-leaderboard.db '.backup /tmp/backup.db'"
+  flyctl ssh sftp get /tmp/backup.db data/backup-db/backup.db || true
 
 #copy-db-to-fly-volume:
 #  rm temp_data/*.db*
