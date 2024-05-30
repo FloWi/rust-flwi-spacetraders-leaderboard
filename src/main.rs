@@ -1,7 +1,7 @@
 use std::fs;
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use futures::join;
 use sqlx::sqlite::SqlitePoolOptions;
@@ -98,7 +98,9 @@ async fn background_collect(pool: Pool<Sqlite>) -> Result<()> {
                 let reqwest_client_with_middleware = create_client();
                 let client = StClient::new(reqwest_client_with_middleware);
 
-                let _ = perform_tick(&client, clone_wars_pool).await;
+                let _ = perform_tick(&client, clone_wars_pool)
+                    .await
+                    .context("failed at perform_tick");
 
                 // Query the next execution time for this job
                 let next_tick = l.next_tick_for_job(uuid).await;

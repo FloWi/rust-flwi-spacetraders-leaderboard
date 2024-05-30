@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use anyhow::Context;
 use chrono::{Local, NaiveDate};
 use futures::future::join_all;
 use itertools::Itertools;
@@ -50,7 +51,10 @@ pub async fn perform_tick(client: &StClient, pool: Pool<Sqlite>) -> anyhow::Resu
 
     let static_agent_info_results = load_static_agent_infos(&client, new_agent_symbols).await?;
     save_construction_sites(&pool, reset_date_db, static_agent_info_results.clone()).await;
-    let construction_sites = select_construction_sites_for_reset(&pool, reset_date_db).await?;
+    let construction_sites = select_construction_sites_for_reset(&pool, reset_date_db)
+        .await
+        .context("failed at select_construction_sites_for_reset")?;
+
     save_static_agent_infos(
         &pool,
         reset_date_db,
@@ -72,9 +76,13 @@ pub async fn perform_tick(client: &StClient, pool: Pool<Sqlite>) -> anyhow::Resu
     );
 
     let (current_agent_entries, current_construction_entries) =
-        collect_data(&client, static_agent_infos.clone(), construction_sites).await?;
+        collect_data(&client, static_agent_infos.clone(), construction_sites)
+            .await
+            .context("failed at collect_data")?;
 
-    let db_construction_infos = select_construction_sites_for_reset(&pool, reset_date_db).await?;
+    let db_construction_infos = select_construction_sites_for_reset(&pool, reset_date_db)
+        .await
+        .context("failed at select_construction_sites_for_reset")?;
 
     let _ = insert_job_run_and_details(
         &pool,
@@ -93,7 +101,9 @@ pub async fn perform_tick(client: &StClient, pool: Pool<Sqlite>) -> anyhow::Resu
     );
 
     event!(Level::DEBUG, "Refreshing 'materialized view'",);
-    let _ = refresh_fake_materialized_view(&pool).await?;
+    let _ = refresh_fake_materialized_view(&pool)
+        .await
+        .context("failed at refresh_fake_materialized_view")?;
     event!(Level::DEBUG, "Done refreshing 'materialized view'",);
 
     Ok(())
@@ -163,9 +173,12 @@ async fn collect_data(
     Vec<LeaderboardCurrentAgentInfo>,
     Vec<LeaderboardCurrentConstructionInfo>,
 )> {
-    let current_agent_infos = collect_current_agent_infos(client, static_agent_infos).await?;
-    let current_construction_infos =
-        collect_current_construction_infos(client, construction_sites).await?;
+    let current_agent_infos = collect_current_agent_infos(client, static_agent_infos)
+        .await
+        .context("failed at collect_current_agent_infos")?;
+    let current_construction_infos = collect_current_construction_infos(client, construction_sites)
+        .await
+        .context("failed at collect_current_construction_infos")?;
 
     Ok((current_agent_infos, current_construction_infos))
 }
