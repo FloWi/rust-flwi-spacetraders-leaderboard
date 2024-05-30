@@ -4,6 +4,8 @@ use std::sync::Arc;
 use governor::{DefaultDirectRateLimiter, Quota, RateLimiter};
 use reqwest::{Client, Request};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware, Middleware, Next};
+use reqwest_retry::policies::ExponentialBackoff;
+use reqwest_retry::RetryTransientMiddleware;
 
 pub(crate) fn create_client() -> ClientWithMiddleware {
     let reqwest_client = Client::builder().build().unwrap();
@@ -11,13 +13,19 @@ pub(crate) fn create_client() -> ClientWithMiddleware {
     let limiter = RateLimiter::direct(Quota::per_second(std::num::NonZeroU32::new(2u32).unwrap()));
     let arc_limiter = Arc::new(limiter);
 
-    let middleware = RateLimitingMiddleware {
+    let rate_limiting_middleware = RateLimitingMiddleware {
         limiter: arc_limiter,
     };
 
-    let client = ClientBuilder::new(reqwest_client).with(middleware).build();
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+
+    let client = ClientBuilder::new(reqwest_client)
+        .with(rate_limiting_middleware)
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .build();
     client
 }
+
 struct RateLimitingMiddleware {
     limiter: Arc<DefaultDirectRateLimiter>,
 }
