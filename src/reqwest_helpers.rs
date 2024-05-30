@@ -20,8 +20,8 @@ pub(crate) fn create_client() -> ClientWithMiddleware {
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
 
     let client = ClientBuilder::new(reqwest_client)
-        .with(rate_limiting_middleware)
         .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .with(rate_limiting_middleware)
         .build();
     client
 }
