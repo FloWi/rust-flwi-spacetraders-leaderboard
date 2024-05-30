@@ -1,6 +1,6 @@
 import {ApiConstructionMaterialMostRecentProgressEntry, ApiLeaderboardEntry} from "../../generated";
 import {Table} from "@tanstack/react-table";
-import {JSX, ReactNode} from "react";
+import {Dispatch, JSX, ReactNode} from "react";
 import {
   Sheet,
   SheetContent,
@@ -21,7 +21,7 @@ import {useMediaQuery} from "react-responsive";
 type SheetPageProps = {
   title: string;
   isLog: boolean;
-  setIsLog: (value: ((prevState: boolean) => boolean) | boolean) => void;
+  setIsLog: Dispatch<boolean>;
   selectedAgents: string[];
   setSelectedAgents: (newSelection: string[]) => void;
   memoizedLeaderboard: {

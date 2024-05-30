@@ -17,6 +17,7 @@ import {chartColors} from "../../utils/chartColors.ts";
 
 type AgentSelectionSearch = {
   agents?: string[];
+  logAxis: boolean;
 };
 
 export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
@@ -73,6 +74,7 @@ export const Route = createFileRoute("/resets/$resetDate/leaderboard")({
     // validate and parse the search params into a typed state
     return {
       agents: search?.agents as string[],
+      logAxis: (search?.logAxis as boolean) ?? true,
     };
   },
 });
@@ -165,9 +167,7 @@ function LeaderboardComponent() {
   );
   // const { data: resetDates } = useSuspenseQuery(resetDatesQueryOptions);
   const leaderboardEntries = leaderboardData.leaderboardEntries;
-  const {agents} = Route.useSearch(); //leaderboardEntries.map((e) => e.agentSymbol);
-
-  const [isLog, setIsLog] = React.useState(true);
+  const {agents, logAxis: isLog} = Route.useSearch(); //leaderboardEntries.map((e) => e.agentSymbol);
 
   const current = {leaderboard: leaderboardEntries};
 
@@ -251,6 +251,12 @@ function LeaderboardComponent() {
 
   const navigate = useNavigate({from: Route.fullPath});
 
+  const setIsLog = (value: boolean): Promise<void> => {
+    return navigate({
+      search: (prev) => ({...prev, logAxis: value}),
+    });
+  };
+
   useEffect(() => {
     const newAgentSelection = Object.keys(rowSelection);
 
@@ -258,9 +264,10 @@ function LeaderboardComponent() {
     navigate({
       search: () => ({
         agents: newAgentSelection,
+        logAxis: isLog,
       }),
     });
-  }, [resetDateToUse, rowSelection, navigate]);
+  }, [resetDateToUse, rowSelection, navigate, isLog]);
 
   const selectAgents = (newSelectedAgents: string[]) => {
     const newSelection: RowSelectionState = newSelectedAgents.reduce((o, key) => ({...o, [key]: true}), {});
