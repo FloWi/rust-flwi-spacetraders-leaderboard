@@ -252,22 +252,24 @@ function LeaderboardComponent() {
   const navigate = useNavigate({from: Route.fullPath});
 
   const setIsLog = (value: boolean): Promise<void> => {
+    console.log("setIsLog. newValue:", value, "current", isLog);
     return navigate({
       search: (prev) => ({...prev, logAxis: value}),
     });
   };
+
 
   useEffect(() => {
     const newAgentSelection = Object.keys(rowSelection);
 
     //fire-and-forget promise call seems to be ok? YOLO
     navigate({
-      search: () => ({
+      search: (prev) => ({
+        ...prev,
         agents: newAgentSelection,
-        logAxis: isLog,
       }),
     });
-  }, [resetDateToUse, rowSelection, navigate, isLog]);
+  }, [resetDateToUse, rowSelection, navigate]);
 
   const selectAgents = (newSelectedAgents: string[]) => {
     const newSelection: RowSelectionState = newSelectedAgents.reduce((o, key) => ({...o, [key]: true}), {});
