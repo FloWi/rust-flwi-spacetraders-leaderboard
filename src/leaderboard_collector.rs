@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use anyhow::Context;
-use chrono::{Local, NaiveDate};
+use chrono::{DateTime, Duration, DurationRound, Local, NaiveDate, SubsecRound, Timelike};
 use futures::future::join_all;
 use itertools::Itertools;
 use sqlx::{Pool, Sqlite};
@@ -19,7 +19,10 @@ pub async fn perform_tick(client: &StClient, pool: Pool<Sqlite>) -> anyhow::Resu
     event!(Level::INFO, "Reset Date: {:?}", st_status.reset_date);
     event!(Level::INFO, "{:?}", st_status.stats);
 
-    let now = Local::now().naive_utc();
+    let now = Local::now()
+        .naive_utc()
+        .duration_round(Duration::minutes(5))
+        .unwrap();
 
     let reset_date = NaiveDate::parse_from_str(st_status.reset_date.as_str(), "%Y-%m-%d").unwrap();
 

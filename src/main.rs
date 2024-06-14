@@ -5,6 +5,7 @@ use anyhow::{Context, Error, Result};
 use clap::Parser;
 use futures::join;
 use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::sqlx_macros::migrate;
 use sqlx::{ConnectOptions, Pool, Sqlite};
 use tokio_cron_scheduler::{Job, JobScheduler};
 use tracing::log::LevelFilter;
@@ -63,6 +64,10 @@ async fn main() -> Result<()> {
                     .max_connections(5)
                     .connect_with(database_connection_options)
                     .await?;
+
+                event!(Level::INFO, "Migrating database if necessary");
+                sqlx::migrate!().run(&background_task_pool).await?;
+                event!(Level::INFO, "Done migrating database");
 
                 let pool = SqlitePoolOptions::new()
                     .max_connections(5)

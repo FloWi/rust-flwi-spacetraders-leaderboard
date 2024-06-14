@@ -19,7 +19,7 @@ chrono = { version = "0.4.35", features = ["serde"] }
 anyhow = "1.0.81"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "std"] }
-sqlx = { version = "0.7.4", features = ["sqlite", "runtime-tokio-native-tls", "chrono"] }
+sqlx = { version = "0.7.4", features = ["sqlite", "runtime-tokio-native-tls", "chrono", "migrate"] }
 tokio-cron-scheduler = "0.10.0"
 axum = "0.7.5"
 utoipa = { version = "4.2.0", features = ["axum_extras", "chrono"] }

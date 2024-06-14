@@ -497,7 +497,7 @@ pub mod leaderboard {
         jump_gate_assignments
     }
 
-    #[derive(Deserialize, ToSchema, Debug)]
+    #[derive(Deserialize, ToSchema, Debug, Clone)]
     #[serde(rename_all = "camelCase")]
     pub(crate) enum RangeSelectionMode {
         First,
@@ -643,19 +643,42 @@ fn extract_reset_period_from_filter(
     filter: &ApiResetAgentPeriodFilterBody,
     reset_infos: ResetDate,
 ) -> ResetPeriodFilter {
-    let event_time_minutes = match filter.selection_mode {
-        RangeSelectionMode::First => safe_range(
-            filter.event_time_minutes_gte.unwrap_or(0),
-            filter.event_time_minutes_lte,
-        ),
+    let event_time_minutes_gte = filter.event_time_minutes_gte;
+    let event_time_minutes_lte = filter.event_time_minutes_lte;
+    let num_minutes = (reset_infos.latest_ts - reset_infos.first_ts)
+        .num_minutes()
+        .abs() as u32;
+
+    extract_reset_period(
+        filter.selection_mode.clone(),
+        event_time_minutes_gte,
+        event_time_minutes_lte,
+        num_minutes,
+    )
+}
+
+fn extract_reset_period(
+    selection_mode: RangeSelectionMode,
+    event_time_minutes_gte: Option<u32>,
+    event_time_minutes_lte: u32,
+    num_minutes: u32,
+) -> ResetPeriodFilter {
+    let event_time_minutes = match selection_mode {
+        RangeSelectionMode::First => {
+            safe_range(event_time_minutes_gte.unwrap_or(0), event_time_minutes_lte)
+        }
         RangeSelectionMode::Last => {
-            let num_minutes = (reset_infos.latest_ts - reset_infos.first_ts)
-                .num_minutes()
-                .abs() as u32;
-            safe_range(
-                num_minutes - filter.event_time_minutes_gte.unwrap_or(0),
-                num_minutes - filter.event_time_minutes_lte,
-            )
+            event!(Level::DEBUG, "num_minutes {}", num_minutes);
+
+            if event_time_minutes_lte > num_minutes {
+                safe_range(0, num_minutes)
+            } else {
+                // event_time_minutes_lte <= num_minutes
+                // reset is 14 days old
+                // asks for last 7 days
+                // [14d-7d ... 14 d]
+                safe_range(num_minutes - event_time_minutes_lte, num_minutes)
+            }
         }
     };
 
@@ -758,5 +781,56 @@ impl TryFrom<DbAllTimePerformanceEntry> for ApiAllTimePerformanceEntry {
             credits: db.credits,
             rank: u32::try_from(db.rank).unwrap(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ops::Add;
+
+    const LAST_WEEK_TEST_DATA: ApiResetAgentPeriodFilterBody = ApiResetAgentPeriodFilterBody {
+        agent_symbols: vec![],
+        event_time_minutes_lte: TimeDelta::weeks(1).num_minutes() as u32,
+        event_time_minutes_gte: None,
+        selection_mode: RangeSelectionMode::Last,
+    };
+
+    const LAST_DAY_TEST_DATA: ApiResetAgentPeriodFilterBody = ApiResetAgentPeriodFilterBody {
+        agent_symbols: vec![],
+        event_time_minutes_lte: TimeDelta::days(1).num_minutes() as u32,
+        event_time_minutes_gte: None,
+        selection_mode: RangeSelectionMode::Last,
+    };
+
+    #[test]
+    fn test_last_week_of_reset_when_reset_is_less_than_one_week_old() {
+        let age_of_reset = TimeDelta::days(4).add(TimeDelta::hours(19));
+        let actual = extract_reset_period(
+            RangeSelectionMode::Last,
+            LAST_WEEK_TEST_DATA.event_time_minutes_gte,
+            LAST_WEEK_TEST_DATA.event_time_minutes_lte,
+            age_of_reset.num_minutes() as u32,
+        );
+        assert_eq!(actual.resolution_minutes, 60);
+        assert_eq!(actual.from_event_time_minutes, 0);
+        assert_eq!(actual.to_event_time_minutes, age_of_reset.num_minutes());
+    }
+
+    #[test]
+    fn test_last_day_of_reset_when_reset_is_one_week_old() {
+        let age_of_reset = TimeDelta::days(7);
+        let actual = extract_reset_period(
+            RangeSelectionMode::Last,
+            LAST_DAY_TEST_DATA.event_time_minutes_gte,
+            LAST_DAY_TEST_DATA.event_time_minutes_lte,
+            age_of_reset.num_minutes() as u32,
+        );
+        assert_eq!(actual.resolution_minutes, 60);
+        assert_eq!(
+            actual.from_event_time_minutes,
+            TimeDelta::days(6).num_minutes()
+        );
+        assert_eq!(actual.to_event_time_minutes, age_of_reset.num_minutes());
     }
 }
