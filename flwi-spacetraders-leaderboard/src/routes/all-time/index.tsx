@@ -20,8 +20,16 @@ import {useMediaQuery} from "react-responsive";
 import {Switch} from "../../@/components/ui/switch.tsx";
 import {Label} from "../../@/components/ui/label.tsx";
 import {useSuspenseQuery} from "@tanstack/react-query";
-import {allTimePerformanceQueryOptions, resetDatesQueryOptions} from "../../utils/queryOptions.ts";
-import {ApiAllTimePerformanceEntry, ApiResetDateMeta} from "../../../generated";
+import {
+  allTimeConstructionLeaderboardOptions,
+  allTimePerformanceQueryOptions,
+  resetDatesQueryOptions,
+} from "../../utils/queryOptions.ts";
+import {
+  ApiAllTimeConstructionLeaderboardEntry,
+  ApiAllTimePerformanceEntry,
+  ApiResetDateMeta,
+} from "../../../generated";
 
 type RankFilter = { name: string; maxRank?: number };
 type ResetFilter = { name: string; numberResets?: number };
@@ -106,6 +114,7 @@ export const Route = createFileRoute("/all-time/")({
   component: AllTimeComponent,
   loader: async ({context: {queryClient}}) => {
     queryClient.prefetchQuery(allTimePerformanceQueryOptions);
+    queryClient.prefetchQuery(allTimeConstructionLeaderboardOptions);
 
     await queryClient.prefetchQuery(resetDatesQueryOptions);
   },
@@ -126,9 +135,14 @@ interface AllTimeRankEntry extends ApiAllTimePerformanceEntry {
   resetDate: ApiResetDateMeta;
 }
 
-const columnHelperAllTimeData = createColumnHelper<AllTimeRankEntry>();
+interface AllTimeConstructionLeaderboardEntry extends ApiAllTimeConstructionLeaderboardEntry {
+  resetDate: ApiResetDateMeta;
+}
 
-const allTimeColumns = [
+const columnHelperAllTimeData = createColumnHelper<AllTimeRankEntry>();
+const columnHelperAllTimeConstructionData = createColumnHelper<AllTimeConstructionLeaderboardEntry>();
+
+const allTimePerformanceColumns = [
   columnHelperAllTimeData.accessor("resetDate", {
     header: "Reset Date",
     cell: (info) => info.getValue().resetDate,
@@ -162,6 +176,44 @@ const allTimeColumns = [
   }),
 ];
 
+/*
+agentsInSystem
+durationMinutesJumpGateConstruction
+durationMinutesStartFortnightFinishJumpGateConstruction
+durationMinutesStartFortnightStartJumpGateConstruction
+jumpGateWaypointSymbol
+rankJumpGateConstruction
+rankStartFortnightFinishJumpGateConstruction
+rankStartFortnightStartJumpGateConstruction
+reset
+tsFinishJumpGateConstruction
+tsStartJumpGateConstruction
+tsStartOfReset
+ */
+
+const allTimeConstructionLeaderboardColumns = [
+  columnHelperAllTimeConstructionData.accessor("resetDate", {
+    header: "Reset Date",
+    cell: (info) => info.getValue().resetDate,
+    footer: (info) => info.column.id,
+  }),
+  columnHelperAllTimeConstructionData.accessor(
+    (row) => {
+      return row.durationMinutesJumpGateConstruction
+        ? prettyDuration(row.durationMinutesJumpGateConstruction * 60 * 1000)
+        : "---";
+    },
+    {
+      id: "durationJumpGateConstruction",
+      header: "Duration Jump Gate Construction",
+      cell: (info) => <pre>{info.getValue()}</pre>,
+      meta: {
+        align: "right",
+      },
+    },
+  ),
+];
+
 function AllTimeComponent() {
   const {data: allResetDates} = useSuspenseQuery(resetDatesQueryOptions);
 
@@ -174,8 +226,12 @@ function AllTimeComponent() {
   }, [rankFilter, resetFilter]);
 
   const {
-    data: {entries: allTimeData},
+    data: {entries: allTimePerformanceData},
   } = useSuspenseQuery(allTimePerformanceQueryOptions);
+
+  const {
+    data: {entries: allTimeConstructionLeaderboardData},
+  } = useSuspenseQuery(allTimeConstructionLeaderboardOptions);
 
   const resetDates = useMemo(() => {
     return allResetDates
@@ -184,7 +240,7 @@ function AllTimeComponent() {
       .toReversed();
   }, [allResetDates]);
 
-  const [sorting, setSorting] = React.useState<SortingState>([
+  const [allTimePerformanceSorting, setAllTimePerformanceSorting] = React.useState<SortingState>([
     {
       id: "resetDate",
       desc: true,
@@ -195,11 +251,22 @@ function AllTimeComponent() {
     },
   ]);
 
-  const relevantData: AllTimeRankEntry[] = useMemo(() => {
+  const [allTimeConstructionDurationSorting, setAllTimeConstructionDurationSorting] = React.useState<SortingState>([
+    {
+      id: "resetDate",
+      desc: true,
+    },
+    {
+      id: "rankJumpGateConstruction",
+      desc: false,
+    },
+  ]);
+
+  const relevantPerformanceData: AllTimeRankEntry[] = useMemo(() => {
     const relevantResetDates = new Set(
       currentResetFilter.numberResets ? resetDates.slice(0, currentResetFilter.numberResets) : resetDates,
     );
-    return allTimeData
+    return allTimePerformanceData
       .filter((d) => {
         return (
           (currentRankFilter.maxRank ? d.rank <= currentRankFilter.maxRank : true) && relevantResetDates.has(d.reset)
@@ -209,30 +276,62 @@ function AllTimeComponent() {
         const resetMeta = allResetDates?.find((rd) => rd.resetDate === d.reset);
         return resetMeta ? [{...d, resetDate: resetMeta, reset: resetMeta.resetDate}] : [];
       });
-  }, [currentRankFilter, currentResetFilter, allResetDates, allTimeData, resetDates]);
+  }, [currentRankFilter, currentResetFilter, allResetDates, allTimePerformanceData, resetDates]);
 
-  const table = useReactTable({
+  const relevantConstructionLeaderboardData: AllTimeConstructionLeaderboardEntry[] = useMemo(() => {
+    const relevantResetDates = new Set(
+      currentResetFilter.numberResets ? resetDates.slice(0, currentResetFilter.numberResets) : resetDates,
+    );
+    return allTimeConstructionLeaderboardData
+      .filter((d) => {
+        return (
+          (currentRankFilter.maxRank ? d.rankJumpGateConstruction <= currentRankFilter.maxRank : true) &&
+          relevantResetDates.has(d.reset)
+        );
+      })
+      .flatMap((d) => {
+        const resetMeta = allResetDates?.find((rd) => rd.resetDate === d.reset);
+        return resetMeta ? [{...d, resetDate: resetMeta, reset: resetMeta.resetDate}] : [];
+      });
+  }, [currentRankFilter, currentResetFilter, allResetDates, allTimeConstructionLeaderboardData, resetDates]);
+
+  const allTimePerformanceTable = useReactTable({
     defaultColumn: {
       size: 25,
     },
-    data: relevantData,
+    data: relevantPerformanceData,
     enableRowSelection: false,
-    columns: allTimeColumns,
+    columns: allTimePerformanceColumns,
     //getRowId: (row) => `${row}-${row.tradeSymbol}`,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    state: {sorting},
-    onSortingChange: setSorting,
+    state: {sorting: allTimePerformanceSorting},
+    onSortingChange: setAllTimePerformanceSorting,
+    debugTable: true,
+  });
+
+  const allTimeConstructionDurationTable = useReactTable({
+    defaultColumn: {
+      size: 25,
+    },
+    data: relevantConstructionLeaderboardData,
+    enableRowSelection: false,
+    columns: allTimeConstructionLeaderboardColumns,
+    //getRowId: (row) => `${row}-${row.tradeSymbol}`,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    state: {sorting: allTimeConstructionDurationSorting},
+    onSortingChange: setAllTimeConstructionDurationSorting,
     debugTable: true,
   });
 
   const chartData = React.useMemo(() => {
     const maxRank = currentRankFilter.maxRank ?? 10;
-    const resets = Array.from(new Set(relevantData.map((d) => d.reset))).toSorted();
+    const resets = Array.from(new Set(relevantPerformanceData.map((d) => d.reset))).toSorted();
     const ranks = Array.from(Array(maxRank).keys()).map((r) => r + 1);
 
     const data = ranks.map((rank) => {
-      const rankData = resets.flatMap((r) => relevantData.filter((d) => d.reset === r && d.rank === rank));
+      const rankData = resets.flatMap((r) => relevantPerformanceData.filter((d) => d.reset === r && d.rank === rank));
       const yValues = rankData.map((d) => d.credits);
       const texts = rankData.map((d) => d.agentSymbol);
 
@@ -247,7 +346,7 @@ function AllTimeComponent() {
     });
     console.log("chartData", data);
     return data;
-  }, [relevantData, currentRankFilter.maxRank]);
+  }, [relevantPerformanceData, currentRankFilter.maxRank]);
 
   const mobileLegend: Partial<Legend> = {
     orientation: "h",
@@ -417,7 +516,7 @@ function AllTimeComponent() {
                   </CardHeader>
                   {periodCardDisplay}
                 </Card>
-                {prettyTable(table)}
+                {prettyTable(allTimePerformanceTable)}
               </div>
               <div className="flex flex-col gap-4 md:flex-row w-full">
                 <div className="flex flex-col gap-2 w-full">{allTimeRanksChart}</div>
@@ -437,7 +536,7 @@ function AllTimeComponent() {
         </div>
         <div className="left flex flex-col gap-4">
           {durationSelection}
-          <div className="flex flex-col gap-2">{prettyTable(table)}</div>
+          <div className="flex flex-col gap-2">{prettyTable(allTimePerformanceTable)}</div>
         </div>
         <div className="content flex flex-col gap-4">
           <Card className="flex flex-col gap-4 p-4 w-full h-full">
@@ -450,6 +549,10 @@ function AllTimeComponent() {
             ) : (
               <p className="text-sm text-muted-foreground">Displaying only Top 10 Agents to keep chart readable.</p>
             )}
+          </Card>
+          <Card className="flex flex-col gap-4 p-4 w-full h-full">
+            <h2 className="text-xl font-bold">All Time Leaderboard Construction Duration</h2>
+            {prettyTable(allTimeConstructionDurationTable)}
           </Card>
         </div>
       </>

@@ -26,7 +26,7 @@ use crate::db::{
 };
 use crate::model::WaypointSymbol;
 use crate::server::leaderboard::{
-    ApiAgentHistoryEntry, ApiAgentSymbol, ApiAllConstructionLeaderboardEntry,
+    ApiAgentHistoryEntry, ApiAgentSymbol, ApiAllTimeConstructionLeaderboardEntry,
     ApiAllTimePerformanceEntry, ApiConstructionMaterialHistoryEntry,
     ApiConstructionMaterialMostRecentProgressEntry,
     ApiGetJumpGateConstructionEventOverviewResponse, ApiJumpGateConstructionEventOverviewEntry,
@@ -168,7 +168,7 @@ pub mod leaderboard {
             schemas(ApiTradeSymbol),
             schemas(ApiWaypointSymbol),
             schemas(GetAllTimeConstructionLeaderboardResult),
-            schemas(ApiAllConstructionLeaderboardEntry),
+            schemas(ApiAllTimeConstructionLeaderboardEntry),
             schemas(GetAllTimePerformanceResult),
             schemas(GetHistoryDataForResetResponseContent),
             schemas(GetJumpGateAgentsAssignmentForResetResponseContent),
@@ -219,7 +219,7 @@ pub mod leaderboard {
     #[derive(Serialize, Deserialize, ToSchema)]
     #[serde(rename_all = "camelCase")]
     pub(crate) struct GetAllTimeConstructionLeaderboardResult {
-        entries: Vec<ApiAllConstructionLeaderboardEntry>,
+        entries: Vec<ApiAllTimeConstructionLeaderboardEntry>,
     }
 
     #[derive(Serialize, Deserialize, ToSchema)]
@@ -332,8 +332,8 @@ pub mod leaderboard {
 
     #[derive(Serialize, Deserialize, ToSchema, Debug)]
     #[serde(rename_all = "camelCase")]
-    pub(crate) struct ApiAllConstructionLeaderboardEntry {
-        pub(crate) reset_date: ApiResetDate,
+    pub(crate) struct ApiAllTimeConstructionLeaderboardEntry {
+        pub(crate) reset: ApiResetDate,
         pub(crate) ts_start_of_reset: NaiveDateTime,
         pub(crate) jump_gate_waypoint_symbol: ApiWaypointSymbol,
         pub(crate) agents_in_system: Vec<ApiAgentSymbol>,
@@ -840,11 +840,11 @@ impl TryFrom<DbAllTimePerformanceEntry> for ApiAllTimePerformanceEntry {
     }
 }
 
-impl TryFrom<DbConstructionLeaderboardEntry> for ApiAllConstructionLeaderboardEntry {
+impl TryFrom<DbConstructionLeaderboardEntry> for ApiAllTimeConstructionLeaderboardEntry {
     type Error = ();
     fn try_from(db: DbConstructionLeaderboardEntry) -> Result<Self, Self::Error> {
-        Ok(ApiAllConstructionLeaderboardEntry {
-            reset_date: ApiResetDate(db.reset_date.format("%Y-%m-%d").to_string()),
+        Ok(ApiAllTimeConstructionLeaderboardEntry {
+            reset: ApiResetDate(db.reset_date.format("%Y-%m-%d").to_string()),
             ts_start_of_reset: db.ts_start_of_reset,
             jump_gate_waypoint_symbol: ApiWaypointSymbol(db.jump_gate_waypoint_symbol),
             agents_in_system: db
