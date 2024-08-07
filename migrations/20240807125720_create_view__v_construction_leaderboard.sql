@@ -56,12 +56,12 @@ with agent_construction_summary as (select construction_site_id, group_concat(ag
                      , agents_in_system_csv
                      , ts_start_jump_gate_construction
                      , ts_finish_jump_gate_construction
-                     , cast(duration_minutes__start_fortnight__start_jump_gate_construction as int)                                    as duration_minutes__start_fortnight__start_jump_gate_construction
-                     , cast(duration_minutes__start_fortnight__finish_jump_gate_construction as int)                                   as duration_minutes__start_fortnight__finish_jump_gate_construction
-                     , cast(duration_minutes__jump_gate_construction as int)                                                           as duration_minutes__jump_gate_construction
-                     , rank() over (partition by reset_date order by duration_minutes__jump_gate_construction)                         as rank__jump_gate_construction
-                     , rank() over (partition by reset_date order by duration_minutes__start_fortnight__start_jump_gate_construction)  as rank__start_fortnight__start_jump_gate_construction
-                     , rank() over (partition by reset_date order by duration_minutes__start_fortnight__finish_jump_gate_construction) as rank__start_fortnight__finish_jump_gate_construction
+                     , cast(duration_minutes__start_fortnight__start_jump_gate_construction as int)                                               as duration_minutes__start_fortnight__start_jump_gate_construction
+                     , cast(duration_minutes__start_fortnight__finish_jump_gate_construction as int)                                              as duration_minutes__start_fortnight__finish_jump_gate_construction
+                     , cast(duration_minutes__jump_gate_construction as int)                                                                      as duration_minutes__jump_gate_construction
+                     , rank() over (partition by reset_date order by duration_minutes__jump_gate_construction nulls last )                        as rank__jump_gate_construction
+                     , rank() over (partition by reset_date order by duration_minutes__start_fortnight__start_jump_gate_construction nulls last)  as rank__start_fortnight__start_jump_gate_construction
+                     , rank() over (partition by reset_date order by duration_minutes__start_fortnight__finish_jump_gate_construction nulls last) as rank__start_fortnight__finish_jump_gate_construction
                 from event_durations)
 select *
 from ranked
