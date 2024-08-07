@@ -28,6 +28,7 @@ mod st_client;
 mod cli_args;
 mod db;
 mod leaderboard_collector;
+
 mod server;
 
 #[tokio::main]

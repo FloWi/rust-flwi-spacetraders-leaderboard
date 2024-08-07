@@ -9,7 +9,6 @@ use crate::leaderboard_model::{
     LeaderboardCurrentAgentInfo, LeaderboardCurrentConstructionInfo, LeaderboardStaticAgentInfo,
 };
 use crate::model::ConstructionMaterial;
-use crate::server::leaderboard::{ApiAgentSymbol, ApiResetDate};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -523,6 +522,7 @@ group by ad.agent_symbol
     .fetch_all(pool)
     .await
 }
+
 pub(crate) async fn select_all_time_performance(
     pool: &Pool<Sqlite>,
 ) -> Result<Vec<DbAllTimePerformanceEntry>, Error> {
@@ -555,6 +555,44 @@ with last_entry_of_reset as (select *
 select *
 from ranked
 order by reset
+        "#
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub(crate) async fn select_all_time_construction_leaderboard(
+    pool: &Pool<Sqlite>,
+) -> Result<Vec<DbConstructionLeaderboardEntry>, Error> {
+    /*
+        select r.reset_id as "reset_id!"
+         , r.reset as "reset!"
+         , r.first_ts as "first_ts!"
+         , max(jr.query_time) as "latest_ts! :_"
+         , (select count(*) from reset_date next where next.reset > r.reset ) = 0 as "is_ongoing! :_"
+    from reset_date r
+             join main.job_run jr
+                  on r.reset_id = jr.reset_id
+    group by r.reset_id, r.first_ts, r.reset
+
+         */
+
+    sqlx::query_as!(
+        DbConstructionLeaderboardEntry,
+        r#"
+select reset_date as "reset_date! :_"
+     , ts_start_of_reset as "ts_start_of_reset! :_"
+     , jump_gate_waypoint_symbol as "jump_gate_waypoint_symbol! :_"
+     , agents_in_system_csv as "agents_in_system_csv! :_"
+     , ts_start_jump_gate_construction as "ts_start_jump_gate_construction! :_"
+     , ts_finish_jump_gate_construction as "ts_finish_jump_gate_construction! :_"
+     , duration_minutes__start_fortnight__start_jump_gate_construction as "duration_minutes_start_fortnight_start_jump_gate_construction! :_"
+     , duration_minutes__start_fortnight__finish_jump_gate_construction as "duration_minutes_start_fortnight_finish_jump_gate_construction! :_"
+     , duration_minutes__jump_gate_construction as "duration_minutes_jump_gate_construction! :_"
+     , rank__jump_gate_construction as "rank_jump_gate_construction! :_"
+     , rank__start_fortnight__start_jump_gate_construction as "rank_start_fortnight_start_jump_gate_construction! :_"
+     , rank__start_fortnight__finish_jump_gate_construction as "rank_start_fortnight_finish_jump_gate_construction! :_"
+from v_construction_leaderboard
         "#
     )
     .fetch_all(pool)
@@ -921,4 +959,19 @@ pub(crate) struct DbAllTimePerformanceEntry {
     pub(crate) agent_symbol: String,
     pub(crate) credits: i64,
     pub(crate) rank: i64,
+}
+
+pub(crate) struct DbConstructionLeaderboardEntry {
+    pub(crate) reset_date: NaiveDate,
+    pub(crate) ts_start_of_reset: NaiveDateTime,
+    pub(crate) jump_gate_waypoint_symbol: String,
+    pub(crate) agents_in_system_csv: String,
+    pub(crate) ts_start_jump_gate_construction: NaiveDateTime,
+    pub(crate) ts_finish_jump_gate_construction: Option<NaiveDateTime>,
+    pub(crate) duration_minutes_start_fortnight_start_jump_gate_construction: i64,
+    pub(crate) duration_minutes_start_fortnight_finish_jump_gate_construction: Option<i64>,
+    pub(crate) duration_minutes_jump_gate_construction: Option<i64>,
+    pub(crate) rank_jump_gate_construction: i64,
+    pub(crate) rank_start_fortnight_start_jump_gate_construction: i64,
+    pub(crate) rank_start_fortnight_finish_jump_gate_construction: i64,
 }

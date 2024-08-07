@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "\nselect reset_date as \"reset_date! :_\"\n     , ts_start_of_reset as \"ts_start_of_reset! :_\"\n     , jump_gate_waypoint_symbol as \"jump_gate_waypoint_symbol! :_\"\n     , agents_in_system_csv as \"agents_in_system_csv! :_\"\n     , ts_start_jump_gate_construction as \"ts_start_jump_gate_construction! :_\"\n     , ts_finish_jump_gate_construction as \"ts_finish_jump_gate_construction! :_\"\n     , duration_minutes__start_fortnight__start_jump_gate_construction as \"duration_minutes_start_fortnight_start_jump_gate_construction! :_\"\n     , duration_minutes__start_fortnight__finish_jump_gate_construction as \"duration_minutes_start_fortnight_finish_jump_gate_construction! :_\"\n     , duration_minutes__jump_gate_construction as \"duration_minutes_jump_gate_construction! :_\"\n     , rank__jump_gate_construction as \"rank_jump_gate_construction! :_\"\n     , rank__start_fortnight__start_jump_gate_construction as \"rank_start_fortnight_start_jump_gate_construction! :_\"\n     , rank__start_fortnight__finish_jump_gate_construction as \"rank_start_fortnight_finish_jump_gate_construction! :_\"\nfrom v_construction_leaderboard\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "reset_date! :_",
+        "ordinal": 0,
+        "type_info": "Date"
+      },
+      {
+        "name": "ts_start_of_reset! :_",
+        "ordinal": 1,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "jump_gate_waypoint_symbol! :_",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "agents_in_system_csv! :_",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "ts_start_jump_gate_construction! :_",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "ts_finish_jump_gate_construction! :_",
+        "ordinal": 5,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "duration_minutes_start_fortnight_start_jump_gate_construction! :_",
+        "ordinal": 6,
+        "type_info": "Float"
+      },
+      {
+        "name": "duration_minutes_start_fortnight_finish_jump_gate_construction! :_",
+        "ordinal": 7,
+        "type_info": "Null"
+      },
+      {
+        "name": "duration_minutes_jump_gate_construction! :_",
+        "ordinal": 8,
+        "type_info": "Null"
+      },
+      {
+        "name": "rank_jump_gate_construction! :_",
+        "ordinal": 9,
+        "type_info": "Int"
+      },
+      {
+        "name": "rank_start_fortnight_start_jump_gate_construction! :_",
+        "ordinal": 10,
+        "type_info": "Int"
+      },
+      {
+        "name": "rank_start_fortnight_finish_jump_gate_construction! :_",
+        "ordinal": 11,
+        "type_info": "Int"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      null,
+      null,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e40b71f660909715a130f04d2a2ceb99de033677afe1765190da3d7a83e5ca13"
+}

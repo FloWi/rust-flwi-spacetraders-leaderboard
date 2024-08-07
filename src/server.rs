@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use axum::{response::Result, routing, Router};
 use chrono::TimeDelta;
+use futures::TryFutureExt;
 use sqlx::{Pool, Sqlite};
 use tokio::net::TcpListener;
 use tower_http::classify::ServerErrorsFailureClass;
@@ -19,12 +20,15 @@ use utoipa_redoc::{Redoc, Servable};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::db::{
-    DbAgentHistoryEntry, DbAllTimePerformanceEntry, DbConstructionMaterialHistoryEntry,
-    DbConstructionMaterialMostRecentStatus, DbJumpGateConstructionEventOverviewEntry, ResetDate,
+    DbAgentHistoryEntry, DbAllTimePerformanceEntry, DbConstructionLeaderboardEntry,
+    DbConstructionMaterialHistoryEntry, DbConstructionMaterialMostRecentStatus,
+    DbJumpGateConstructionEventOverviewEntry, ResetDate,
 };
+use crate::model::WaypointSymbol;
 use crate::server::leaderboard::{
-    ApiAgentHistoryEntry, ApiAgentSymbol, ApiAllTimePerformanceEntry,
-    ApiConstructionMaterialHistoryEntry, ApiConstructionMaterialMostRecentProgressEntry,
+    ApiAgentHistoryEntry, ApiAgentSymbol, ApiAllConstructionLeaderboardEntry,
+    ApiAllTimePerformanceEntry, ApiConstructionMaterialHistoryEntry,
+    ApiConstructionMaterialMostRecentProgressEntry,
     ApiGetJumpGateConstructionEventOverviewResponse, ApiJumpGateConstructionEventOverviewEntry,
     ApiResetAgentPeriodFilterBody, ApiResetDate, ApiTradeSymbol, ApiWaypointSymbol,
     RangeSelectionMode,
@@ -59,6 +63,10 @@ pub async fn http_server(
         .route(
             "/api/all-time-performance",
             routing::get(leaderboard::get_all_time_performance),
+        )
+        .route(
+            "/api/all-time-construction-leaderboard",
+            routing::get(leaderboard::get_all_time_construction_leaderboard),
         )
         .route(
             "/api/leaderboard/:reset_date",
@@ -123,11 +131,12 @@ pub mod leaderboard {
 
     use crate::db::{
         load_leaderboard_for_reset, load_reset_date, load_reset_dates, select_agent_history,
-        select_all_time_performance, select_construction_progress_for_reset,
-        select_jump_gate_agent_assignment_for_reset,
+        select_all_time_construction_leaderboard, select_all_time_performance,
+        select_construction_progress_for_reset, select_jump_gate_agent_assignment_for_reset,
         select_jump_gate_construction_event_overview_for_reset,
         select_most_recent_construction_progress_for_reset, ResetDate,
     };
+    use crate::model::WaypointSymbol;
     use crate::server::{extract_reset_period_from_filter, ResetPeriodFilter};
 
     #[derive(OpenApi)]
@@ -139,7 +148,8 @@ pub mod leaderboard {
             get_history_data_for_reset,
             get_jump_gate_most_recent_progress,
             get_jump_gate_construction_event_overview,
-            get_all_time_performance
+            get_all_time_performance,
+            get_all_time_construction_leaderboard,
         ),
         components(
             schemas(ApiAgentHistoryEntry),
@@ -157,6 +167,8 @@ pub mod leaderboard {
             schemas(ApiResetDateMeta),
             schemas(ApiTradeSymbol),
             schemas(ApiWaypointSymbol),
+            schemas(GetAllTimeConstructionLeaderboardResult),
+            schemas(ApiAllConstructionLeaderboardEntry),
             schemas(GetAllTimePerformanceResult),
             schemas(GetHistoryDataForResetResponseContent),
             schemas(GetJumpGateAgentsAssignmentForResetResponseContent),
@@ -202,6 +214,12 @@ pub mod leaderboard {
     #[serde(rename_all = "camelCase")]
     pub(crate) struct GetAllTimePerformanceResult {
         entries: Vec<ApiAllTimePerformanceEntry>,
+    }
+
+    #[derive(Serialize, Deserialize, ToSchema)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct GetAllTimeConstructionLeaderboardResult {
+        entries: Vec<ApiAllConstructionLeaderboardEntry>,
     }
 
     #[derive(Serialize, Deserialize, ToSchema)]
@@ -312,6 +330,23 @@ pub mod leaderboard {
         pub(crate) rank: u32,
     }
 
+    #[derive(Serialize, Deserialize, ToSchema, Debug)]
+    #[serde(rename_all = "camelCase")]
+    pub(crate) struct ApiAllConstructionLeaderboardEntry {
+        pub(crate) reset_date: ApiResetDate,
+        pub(crate) ts_start_of_reset: NaiveDateTime,
+        pub(crate) jump_gate_waypoint_symbol: ApiWaypointSymbol,
+        pub(crate) agents_in_system: Vec<ApiAgentSymbol>,
+        pub(crate) ts_start_jump_gate_construction: NaiveDateTime,
+        pub(crate) ts_finish_jump_gate_construction: Option<NaiveDateTime>,
+        pub(crate) duration_minutes_start_fortnight_start_jump_gate_construction: u32,
+        pub(crate) duration_minutes_start_fortnight_finish_jump_gate_construction: Option<u32>,
+        pub(crate) duration_minutes_jump_gate_construction: Option<u32>,
+        pub(crate) rank_jump_gate_construction: u32,
+        pub(crate) rank_start_fortnight_start_jump_gate_construction: u32,
+        pub(crate) rank_start_fortnight_finish_jump_gate_construction: u32,
+    }
+
     /// List all reset-dates
     #[utoipa::path(get, path = "/api/reset-dates", responses((status = 200, body = ListResetDatesResponseContent)))]
     pub(crate) async fn get_reset_dates(
@@ -377,6 +412,27 @@ pub mod leaderboard {
         let performance_entries = select_all_time_performance(&pool).await.unwrap();
 
         Json(GetAllTimePerformanceResult {
+            entries: performance_entries
+                .into_iter()
+                .map(|e| e.try_into().unwrap())
+                .collect(),
+        })
+    }
+
+    /// Get the ranked construction performance for all resets.
+    #[utoipa::path(
+    get,
+    path = "/api/all-time-construction-leaderboard",
+    responses((status = 200, body = GetAllTimeConstructionLeaderboardResult)),
+    )]
+    pub(crate) async fn get_all_time_construction_leaderboard(
+        State(pool): State<Pool<Sqlite>>,
+    ) -> Json<GetAllTimeConstructionLeaderboardResult> {
+        let performance_entries = select_all_time_construction_leaderboard(&pool)
+            .await
+            .unwrap();
+
+        Json(GetAllTimeConstructionLeaderboardResult {
             entries: performance_entries
                 .into_iter()
                 .map(|e| e.try_into().unwrap())
@@ -784,10 +840,48 @@ impl TryFrom<DbAllTimePerformanceEntry> for ApiAllTimePerformanceEntry {
     }
 }
 
+impl TryFrom<DbConstructionLeaderboardEntry> for ApiAllConstructionLeaderboardEntry {
+    type Error = ();
+    fn try_from(db: DbConstructionLeaderboardEntry) -> Result<Self, Self::Error> {
+        Ok(ApiAllConstructionLeaderboardEntry {
+            reset_date: ApiResetDate(db.reset_date.format("%Y-%m-%d").to_string()),
+            ts_start_of_reset: db.ts_start_of_reset,
+            jump_gate_waypoint_symbol: ApiWaypointSymbol(db.jump_gate_waypoint_symbol),
+            agents_in_system: db
+                .agents_in_system_csv
+                .split(',')
+                .map(|a| ApiAgentSymbol(a.into()))
+                .collect(),
+            ts_start_jump_gate_construction: db.ts_start_jump_gate_construction,
+            ts_finish_jump_gate_construction: db.ts_finish_jump_gate_construction,
+            duration_minutes_start_fortnight_start_jump_gate_construction: u32::try_from(
+                db.duration_minutes_start_fortnight_start_jump_gate_construction,
+            )
+            .unwrap(),
+            duration_minutes_start_fortnight_finish_jump_gate_construction: db
+                .duration_minutes_start_fortnight_finish_jump_gate_construction
+                .and_then(|x| x.try_into().ok()),
+            duration_minutes_jump_gate_construction: db
+                .duration_minutes_jump_gate_construction
+                .and_then(|x| x.try_into().ok()),
+            rank_jump_gate_construction: u32::try_from(db.rank_jump_gate_construction).unwrap(),
+            rank_start_fortnight_start_jump_gate_construction: u32::try_from(
+                db.rank_start_fortnight_start_jump_gate_construction,
+            )
+            .unwrap(),
+            rank_start_fortnight_finish_jump_gate_construction: u32::try_from(
+                db.rank_start_fortnight_finish_jump_gate_construction,
+            )
+            .unwrap(),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::ops::Add;
+
+    use super::*;
 
     const LAST_WEEK_TEST_DATA: ApiResetAgentPeriodFilterBody = ApiResetAgentPeriodFilterBody {
         agent_symbols: vec![],
