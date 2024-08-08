@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import React, { JSX, useMemo } from "react";
+import {createFileRoute, useNavigate} from "@tanstack/react-router";
+import React, {JSX, useMemo} from "react";
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -7,26 +7,34 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { intNumberFmt, prettyDuration } from "../../lib/formatters.ts";
-import { ToggleGroup, ToggleGroupItem } from "../../@/components/ui/toggle-group.tsx";
-import { prettyTable } from "../../components/prettyTable.tsx";
+import {intNumberFmt, prettyDuration} from "../../lib/formatters.ts";
+import {ToggleGroup, ToggleGroupItem} from "../../@/components/ui/toggle-group.tsx";
+import {prettyTable} from "../../components/prettyTable.tsx";
 import Plot from "react-plotly.js";
-import { Legend, PlotType } from "plotly.js";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../../@/components/ui/sheet.tsx";
-import { HamburgerMenuIcon } from "@radix-ui/react-icons";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../@/components/ui/card.tsx";
-import { renderKvPair } from "../../lib/key-value-card-helper.tsx";
-import { useMediaQuery } from "react-responsive";
-import { Switch } from "../../@/components/ui/switch.tsx";
-import { Label } from "../../@/components/ui/label.tsx";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {Legend, PlotType} from "plotly.js";
+import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger} from "../../@/components/ui/sheet.tsx";
+import {HamburgerMenuIcon} from "@radix-ui/react-icons";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "../../@/components/ui/card.tsx";
+import {renderKvPair} from "../../lib/key-value-card-helper.tsx";
+import {useMediaQuery} from "react-responsive";
+import {Switch} from "../../@/components/ui/switch.tsx";
+import {Label} from "../../@/components/ui/label.tsx";
+import {useSuspenseQuery} from "@tanstack/react-query";
 import {
   allTimeConstructionLeaderboardOptions,
   allTimePerformanceQueryOptions,
   resetDatesQueryOptions,
 } from "../../utils/queryOptions.ts";
-import { ApiAllTimePerformanceEntry, ApiResetDateMeta } from "../../../generated";
-import { allTimeConstructionLeaderboardColumns } from "../../utils/constructionLeaderboardTables.tsx";
+import {
+  ApiAllTimeConstructionLeaderboardEntry,
+  ApiAllTimePerformanceEntry,
+  ApiResetDateMeta,
+} from "../../../generated";
+import {
+  allTimeConstructionLeaderboardColumns,
+  AllTimeConstructionLeaderboardEntry,
+} from "../../utils/constructionLeaderboardTables.tsx";
+import {useConstructionTable} from "../../lib/constructionLeaderboardHelper.tsx";
 
 type RankFilter = { name: string; maxRank?: number };
 type ResetFilter = { name: string; numberResets?: number };
@@ -109,7 +117,7 @@ type AllTimeSelectionSearch = {
 
 export const Route = createFileRoute("/all-time/")({
   component: AllTimeComponent,
-  loader: async ({ context: { queryClient } }) => {
+  loader: async ({context: {queryClient}}) => {
     queryClient.prefetchQuery(allTimePerformanceQueryOptions);
     queryClient.prefetchQuery(allTimeConstructionLeaderboardOptions);
 
@@ -169,22 +177,22 @@ const allTimePerformanceColumns = [
 ];
 
 function AllTimeComponent() {
-  const { data: allResetDates } = useSuspenseQuery(resetDatesQueryOptions);
+  const {data: allResetDates} = useSuspenseQuery(resetDatesQueryOptions);
 
-  const { rankFilter, resetFilter, logAxis: isLog } = Route.useSearch();
+  const {rankFilter, resetFilter, logAxis: isLog} = Route.useSearch();
 
-  const navigate = useNavigate({ from: Route.fullPath });
+  const navigate = useNavigate({from: Route.fullPath});
 
-  const { currentRankFilter, currentResetFilter } = React.useMemo(() => {
-    return { currentRankFilter: rankFilters.get(rankFilter)!, currentResetFilter: resetFilters.get(resetFilter)! };
+  const {currentRankFilter, currentResetFilter} = React.useMemo(() => {
+    return {currentRankFilter: rankFilters.get(rankFilter)!, currentResetFilter: resetFilters.get(resetFilter)!};
   }, [rankFilter, resetFilter]);
 
   const {
-    data: { entries: allTimePerformanceData },
+    data: {entries: allTimePerformanceData},
   } = useSuspenseQuery(allTimePerformanceQueryOptions);
 
   const {
-    data: { entries: allTimeConstructionLeaderboardData },
+    data: {entries: allTimeConstructionLeaderboardData},
   } = useSuspenseQuery(allTimeConstructionLeaderboardOptions);
 
   const resetDates = useMemo(() => {
@@ -256,11 +264,12 @@ function AllTimeComponent() {
       })
       .flatMap((d) => {
         const resetMeta = allResetDates?.find((rd) => rd.resetDate === d.reset);
-        return resetMeta ? [{ ...d, resetDate: resetMeta, reset: resetMeta.resetDate }] : [];
+        return resetMeta ? [{...d, resetDate: resetMeta, reset: resetMeta.resetDate}] : [];
       });
   }, [currentRankFilter, currentResetFilter, allResetDates, allTimePerformanceData, resetDates]);
 
   const {
+    filteredResetData,
     constructionDurationData,
     startFortnightStartConstructionDurationData,
     startFortnightFinishConstructionDurationData,
@@ -272,10 +281,11 @@ function AllTimeComponent() {
       .filter((d) => relevantResetDates.has(d.reset))
       .flatMap((d) => {
         const resetMeta = allResetDates?.find((rd) => rd.resetDate === d.reset);
-        return resetMeta ? [{ ...d, resetDate: resetMeta, reset: resetMeta.resetDate }] : [];
+        return resetMeta ? [{...d, resetDate: resetMeta, reset: resetMeta.resetDate}] : [];
       });
 
     return {
+      filteredResetData,
       constructionDurationData: filteredResetData.filter((d) =>
         currentRankFilter.maxRank ? d.rankJumpGateConstruction <= currentRankFilter.maxRank : true,
       ),
@@ -298,78 +308,40 @@ function AllTimeComponent() {
     //getRowId: (row) => `${row}-${row.tradeSymbol}`,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    state: { sorting: allTimePerformanceSorting },
+    state: {sorting: allTimePerformanceSorting},
     onSortingChange: setAllTimePerformanceSorting,
     debugTable: true,
   });
 
-  const allTimeConstructionDurationTable = useReactTable({
-    defaultColumn: {
-      size: 45,
-    },
-    data: constructionDurationData,
-    enableRowSelection: false,
-    columns: allTimeConstructionLeaderboardColumns,
-    //getRowId: (row) => `${row}-${row.tradeSymbol}`,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    state: { sorting: allTimeConstructionDurationSorting },
-    onSortingChange: setAllTimeConstructionDurationSorting,
-    debugTable: true,
-    initialState: {
-      columnPinning: {
-        left: ["resetDate", "rankJumpGateConstruction", "durationJumpGateConstruction"],
-      },
-    },
-  });
+  const allTimeConstructionDurationTable = useConstructionTable(
+    filteredResetData,
+    "rankJumpGateConstruction",
+    currentRankFilter.maxRank,
+    ["resetDate", "rankJumpGateConstruction", "durationMinutesJumpGateConstruction"],
+  );
 
-  const allTimeConstructionStartFortnightStartConstructionTable = useReactTable({
-    defaultColumn: {
-      size: 45,
-    },
-    data: startFortnightStartConstructionDurationData,
-    enableRowSelection: false,
-    columns: allTimeConstructionLeaderboardColumns,
-    //getRowId: (row) => `${row}-${row.tradeSymbol}`,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    state: { sorting: allTimeConstructionStartFortnightStartConstructionSorting },
-    onSortingChange: setAllTimeConstructionStartFortnightStartConstructionSorting,
-    debugTable: true,
-    initialState: {
-      columnPinning: {
-        left: [
-          "resetDate",
-          "rankStartFortnightStartJumpGateConstruction",
-          "durationStartFortnightStartJumpGateConstruction",
-        ],
-      },
-    },
-  });
+  const allTimeConstructionStartFortnightStartConstructionTable = useConstructionTable(
+    filteredResetData,
+    "rankStartFortnightStartJumpGateConstruction",
+    currentRankFilter.maxRank,
+    [
+      "resetDate",
+      "rankStartFortnightStartJumpGateConstruction",
+      "durationMinutesStartFortnightStartJumpGateConstruction",
+    ],
+  );
 
-  const allTimeConstructionStartFortnightFinishConstructionTable = useReactTable({
-    defaultColumn: {
-      size: 45,
-    },
-    data: startFortnightFinishConstructionDurationData,
-    enableRowSelection: false,
-    columns: allTimeConstructionLeaderboardColumns,
-    //getRowId: (row) => `${row}-${row.tradeSymbol}`,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    state: { sorting: allTimeConstructionStartFortnightFinishConstructionSorting },
-    onSortingChange: setAllTimeConstructionStartFortnightFinishConstructionSorting,
-    debugTable: true,
-    initialState: {
-      columnPinning: {
-        left: [
-          "resetDate",
-          "rankStartFortnightFinishJumpGateConstruction",
-          "durationStartFortnightFinishJumpGateConstruction",
-        ],
-      },
-    },
-  });
+  const allTimeConstructionStartFortnightFinishConstructionTable = useConstructionTable(
+    filteredResetData,
+    "rankStartFortnightFinishJumpGateConstruction",
+    currentRankFilter.maxRank,
+    [
+      "resetDate",
+      "rankStartFortnightFinishJumpGateConstruction",
+      "durationMinutesStartFortnightFinishJumpGateConstruction",
+    ],
+  );
+
 
   const chartData = React.useMemo(() => {
     const maxRank = currentRankFilter.maxRank ?? 10;
@@ -410,7 +382,7 @@ function AllTimeComponent() {
 
   const setIsLog = (value: boolean): Promise<void> => {
     return navigate({
-      search: (prev) => ({ ...prev, logAxis: value }),
+      search: (prev) => ({...prev, logAxis: value}),
     });
   };
 
@@ -454,7 +426,7 @@ function AllTimeComponent() {
           tickformat: ".2s", // d3.format(".2s")(42e6) // SI-prefix with two significant digits, "42M" https://d3js.org/d3-format
         },
       }}
-      config={{ displayModeBar: false, responsive: true }}
+      config={{displayModeBar: false, responsive: true}}
     />
   );
   const top_n_AgentSelectionComponent = (
@@ -522,7 +494,7 @@ function AllTimeComponent() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-2 text-sm">
-            <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog} />
+            <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog}/>
             <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
           </div>
         </CardContent>
@@ -565,7 +537,7 @@ function AllTimeComponent() {
         <div className="sub-header flex flex-row gap-2 mt-4 items-center">
           <h2 className="text-2xl font-bold">All Time Comparison</h2>
           <SheetTrigger asChild className={`block lg:hidden mr-2`}>
-            <HamburgerMenuIcon className="ml-auto" />
+            <HamburgerMenuIcon className="ml-auto"/>
           </SheetTrigger>
           {
             <SheetContent side="left" className="w-11/12 md:w-fit flex flex-col gap-4">
@@ -574,7 +546,7 @@ function AllTimeComponent() {
               </SheetHeader>
               {durationSelection}
               <div className="flex items-center space-x-2 text-sm">
-                <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog} />
+                <Switch id="log-y-axis" checked={isLog} onCheckedChange={setIsLog}/>
                 <Label htmlFor="log-y-axis">Use Log For Y-Axis</Label>
               </div>
             </SheetContent>
