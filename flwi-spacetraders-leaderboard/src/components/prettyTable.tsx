@@ -1,6 +1,6 @@
-import {flexRender, Table as TanStackTable} from "@tanstack/react-table";
-import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "../@/components/ui/table.tsx";
-import {ArrowDownAzIcon, ArrowUpAzIcon} from "lucide-react";
+import { flexRender, Table as TanStackTable } from "@tanstack/react-table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../@/components/ui/table.tsx";
+import { ArrowDownAzIcon, ArrowUpAzIcon } from "lucide-react";
 
 export function prettyTable<T>(table: TanStackTable<T>) {
   return (
@@ -16,7 +16,7 @@ export function prettyTable<T>(table: TanStackTable<T>) {
                     colSpan={header.colSpan}
                     align={(header.column.columnDef.meta as any)?.align}
                     className="border"
-                    style={{width: `${header.getSize()}px`}}
+                    style={{ width: `${header.getSize()}px` }}
                   >
                     {header.isPlaceholder ? null : (
                       <div
@@ -34,8 +34,8 @@ export function prettyTable<T>(table: TanStackTable<T>) {
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
                         {{
-                          asc: <ArrowUpAzIcon/>,
-                          desc: <ArrowDownAzIcon/>,
+                          asc: <ArrowDownAzIcon />,
+                          desc: <ArrowUpAzIcon />,
                         }[header.column.getIsSorted() as string] ?? null}
                       </div>
                     )}
