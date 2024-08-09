@@ -441,68 +441,31 @@ function AllTimeComponent() {
     </div>
   );
 
-  let tabs = (
+  const constructionTableTabComponent = (
     <>
       <h2 className="text-2xl font-bold">Construction Leaderboards</h2>
       <p>The following tables contain the same columns in different arrangements to showcase different durations.</p>
       <p>Note that the rank filter is applied to the relevant rank-column.</p>
       <Tabs defaultValue="allTimeConstructionDuration">
         <TabsList>
-          <TabsTrigger value="allTimeConstructionDuration">Construction Duration</TabsTrigger>
+          <TabsTrigger value="allTimeConstructionDuration">Start Construction - Finish Construction</TabsTrigger>
           <TabsTrigger value="allTimeConstructionStartFortnightStartConstruction">
-            Duration Start Fortnight - Start Construction
+            Start Fortnight - Start Construction
           </TabsTrigger>
           <TabsTrigger value="allTimeConstructionStartFortnightFinishConstruction">
-            Duration Start Fortnight - Finish Construction
+            Start Fortnight - Finish Construction
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="allTimeConstructionDuration">
-          {prettyTable(allTimeConstructionDurationTable)}
-        </TabsContent>
-        <TabsContent
-
-          value="allTimeConstructionStartFortnightStartConstruction"
-        >
+        <TabsContent value="allTimeConstructionDuration">{prettyTable(allTimeConstructionDurationTable)}</TabsContent>
+        <TabsContent value="allTimeConstructionStartFortnightStartConstruction">
           {prettyTable(allTimeConstructionStartFortnightStartConstructionTable)}
         </TabsContent>
-        <TabsContent
-
-          value="allTimeConstructionStartFortnightFinishConstruction"
-        >
+        <TabsContent value="allTimeConstructionStartFortnightFinishConstruction">
           {prettyTable(allTimeConstructionStartFortnightFinishConstructionTable)}
         </TabsContent>
       </Tabs>
     </>
   );
-
-  const constructionTableCards = tabs;
-
-  /*<div className="flex flex-col gap-4 p-4">
-    <h2 className="text-2xl font-bold">Construction Leaderboards</h2>
-    <p>The following tables contain the same columns in different arrangements to showcase different durations.</p>
-    <p>Note that the rank filter is applied to the relevant rank-column.</p>
-    <Card className="flex flex-col gap-4 p-4 w-full h-full">
-      <CardHeader>
-        <CardTitle>Construction Duration</CardTitle>
-        <CardDescription>Duration from first to last delivery.</CardDescription>
-      </CardHeader>
-      <CardContent>{prettyTable(allTimeConstructionDurationTable)}</CardContent>
-    </Card>
-    <Card className="flex flex-col gap-4 p-4">
-      <CardHeader>
-        <CardTitle>Duration Start Fortnight - Start Construction</CardTitle>
-        <CardDescription>Duration from start of the fortnight to first delivery.</CardDescription>
-      </CardHeader>
-      <CardContent>{prettyTable(allTimeConstructionStartFortnightStartConstructionTable)}</CardContent>
-    </Card>
-    <Card className="flex flex-col gap-4 p-4">
-      <CardHeader>
-        <CardTitle>Duration Start Fortnight - Finish Construction</CardTitle>
-        <CardDescription>Duration from start of the fortnight to last delivery.</CardDescription>
-      </CardHeader>
-      <CardContent>{prettyTable(allTimeConstructionStartFortnightFinishConstructionTable)}</CardContent>
-    </Card>
-  </div>*/
 
   function mobileLayout(): JSX.Element {
     return (
@@ -541,7 +504,7 @@ function AllTimeComponent() {
               <div className="flex flex-col gap-4 md:flex-row w-full">
                 <div className="flex flex-col gap-2 w-full">{allTimeRanksChart}</div>
               </div>
-              {constructionTableCards}
+              {constructionTableTabComponent}
             </div>
           </div>
         </div>
@@ -572,7 +535,7 @@ function AllTimeComponent() {
             )}
           </Card>
 
-          {constructionTableCards}
+          {constructionTableTabComponent}
         </div>
       </>
     );
