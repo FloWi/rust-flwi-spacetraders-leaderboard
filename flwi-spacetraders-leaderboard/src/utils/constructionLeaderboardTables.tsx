@@ -1,6 +1,6 @@
-import { createColumnHelper } from "@tanstack/react-table";
-import { ApiAllTimeConstructionLeaderboardEntry, ApiResetDateMeta } from "../../generated";
-import { prettyDuration } from "../lib/formatters.ts";
+import {createColumnHelper} from "@tanstack/react-table";
+import {ApiAllTimeConstructionLeaderboardEntry, ApiResetDateMeta} from "../../generated";
+import {prettyDuration} from "../lib/formatters.ts";
 
 export interface AllTimeConstructionLeaderboardEntry extends ApiAllTimeConstructionLeaderboardEntry {
   resetDate: ApiResetDateMeta;
@@ -71,21 +71,7 @@ export const allTimeConstructionLeaderboardColumns = [
     cell: (info) => info.getValue(),
     footer: (info) => info.column.id,
   }),
-  columnHelperAllTimeConstructionData.accessor(
-    (row) => {
-      return row.durationMinutesStartFortnightStartJumpGateConstruction
-        ? prettyDuration(row.durationMinutesStartFortnightStartJumpGateConstruction * 60 * 1000)
-        : "---";
-    },
-    {
-      id: "durationMinutesStartFortnightStartJumpGateConstruction",
-      header: "Duration Start Fortnight - Start Jump Gate Construction",
-      cell: (info) => <pre>{info.getValue()}</pre>,
-      meta: {
-        align: "right",
-      },
-    },
-  ),
+
   columnHelperAllTimeConstructionData.accessor("rankStartFortnightFinishJumpGateConstruction", {
     header: "Rank Start Fortnight - Finish Jump Gate Construction",
     cell: (info) => info.getValue(),
