@@ -92,4 +92,11 @@ export const allTimeConstructionLeaderboardColumns = [
       },
     },
   ),
+  columnHelperAllTimeConstructionData.accessor("agentsInSystem", {
+    header: "Agents In System",
+    cell: (info) => info.getValue().toSorted().join(", "),
+    footer: (info) => info.column.id,
+    size: 350,
+    invertSorting: true, //something is wrong with the sorting of the resetDate. Tanstack Table thinks 2024-01-01 > 2024-02-02. Most likely I'm using it wrong.
+  }),
 ];
