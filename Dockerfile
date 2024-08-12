@@ -4,7 +4,7 @@
 
 
 # install cargo-chef and toolchain, to be reused in other stages
-FROM rust:1.78-bookworm as chef
+FROM rust:1.80.1-bookworm AS chef
 RUN cargo install cargo-chef --locked
 RUN rustup install stable # should match the channel in rust-toolchain.toml
 WORKDIR app
@@ -12,14 +12,14 @@ WORKDIR app
 
 
 # only prepares the build plan
-FROM chef as planner
+FROM chef AS planner
 COPY . .
 # Prepare a build plan ("recipe")
 RUN cargo chef prepare --recipe-path recipe.json
 
 
 # build the project with a cached dependency layer
-FROM chef as builder
+FROM chef AS builder
 # for alpine: RUN apk add git cmake make g++ musl-dev openssl-dev sqlite-dev
 RUN apt-get update && apt-get install --yes git cmake make g++ libssl-dev libsqlite3-dev
 
@@ -37,7 +37,7 @@ RUN SQLX_OFFLINE=true cargo run --locked --release -- generate-openapi --output-
 
 
 # run frontend-build
-FROM node:alpine as frontend-builder
+FROM node:alpine AS frontend-builder
 WORKDIR app
 COPY ./flwi-spacetraders-leaderboard ./flwi-spacetraders-leaderboard
 COPY --from=builder /app/openapi.json ./flwi-spacetraders-leaderboard/openapi-spec/openapi.json
