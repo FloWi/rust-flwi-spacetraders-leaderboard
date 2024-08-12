@@ -31,22 +31,22 @@
       {
         "name": "ts_finish_jump_gate_construction! :_",
         "ordinal": 5,
-        "type_info": "Datetime"
+        "type_info": "Text"
       },
       {
         "name": "duration_minutes_start_fortnight_start_jump_gate_construction! :_",
         "ordinal": 6,
-        "type_info": "Float"
+        "type_info": "Int"
       },
       {
         "name": "duration_minutes_start_fortnight_finish_jump_gate_construction! :_",
         "ordinal": 7,
-        "type_info": "Null"
+        "type_info": "Int"
       },
       {
         "name": "duration_minutes_jump_gate_construction! :_",
         "ordinal": 8,
-        "type_info": "Null"
+        "type_info": "Int"
       },
       {
         "name": "rank_jump_gate_construction! :_",
