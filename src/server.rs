@@ -119,16 +119,6 @@ pub async fn http_server(
 }
 
 pub mod leaderboard {
-    use axum::extract::{Path, State};
-    use axum::Json;
-    use chrono::format::StrftimeItems;
-    use chrono::{NaiveDate, NaiveDateTime, TimeDelta};
-    use itertools::{process_results, Itertools};
-    use serde::{Deserialize, Serialize};
-    use sqlx::{Pool, Sqlite};
-    use tracing::{event, Level};
-    use utoipa::{OpenApi, ToSchema};
-
     use crate::db::{
         load_leaderboard_for_reset, load_reset_date, load_reset_dates, select_agent_history,
         select_all_time_construction_leaderboard, select_all_time_performance,
@@ -138,6 +128,16 @@ pub mod leaderboard {
     };
     use crate::model::WaypointSymbol;
     use crate::server::{extract_reset_period_from_filter, ResetPeriodFilter};
+    use axum::extract::{Path, State};
+    use axum::Json;
+    use chrono::format::StrftimeItems;
+    use chrono::{NaiveDate, NaiveDateTime, TimeDelta};
+    use itertools::{process_results, Itertools};
+    use serde::{Deserialize, Serialize};
+    use sqlx::{Pool, Sqlite};
+    use tracing::{event, Level};
+    use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
+    use utoipa::{openapi, Modify, OpenApi, ToSchema};
 
     #[derive(OpenApi)]
     #[openapi(
@@ -176,9 +176,28 @@ pub mod leaderboard {
             schemas(GetLeaderboardForResetResponseContent),
             schemas(ListResetDatesResponseContent),
             schemas(RangeSelectionMode),
-        )
+        ),
+        modifiers(&SecurityAddon)
     )]
     pub(crate) struct ApiDoc;
+
+    struct SecurityAddon;
+
+    impl Modify for SecurityAddon {
+        fn modify(&self, openapi: &mut openapi::OpenApi) {
+            if let Some(components) = openapi.components.as_mut() {
+                components.add_security_scheme(
+                    "api_jwt_token",
+                    SecurityScheme::Http(
+                        HttpBuilder::new()
+                            .scheme(HttpAuthScheme::Bearer)
+                            .bearer_format("JWT")
+                            .build(),
+                    ),
+                );
+            }
+        }
+    }
 
     #[derive(Serialize, Deserialize, ToSchema)]
     #[serde(rename_all = "camelCase")]
