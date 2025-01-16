@@ -17,8 +17,8 @@ LEADERBOARD_DATABASE_URL = "sqlite://data/flwi-leaderboard.db?mode=rwc"
 LEADERBOARD_HOST = "0.0.0.0"
 LEADERBOARD_PORT = "9000"
 LEADERBOARD_ASSET_DIR = "/dist"
-RUST_LOG = "info,flwi_spacetraders_leaderboard::pagination=trace,tower_http=trace"
-
+RUST_LOG = "info"
+#RUST_LOG = "info,flwi_spacetraders_leaderboard::pagination=trace,tower_http=trace"
 
 [[services]]
 protocol = "tcp"
