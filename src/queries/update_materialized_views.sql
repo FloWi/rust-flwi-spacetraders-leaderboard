@@ -21,7 +21,7 @@ select reset_id,
        query_time,
        duration_seconds,
        delivery_event
-from v_material_delivery_events
+from v_material_delivery_events_of_latest_reset
 ;
 
 
@@ -68,7 +68,7 @@ where required > 1
 
 delete
 from mat_view_material_delivery_events
-where true
+where reset_id = (select max(main.reset_date.reset_id) from reset_date)
 ;
 
 
@@ -115,3 +115,4 @@ drop table tmp_mat_view_material_delivery_events
 
 drop table tmp_mat_view_current_construction_progress
 ;
+

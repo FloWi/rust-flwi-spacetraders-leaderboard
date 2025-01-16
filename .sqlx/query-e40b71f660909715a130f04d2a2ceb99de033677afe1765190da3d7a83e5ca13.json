@@ -26,42 +26,42 @@
       {
         "name": "ts_start_jump_gate_construction! :_",
         "ordinal": 4,
-        "type_info": "Text"
+        "type_info": "Datetime"
       },
       {
         "name": "ts_finish_jump_gate_construction! :_",
         "ordinal": 5,
-        "type_info": "Text"
+        "type_info": "Datetime"
       },
       {
         "name": "duration_minutes_start_fortnight_start_jump_gate_construction! :_",
         "ordinal": 6,
-        "type_info": "Int"
+        "type_info": "Int64"
       },
       {
         "name": "duration_minutes_start_fortnight_finish_jump_gate_construction! :_",
         "ordinal": 7,
-        "type_info": "Int"
+        "type_info": "Int64"
       },
       {
         "name": "duration_minutes_jump_gate_construction! :_",
         "ordinal": 8,
-        "type_info": "Int"
+        "type_info": "Int64"
       },
       {
         "name": "rank_jump_gate_construction! :_",
         "ordinal": 9,
-        "type_info": "Int"
+        "type_info": "Int64"
       },
       {
         "name": "rank_start_fortnight_start_jump_gate_construction! :_",
         "ordinal": 10,
-        "type_info": "Int"
+        "type_info": "Int64"
       },
       {
         "name": "rank_start_fortnight_finish_jump_gate_construction! :_",
         "ordinal": 11,
-        "type_info": "Int"
+        "type_info": "Int64"
       }
     ],
     "parameters": {
