@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::{Local, NaiveDate, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqlitePoolOptions;
-use sqlx::{Error, Pool, Sqlite, Transaction};
+use sqlx::{Error, Executor, Pool, Sqlite};
 
 use crate::leaderboard_model::{
     LeaderboardCurrentAgentInfo, LeaderboardCurrentConstructionInfo, LeaderboardStaticAgentInfo,
@@ -40,6 +40,14 @@ pub(crate) async fn load_or_create_reset_date(
             Ok(reset_date)
         }
     }
+}
+
+pub(crate) async fn force_wal_checkpoint(pool: &Pool<Sqlite>) -> Result<(), Error> {
+    // TRUNCATE is more aggressive than PASSIVE or RESTART
+    sqlx::query("PRAGMA wal_checkpoint(TRUNCATE)")
+        .execute(pool)
+        .await?;
+    Ok(())
 }
 
 async fn insert_reset_date(

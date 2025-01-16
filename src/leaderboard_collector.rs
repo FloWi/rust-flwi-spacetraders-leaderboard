@@ -1,17 +1,17 @@
 use std::collections::HashSet;
 
+use crate::db;
+use crate::db::*;
+use crate::leaderboard_model::*;
+use crate::model::*;
+use crate::pagination::paginate;
+use crate::st_client::StClient;
 use anyhow::Context;
 use chrono::{DateTime, Duration, DurationRound, Local, NaiveDate, SubsecRound, Timelike};
 use futures::future::join_all;
 use itertools::Itertools;
 use sqlx::{Pool, Sqlite};
 use tracing::{event, Level};
-
-use crate::db::*;
-use crate::leaderboard_model::*;
-use crate::model::*;
-use crate::pagination::paginate;
-use crate::st_client::StClient;
 
 pub async fn perform_tick(client: &StClient, pool: Pool<Sqlite>) -> anyhow::Result<()> {
     let st_status = client.get_status().await?;
@@ -107,7 +107,15 @@ pub async fn perform_tick(client: &StClient, pool: Pool<Sqlite>) -> anyhow::Resu
     let _ = refresh_fake_materialized_view(&pool)
         .await
         .context("failed at refresh_fake_materialized_view")?;
-    event!(Level::DEBUG, "Done refreshing 'materialized view'",);
+
+    let _ = force_wal_checkpoint(&pool)
+        .await
+        .context("failed at force_wal_checkpoint")?;
+
+    event!(
+        Level::INFO,
+        "Done refreshing 'materialized view' and cleaning up DB wal",
+    );
 
     Ok(())
 }

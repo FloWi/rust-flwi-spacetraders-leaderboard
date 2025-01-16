@@ -6,7 +6,7 @@ use clap::Parser;
 use futures::join;
 use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::sqlx_macros::migrate;
-use sqlx::{ConnectOptions, Pool, Sqlite};
+use sqlx::{ConnectOptions, Executor, Pool, Sqlite};
 use tokio_cron_scheduler::{Job, JobScheduler};
 use tracing::log::LevelFilter;
 use tracing::{event, Level};
@@ -62,6 +62,16 @@ async fn main() -> Result<()> {
                     .log_slow_statements(LevelFilter::Warn, Duration::from_secs(60));
 
                 let background_task_pool = SqlitePoolOptions::new()
+                    .after_connect(|conn, _| {
+                        Box::pin(async move {
+                            // Set WAL mode explicitly
+                            conn.execute("PRAGMA journal_mode=WAL").await?;
+                            // Auto-checkpoint after this many pages (default is 1000)
+                            // Lower this number if you want more frequent checkpoints
+                            conn.execute("PRAGMA wal_autocheckpoint=1000").await?;
+                            Ok(())
+                        })
+                    })
                     .max_connections(5)
                     .connect_with(database_connection_options)
                     .await?;
