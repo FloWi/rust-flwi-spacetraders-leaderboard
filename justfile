@@ -1,7 +1,3 @@
-pull-data:
-  rm -f /Users/florian_witteler/programming/spacetraders/flwi-spacetraders/data/database/flwi-spacetraders-leaderboard-reset_2024_05_19.db
-  cd /Users/florian_witteler/programming/spacetraders/flwi-spacetraders && flyctl ssh sftp get /data/database/flwi-spacetraders-leaderboard-reset_2024_05_19.db data/database/flwi-spacetraders-leaderboard-reset_2024_05_19.db
-
 migrate:
   cargo sqlx database reset -y
   cd notebooks && jupyter execute polars_normalize_leaderboard.ipynb
@@ -75,3 +71,27 @@ extract-file-and-restart:
   echo 'flyctl ssh console --command "gunzip -c /tmp/flwi-leaderboard.db.gz > /data/flwi-leaderboard.db"'
   echo 'restart machine with following command'
   echo 'fly machine restart 56830157a169d8'
+
+backup-prod-db-to-www-folder:
+  ssh -C hetzner-flwi rm -f /var/www/spa.flwi.de/files/tmp-flwi-spacetraders-leaderboard/backup.db
+  ssh -C hetzner-flwi "sqlite3 flwi-spacetraders-leaderboard/db/flwi-leaderboard.db '.backup /var/www/spa.flwi.de/files/tmp-flwi-spacetraders-leaderboard/backup.db'"
+
+delete-prod-backup-from-www-folder:
+  ssh -C hetzner-flwi rm -f /var/www/spa.flwi.de/files/tmp-flwi-spacetraders-leaderboard/backup.db
+
+download-backup-from-hetzner-to-fly-io:
+  flyctl ssh console --command "wget https://spa.flwi.de/tmp-flwi-spacetraders-leaderboard/backup.db -O /tmp/backup.db"
+  flyctl ssh console --command "rm -f /data/flwi-leaderboard.db*"
+  flyctl ssh console --command "sqlite3 /tmp/backup.db '.backup /data/flwi-leaderboard.db'"
+  fly machine restart 56830157a169d8
+
+prepare-fly-machine-for-download:
+  flyctl ssh console --command "apt update && apt install -y wget"
+
+check-fly-machine-performance:
+  flyctl ssh console --command "/bin/bash -c '\
+          dd if=/dev/zero of=/data/testfile bs=1M count=512 oflag=direct && \
+          dd if=/data/testfile of=/dev/null bs=1M count=512 iflag=direct && \
+          rm /data/testfile \
+      '"
+  echo "write should be ~600MB/s and read should be ~900MB/s"
