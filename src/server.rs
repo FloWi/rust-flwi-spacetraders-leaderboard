@@ -102,7 +102,7 @@ pub async fn http_server(
             let serve_dir_with_fallback = Router::new().nest_service(
                 "/",
                 ServeDir::new(asset_dir.clone())
-                    .not_found_service(ServeFile::new(asset_dir.clone().join("index.html"))),
+                    .fallback(ServeFile::new(asset_dir.clone().join("index.html"))),
             );
             app.fallback_service(serve_dir_with_fallback)
         }
