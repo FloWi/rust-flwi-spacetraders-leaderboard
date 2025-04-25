@@ -4,6 +4,7 @@ use std::time::Duration;
 use anyhow::{Context, Error, Result};
 use clap::Parser;
 use futures::join;
+use reqwest::Url;
 use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::sqlx_macros::migrate;
 use sqlx::{ConnectOptions, Executor, Pool, Sqlite};
@@ -49,6 +50,7 @@ async fn main() -> Result<()> {
                 database_url,
                 host,
                 port,
+                base_url,
             } => {
                 tracing_subscriber::registry()
                     .with(fmt::layer())
@@ -88,7 +90,7 @@ async fn main() -> Result<()> {
                 let bind_address = format!("{}:{}", host, port);
 
                 let _ = join!(
-                    background_collect(background_task_pool.clone()),
+                    background_collect(background_task_pool.clone(), base_url),
                     http_server(pool.clone(), bind_address, asset_dir)
                 );
 
@@ -101,7 +103,7 @@ async fn main() -> Result<()> {
     // as a workaround I added this step
 }
 
-async fn background_collect(pool: Pool<Sqlite>) -> Result<()> {
+async fn background_collect(pool: Pool<Sqlite>, base_url: Url) -> Result<()> {
     let mut sched = JobScheduler::new().await?;
 
     // I don't know what I'm doing. `move`d stuff around, until the compiler was happy
@@ -110,9 +112,11 @@ async fn background_collect(pool: Pool<Sqlite>) -> Result<()> {
         Box::pin({
             let clone_wars_pool = pool.clone();
 
+            let base_url = base_url.clone();
+
             async move {
                 let reqwest_client_with_middleware = create_client();
-                let client = StClient::new(reqwest_client_with_middleware);
+                let client = StClient::new(reqwest_client_with_middleware, base_url);
 
                 let result = perform_tick(&client, clone_wars_pool)
                     .await

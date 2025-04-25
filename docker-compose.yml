@@ -14,5 +14,6 @@ services:
       - LEADERBOARD_HOST=0.0.0.0
       - LEADERBOARD_PORT=8080
       - LEADERBOARD_ASSET_DIR=/dist
+      - "SPACE_TRADERS_BASE_URL=https://api.spacetraders.io/"
       - "RUST_LOG=info,flwi_spacetraders_leaderboard::pagination=trace,tower_http=trace"
     command: [ "/usr/local/bin/app", "run-server" ]

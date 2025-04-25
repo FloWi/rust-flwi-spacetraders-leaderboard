@@ -1,4 +1,5 @@
 use anyhow::Result;
+use reqwest::Url;
 use reqwest_middleware::ClientWithMiddleware;
 
 use crate::model::{
@@ -10,23 +11,22 @@ use crate::pagination::PaginationInput;
 
 pub struct StClient {
     pub(crate) client: ClientWithMiddleware,
+    pub(crate) base_url: Url,
 }
 
 impl StClient {
-    pub fn new(client: ClientWithMiddleware) -> Self {
-        StClient { client }
+    pub fn new(client: ClientWithMiddleware, base_url: Url) -> Self {
+        StClient { client, base_url }
     }
 
     pub(crate) async fn get_public_agent(
         &self,
         agent_symbol: &AgentSymbol,
     ) -> Result<AgentInfoResponse> {
+        let path = format!("/v2/agents/{}", agent_symbol.0);
         Ok(self
             .client
-            .get(format!(
-                "https://api.spacetraders.io/v2/agents/{}",
-                agent_symbol.0
-            ))
+            .get(self.base_url.join(&path)?)
             .send()
             .await?
             .json()
@@ -37,15 +37,12 @@ impl StClient {
         &self,
         waypoint_symbol: &WaypointSymbol,
     ) -> Result<GetConstructionResponse> {
-        let resp = self
-            .client
-            .get(format!(
-                "https://api.spacetraders.io/v2/systems/{}/waypoints/{}/construction",
-                extract_system_symbol(&waypoint_symbol).0,
-                waypoint_symbol.0
-            ))
-            .send()
-            .await;
+        let path = format!(
+            "/v2/systems/{}/waypoints/{}/construction",
+            extract_system_symbol(&waypoint_symbol).0,
+            waypoint_symbol.0
+        );
+        let resp = self.client.get(self.base_url.join(&path)?).send().await;
         let construction_site_info = resp?.json().await?;
         Ok(construction_site_info)
     }
@@ -55,12 +52,10 @@ impl StClient {
         system_symbol: SystemSymbol,
     ) -> Result<ListWaypointsInSystemResponse> {
         let query_param_list = [("type", "JUMP_GATE")];
+        let path = format!("/v2/systems/{}/waypoints", system_symbol.0);
         let request = self
             .client
-            .get(format!(
-                "https://api.spacetraders.io/v2/systems/{}/waypoints",
-                system_symbol.0
-            ))
+            .get(self.base_url.join(&path)?)
             .query(&query_param_list);
         let resp = request.send().await;
 
@@ -78,12 +73,10 @@ impl StClient {
             ("limit", pagination_input.limit.to_string()),
         ];
 
+        let path = format!("/v2/systems/{}/waypoints", system_symbol.0);
         let request = self
             .client
-            .get(format!(
-                "https://api.spacetraders.io/v2/systems/{}/waypoints",
-                system_symbol.0
-            ))
+            .get(self.base_url.join(&path)?)
             .query(&query_param_list);
 
         let resp = request.send().await?;
@@ -100,10 +93,8 @@ impl StClient {
             ("limit", pagination_input.limit.to_string()),
         ];
 
-        let request = self
-            .client
-            .get("https://api.spacetraders.io/v2/agents".to_string())
-            .query(&query_param_list);
+        let path = "/v2/agents";
+        let request = self.client.get(path).query(&query_param_list);
 
         let resp = request.send().await.unwrap();
 
@@ -111,9 +102,10 @@ impl StClient {
     }
 
     pub(crate) async fn get_status(&self) -> Result<StStatusResponse> {
+        let path = "/v2/";
         Ok(self
             .client
-            .get("https://api.spacetraders.io/v2/")
+            .get(self.base_url.join(&path)?)
             .send()
             .await?
             .json()

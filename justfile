@@ -95,3 +95,8 @@ check-fly-machine-performance:
           rm /data/testfile \
       '"
   echo "write should be ~600MB/s and read should be ~900MB/s"
+
+copy-feba-db:
+  sqlite3 data/feba.db '.backup data/backup.feba.db'
+  ssh -C hetzner-flwi "rm -f /home/flwi/flwi-spacetraders-leaderboard-feba/db/feba-leaderboard*"
+  scp data/backup.feba.db hetzner-flwi:/home/flwi/flwi-spacetraders-leaderboard-feba/db/feba-leaderboard.db

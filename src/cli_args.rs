@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
+use reqwest::Url;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -30,5 +31,12 @@ pub(crate) enum Commands {
 
         #[arg(long, env("LEADERBOARD_PORT"))]
         port: u16,
+
+        #[arg(long, env("SPACE_TRADERS_BASE_URL"), value_parser = parse_url)]
+        base_url: Url,
     },
+}
+
+fn parse_url(s: &str) -> Result<Url, String> {
+    Url::parse(s).map_err(|e| e.to_string())
 }
