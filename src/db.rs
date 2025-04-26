@@ -27,6 +27,57 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
+pub(crate) async fn load_agent_token_for_reset(
+    pool: &Pool<Sqlite>,
+    reset_date: NaiveDate,
+) -> Result<Option<AgentToken>, Error> {
+    let maybe_agent_token: Option<String> = sqlx::query_as!(
+        String,
+        r#"
+select agent_token
+  from agent_registration
+ where reset_date = $1
+        "#,
+        reset_date
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(maybe_agent_token.map(|token| AgentToken(token)))
+}
+
+pub(crate) async fn store_agent_token_for_reset(
+    pool: &Pool<Sqlite>,
+    reset_date: NaiveDate,
+    agent_token: AgentToken,
+) -> Result<(), Error> {
+    /*
+                sqlx::query!(
+                "
+    insert into construction_site (reset_id, jump_gate_waypoint_symbol)
+    values (?, ?)
+    on conflict (reset_id, jump_gate_waypoint_symbol) do nothing
+            ",
+                reset_id,
+                static_agent_info.jump_gate.0
+            )
+            .execute(pool)
+            .await
+            .unwrap();
+        */
+
+    sqlx::query!(
+        "
+insert into agent_registration (reset_date, agent_token)
+values (?, ?)
+        ",
+        reset_date,
+        agent_token.0
+    )
+    .execute(pool)
+    .await
+}
+
 pub(crate) async fn load_or_create_reset_date(
     pool: &Pool<Sqlite>,
     reset_date: NaiveDate,
@@ -772,6 +823,9 @@ pub(crate) async fn refresh_fake_materialized_view(pool: &Pool<Sqlite>) -> anyho
 
     Ok(())
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub(crate) struct AgentToken(pub String);
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub(crate) struct ResetDate {

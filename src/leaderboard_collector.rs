@@ -10,21 +10,55 @@ use anyhow::Context;
 use chrono::{DateTime, Duration, DurationRound, Local, NaiveDate, SubsecRound, Timelike};
 use futures::future::join_all;
 use itertools::Itertools;
+use reqwest::Url;
 use sqlx::{Pool, Sqlite};
 use tracing::{event, Level};
+use crate::reqwest_helpers::create_client;
 
-pub async fn perform_tick(client: &StClient, pool: Pool<Sqlite>) -> anyhow::Result<()> {
+
+pub struct AgentToken(pub String);
+pub struct AccountToken(pub String);
+
+pub async fn get_or_create_authenticated_client(client: &StClient, pool: Pool<Sqlite>, base_url: Url, account_token: AccountToken) -> anyhow::Result<StClient> {
+    let reqwest_client_with_middleware = create_client(None);
+    let client = StClient::new(reqwest_client_with_middleware, base_url.clone());
     let st_status = client.get_status().await?;
+
+    let reset_date = NaiveDate::parse_from_str(st_status.reset_date.as_str(), "%Y-%m-%d").unwrap();
+
+    let maybe_agent_token_for_reset = load_agent_token_for_reset(&pool, reset_date.clone()).await?;
+
+    let agent_token = match maybe_agent_token_for_reset {
+        None => {
+            let reqwest_client_with_middleware = create_client(Some(account_token.0));
+            let client_with_account_token = StClient::new(reqwest_client_with_middleware, base_url.clone());
+            client_with_account_token.register(
+                RegistrationRequest {
+                    faction: cfg.spacetraders_agent_faction.clone(),
+                    symbol: cfg.spacetraders_agent_symbol.clone(),
+                    email: cfg.spacetraders_registration_email.clone(),
+                }
+            )
+
+        }
+        Some(agent_token) => {
+
+        }
+    }
+
+}
+
+pub async fn perform_tick(pool: Pool<Sqlite>, base_url: Url) -> anyhow::Result<()> {
 
     event!(Level::INFO, "Reset Date: {:?}", st_status.reset_date);
     event!(Level::INFO, "{:?}", st_status.stats);
+
 
     let now = Local::now()
         .naive_utc()
         .duration_round(Duration::minutes(5))
         .unwrap();
 
-    let reset_date = NaiveDate::parse_from_str(st_status.reset_date.as_str(), "%Y-%m-%d").unwrap();
 
     let reset_date_db = load_or_create_reset_date(&pool, reset_date, now).await?;
     event!(Level::INFO, "Using reset_date_db {:?}", reset_date_db);

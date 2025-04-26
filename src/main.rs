@@ -115,10 +115,7 @@ async fn background_collect(pool: Pool<Sqlite>, base_url: Url) -> Result<()> {
             let base_url = base_url.clone();
 
             async move {
-                let reqwest_client_with_middleware = create_client();
-                let client = StClient::new(reqwest_client_with_middleware, base_url);
-
-                let result = perform_tick(&client, clone_wars_pool)
+                let result = perform_tick(clone_wars_pool, base_url)
                     .await
                     .context("failed at perform_tick");
 

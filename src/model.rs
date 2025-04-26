@@ -12,6 +12,14 @@ pub struct WaypointSymbol(pub String);
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct FactionSymbol(pub String);
 
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
+#[serde(rename_all = "camelCase")]
+pub struct RegistrationRequest {
+    pub faction: String,
+    pub symbol: String,
+    pub email: String,
+}
+
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentInfoResponse {
